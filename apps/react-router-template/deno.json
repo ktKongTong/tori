@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "manual",
+  "imports": {
+    "vite": "./node_modules/vite/dist/vite/node/cli.js"
+  }
+}

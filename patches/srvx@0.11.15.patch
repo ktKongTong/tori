@@ -1,0 +1,13 @@
+diff --git a/dist/adapters/node.mjs b/dist/adapters/node.mjs
+index d9efe0fb35e958a098c0e310140205fa02587a61..90b60c6a7f02ab672cd4e76d0d742c4caec381a8 100644
+--- a/dist/adapters/node.mjs
++++ b/dist/adapters/node.mjs
+@@ -29,7 +29,7 @@ async function sendNodeResponse(nodeRes, webRes) {
+ 	return webRes.body ? streamBody(webRes.body, nodeRes) : endNodeResponse(nodeRes);
+ }
+ function writeHead(nodeRes, status, statusText, rawHeaders) {
+-	const writeHeaders = globalThis.Deno ? rawHeaders : rawHeaders.flat();
++	const writeHeaders = rawHeaders.flat();
+ 	if (!nodeRes.headersSent) if (nodeRes.req?.httpVersion === "2.0") nodeRes.writeHead(status, writeHeaders);
+ 	else nodeRes.writeHead(status, statusText, writeHeaders);
+ }
