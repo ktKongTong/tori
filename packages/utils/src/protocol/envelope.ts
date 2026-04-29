@@ -17,12 +17,6 @@ export type ResultEnvelope<
   TDetail extends JsonValue = JsonValue,
 > = DataEnvelope<TData> | { error: ErrorEnvelope<TCode, TDetail> };
 
-export type OAuthErrorEnvelope<TError extends string = string> = {
-  error: TError;
-  error_description?: string;
-  error_uri?: string;
-};
-
 export function dataEnvelope<TData>(data: TData): DataEnvelope<TData> {
   return { data };
 }
@@ -35,16 +29,5 @@ export function errorEnvelope<TCode extends string>(
   const error: ErrorEnvelope<TCode, JsonObject> = { code, message };
   if (options.traceId !== undefined) error.traceId = options.traceId;
   if (options.detail !== undefined) error.detail = options.detail;
-  return {
-    error,
-  };
-}
-
-export function oauthErrorEnvelope<TError extends string>(
-  error: TError,
-  description?: string,
-): OAuthErrorEnvelope<TError> {
-  const envelope: OAuthErrorEnvelope<TError> = { error };
-  if (description !== undefined) envelope.error_description = description;
-  return envelope;
+  return { error };
 }

@@ -22,13 +22,12 @@ import { decryptAesGcmFromBase64, encryptAesGcmToBase64 } from "../src/crypto/ae
 import { cronSchema } from "../src/schema/cron.ts";
 import { dateToIsoDatetime } from "../src/schema/date.ts";
 import { errorResponseSchema, rateLimitErrorResponseSchema } from "../src/schema/http.ts";
-import { deviceAuthorizeSchema, oauthProxyHeadersSchema } from "../src/schema/oauth.ts";
 import { pageCodec } from "../src/schema/paging.ts";
 import { safeParseResult } from "../src/schema/result.ts";
 import { z } from "zod";
 import { randomString, sha256Hash, stringHash } from "../src/encoding/hash.ts";
 import { generateName } from "../src/name/generate-name.ts";
-import { dataEnvelope, errorEnvelope, oauthErrorEnvelope } from "../src/protocol/envelope.ts";
+import { dataEnvelope, errorEnvelope } from "../src/protocol/envelope.ts";
 import { isJsonObject, isJsonValue, type JsonRecord } from "../src/protocol/json.ts";
 
 const randomCharset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
@@ -141,7 +140,7 @@ describe("schema utilities", () => {
     expect(safeParseResult(schema, { id: 1 }).isErr()).toBe(true);
   });
 
-  it("validates shared HTTP and OAuth schemas", () => {
+  it("validates shared HTTP schemas", () => {
     expect(errorResponseSchema.parse({ code: "BAD_REQUEST", message: "Bad request" })).toEqual({
       code: "BAD_REQUEST",
       message: "Bad request",
@@ -151,13 +150,6 @@ describe("schema utilities", () => {
         code: "RATE_LIMITED",
         message: "Rate limited",
         detail: { retryAfter: 60 },
-      }).success,
-    ).toBe(true);
-    expect(deviceAuthorizeSchema.parse({ provider: "steam" })).toEqual({ provider: "steam" });
-    expect(
-      oauthProxyHeadersSchema.safeParse({
-        "x-api-key": "key",
-        "x-proxy-url": "https://example.com/path",
       }).success,
     ).toBe(true);
   });
@@ -199,11 +191,6 @@ describe("protocol utilities", () => {
     });
     expect(errorEnvelope("BAD_REQUEST", "Bad request", { traceId: "trace-1" })).toEqual({
       error: { code: "BAD_REQUEST", message: "Bad request", traceId: "trace-1" },
-    });
-    expect(oauthErrorEnvelope("invalid_request")).toEqual({ error: "invalid_request" });
-    expect(oauthErrorEnvelope("invalid_request", "missing field")).toEqual({
-      error: "invalid_request",
-      error_description: "missing field",
     });
   });
 });

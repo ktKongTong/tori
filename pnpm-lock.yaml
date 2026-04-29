@@ -41,7 +41,7 @@ catalogs:
       version: 3.0.260415-beta
     typescript:
       specifier: npm:@typescript/native-preview@latest
-      version: 7.0.0-dev.20260428.1
+      version: 7.0.0-dev.20260429.1
     uuid:
       specifier: ^14.0.0
       version: 14.0.0
@@ -324,6 +324,19 @@ importers:
       vite-plus:
         specifier: 'catalog:'
         version: 0.1.20(@types/node@25.6.0)(@typescript/native-preview@7.0.0-dev.20260428.1)(esbuild@0.27.3)(jiti@2.6.1)(vite@8.0.10(@types/node@25.6.0)(esbuild@0.27.3)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
+
+  packages/auth:
+    dependencies:
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/native-preview@7.0.0-dev.20260429.1'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.1.20(@types/node@25.6.0)(@typescript/native-preview@7.0.0-dev.20260429.1)(esbuild@0.27.3)(jiti@2.6.1)(vite@8.0.10(@types/node@25.6.0)(esbuild@0.27.3)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
 
   packages/core:
     dependencies:
