@@ -2,35 +2,31 @@ packages:
   - apps/*
   - packages/*
 
-overrides:
-  vite: "catalog:"
-  vitest: "catalog:"
-
 catalog:
-  "babel-plugin-react-compiler": "1.0.0"
   "@rolldown/plugin-babel": "0.2.3"
   "@types/bun": 1.3.13
   "@types/deno": 2.5.0
   "@types/node": ^24
+  "@typescript/native-preview": "npm:@typescript/native-preview@latest"
   "@vitejs/plugin-react": "6.0.1"
   "@voidzero-dev/vite-plus-core": latest
+  "babel-plugin-react-compiler": "1.0.0"
   better-result: "^2.8.2"
+  defu: ^6.1.7
+  microdiff: ^1.5.0
   nitro: latest
+  react-router-hono-server: 2.26.0
   typescript: npm:@typescript/native-preview@latest
+  uuid: ^14.0.0
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
+  yn: ^5.1.0
   zod: "^4.3.6"
-  react-router-hono-server: 2.26.0
 catalogMode: prefer
 catalogs:
   better-auth:
     better-auth: 1.6.8
-
-  icons:
-    "@phosphor-icons/react": "^2.1.10"
-    "@remixicon/react": "^4.9.0"
-    "@tabler/icons-react": "^3.41.1"
 
   drizzle:
     drizzle-kit: 1.0.0-beta.22
@@ -42,6 +38,11 @@ catalogs:
     "@hono/vite-dev-server": "0.25.3"
     hono: "^4.12.15"
     hono-openapi: 1.3.0
+
+  icons:
+    "@phosphor-icons/react": "^2.1.10"
+    "@remixicon/react": "^4.9.0"
+    "@tabler/icons-react": "^3.41.1"
 
   react:
     "@types/react": "^19.2.14"
@@ -68,6 +69,10 @@ catalogs:
     "@cloudflare/vite-plugin": "^1.34.0"
     "@cloudflare/workers-types": "^4.20260426.1"
     "wrangler": "4.86.0"
+
+overrides:
+  vite: "catalog:"
+  vitest: "catalog:"
 
 patchedDependencies:
   srvx@0.11.15: patches/srvx@0.11.15.patch

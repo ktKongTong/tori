@@ -6,7 +6,7 @@ export default defineConfig({
     dts: {
       tsgo: true,
     },
-    exports: false,
+    exports: true,
   },
   lint: {
     options: {

@@ -11,7 +11,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/core/package.json ./packages/core/package.json
 COPY packages/utils/package.json ./packages/utils/package.json
+COPY packages/api-kit/package.json ./packages/api-kit/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM ${NODE_IMAGE} AS builder
@@ -21,7 +23,9 @@ ARG RUNTIME=node
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
+COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=deps /app/packages/utils/node_modules ./packages/utils/node_modules
+COPY --from=deps /app/packages/api-kit/node_modules ./packages/api-kit/node_modules
 COPY . .
 RUN case "$RUNTIME" in \
     node) pnpm --filter web build ;; \

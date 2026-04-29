@@ -1,27 +1,16 @@
 {
-  "name": "utils",
+  "name": "@repo/utils",
   "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
-  "homepage": "https://github.com/author/library#readme",
-  "bugs": {
-    "url": "https://github.com/author/library/issues"
-  },
-  "license": "MIT",
-  "author": "Author Name <author.name@mail.com>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/author/library.git"
-  },
-  "files": [
-    "dist"
-  ],
+  "private": true,
   "type": "module",
   "exports": {
-    ".": "./dist/index.mjs",
+    "./crypto/*": "./dist/crypto/*.mjs",
+    "./encoding/*": "./dist/encoding/*.mjs",
+    "./name/*": "./dist/name/*.mjs",
+    "./protocol/*": "./dist/protocol/*.mjs",
+    "./schema/*": "./dist/schema/*.mjs",
+    "./*": "./dist/common/*.mjs",
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "vp pack",
@@ -30,11 +19,17 @@
     "check": "vp check",
     "prepublishOnly": "vp run build"
   },
+  "dependencies": {
+    "better-result": "catalog:",
+    "defu": "catalog:",
+    "microdiff": "catalog:",
+    "unique-names-generator": "^4.7.1",
+    "uuid": "catalog:",
+    "yn": "catalog:",
+    "zod": "catalog:"
+  },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "@typescript/native-preview": "7.0.0-dev.20260328.1",
-    "bumpp": "^11.0.1",
-    "typescript": "^6.0.2",
-    "vite-plus": "^0.1.14"
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

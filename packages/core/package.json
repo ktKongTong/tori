@@ -1,0 +1,31 @@
+{
+  "name": "@repo/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./errors": "./dist/errors/index.mjs",
+    "./errors/base": "./dist/errors/base.mjs",
+    "./errors/common": "./dist/errors/common.mjs",
+    "./errors/database": "./dist/errors/database.mjs",
+    "./errors/error-codes": "./dist/errors/error-codes.mjs",
+    "./errors/validation": "./dist/errors/validation.mjs",
+    "./utils/trace": "./dist/utils/trace.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "better-result": "catalog:"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

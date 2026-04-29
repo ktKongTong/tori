@@ -14,7 +14,12 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@repo/core/errors/*": ["../core/src/errors/*.ts"],
+      "@repo/core/utils/*": ["../core/src/utils/*.ts"],
+      "@repo/core/*": ["../core/src/*"]
+    }
   },
   "include": ["src", "tests", "vite.config.ts"]
 }
