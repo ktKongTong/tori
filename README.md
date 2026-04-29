@@ -1,29 +1,3 @@
-# Vite+ Monorepo Starter
+## react router/tanstack-start + hono + multi-runtime template
 
-A starter for creating a Vite+ monorepo.
-
-## Development
-
-- Check everything is ready:
-
-```bash
-vp run ready
-```
-
-- Run the tests:
-
-```bash
-vp run -r test
-```
-
-- Build the monorepo:
-
-```bash
-vp run -r build
-```
-
-- Run the development server:
-
-```bash
-vp run dev
-```
+a template repo shows that how to dev/build/deploy a fullstack app using hono + tanstack-start/react-router that support different runime/enviroment(cloudflare worker/deno deploy/vercel/docker).

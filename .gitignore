@@ -37,3 +37,4 @@ tanstack
 .output
 .zed
 deno.jsonc
+.vercel

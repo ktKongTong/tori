@@ -12,8 +12,7 @@
     "build": "pnpm run -r build",
     "check": "vp check .",
     "check:write": "vp check --fix .",
-    "lint:write": "vp lint --fix .",
-    "deploy:deno": "deno task deploy:rr"
+    "lint:write": "vp lint --fix ."
   },
   "dependencies": {
     "srvx": "^0.11.15"

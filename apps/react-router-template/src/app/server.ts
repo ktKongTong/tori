@@ -2,7 +2,7 @@ import { Hono, type ExecutionContext } from "hono";
 import { createRequestHandler } from "react-router";
 import { createApp, type ServerOptions } from "@/api/app";
 
-type Runtime = "node" | "workerd" | "deno" | "bun";
+type Runtime = "node" | "workerd" | "deno" | "bun" | "vercel";
 
 type CreateRRAppOptions = {
   api: ServerOptions;
@@ -17,7 +17,7 @@ export const createRRApp = ({ api, runtime }: CreateRRAppOptions) => {
   // 在使用 react-router-hono-server（node/bun/deno) 时
   // 不需要这一部分，这部分会由其进行处理
   // 但对于其他 runtime 而言(workerd)，这是需要的
-  if (runtime === "workerd") {
+  if (runtime === "workerd" || runtime === "vercel") {
     // known issue
     // 直接使用 wrangler dev 无法正确解析 module
     // 必须借助 vite plugin
@@ -28,11 +28,22 @@ export const createRRApp = ({ api, runtime }: CreateRRAppOptions) => {
       () => import("virtual:react-router/server-build"),
       import.meta.env.MODE,
     );
-    app.all("*", (c) => {
-      return requestHandler(c.req.raw, {
-        cloudflare: { env: c.env, ctx: c.executionCtx as ExecutionContext },
-      });
-    });
+    switch (runtime) {
+      case "workerd":
+        app.all("*", (c) =>
+          requestHandler(c.req.raw, {
+            cloudflare: { env: c.env, ctx: c.executionCtx as ExecutionContext },
+          }),
+        );
+      case "vercel":
+        app.all("*", (c) =>
+          requestHandler(c.req.raw, {
+            runtime: "vercel",
+            env: process.env,
+          }),
+        );
+    }
   }
+
   return app;
 };

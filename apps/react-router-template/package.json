@@ -10,6 +10,7 @@
     "dev:node": "RUNTIME=node react-router dev",
     "dev:worker": "RUNTIME=workerd react-router dev",
     "build": "RUNTIME=node react-router build",
+    "build:vercel": "RUNTIME=vercel react-router build",
     "build:worker": "RUNTIME=workerd react-router build",
     "build:bun": "RUNTIME=bun react-router build",
     "build:deno": "RUNTIME=deno react-router build",

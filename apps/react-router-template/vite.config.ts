@@ -5,6 +5,7 @@ import babel from "@rolldown/plugin-babel";
 import { reactRouterHonoServer } from "react-router-hono-server/dev";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
+
 export default defineConfig(() => {
   const runtime = process.env?.RUNTIME ?? "node";
 
@@ -40,6 +41,19 @@ export default defineConfig(() => {
         presets: [reactCompilerPreset()],
       }),
     ],
+
+    environments:
+      runtime === "vercel"
+        ? {
+            ssr: {
+              build: {
+                rollupOptions: {
+                  input: "./entry/vercel.ts",
+                },
+              },
+            },
+          }
+        : undefined,
     resolve: {
       tsconfigPaths: true,
     },
