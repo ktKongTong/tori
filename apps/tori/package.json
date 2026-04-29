@@ -1,0 +1,52 @@
+{
+  "name": "tanstack-template",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "dev:worker": "RUNTIME=workerd vp dev",
+    "dev:deno": "RUNTIME=deno deno run --unstable-cron -A vite dev",
+    "dev:bun": "RUNTIME=bun bun --bun run vp dev",
+    "build": "vp build",
+    "build:bun": "RUNTIME=bun vp build",
+    "build:deno": "RUNTIME=deno vp build",
+    "build:worker": "RUNTIME=workerd vp build",
+    "preview": "vp preview",
+    "preview:bun": "RUNTIME=bun bun --bun run vp preview",
+    "preview:deno": "RUNTIME=deno deno run --unstable-cron -A vite preview",
+    "preview:worker": "RUNTIME=workerd vp preview",
+    "deploy:worker": "pnpm run build:worker && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "typecheck": "wrangler types && tsgo --noEmit"
+  },
+  "dependencies": {
+    "@repo/ui": "workspace:*",
+    "@tabler/icons-react": "catalog:icons",
+    "@tanstack/react-router": "catalog:tanstack-start",
+    "@tanstack/react-start": "catalog:tanstack-start",
+    "@tanstack/router-plugin": "catalog:tanstack-start",
+    "hono": "catalog:hono",
+    "nitro": "catalog:",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "catalog:worker",
+    "@cloudflare/workers-types": "catalog:worker",
+    "@rolldown/plugin-babel": "catalog:",
+    "@tailwindcss/vite": "catalog:tailwindcss",
+    "@types/bun": "catalog:",
+    "@types/deno": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "@vitejs/plugin-react": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "tailwindcss": "catalog:tailwindcss",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:worker"
+  }
+}

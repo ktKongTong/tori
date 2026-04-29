@@ -1,6 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "base-lyra",
+  "style": "base-sera",
   "rsc": false,
   "tsx": true,
   "tailwind": {
@@ -9,7 +9,7 @@
     "baseColor": "neutral",
     "cssVariables": true
   },
-  "iconLibrary": "phosphor",
+  "iconLibrary": "tabler",
   "aliases": {
     "components": "@/components",
     "hooks": "@/hooks",
