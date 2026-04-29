@@ -7,7 +7,6 @@
     "./errors": "./dist/errors/index.mjs",
     "./errors/base": "./dist/errors/base.mjs",
     "./errors/common": "./dist/errors/common.mjs",
-    "./errors/database": "./dist/errors/database.mjs",
     "./errors/error-codes": "./dist/errors/error-codes.mjs",
     "./errors/validation": "./dist/errors/validation.mjs",
     "./utils/trace": "./dist/utils/trace.mjs",

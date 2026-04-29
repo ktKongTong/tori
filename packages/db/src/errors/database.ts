@@ -1,5 +1,5 @@
-import { createAppError, type AppError } from "./base.ts";
-import { ErrorCode, type ErrorCodeValue } from "./error-codes.ts";
+import { createAppError, type AppError } from "@repo/core/errors/base";
+import { ErrorCode, type ErrorCodeValue } from "@repo/core/errors/error-codes";
 
 export type DatabaseCause = {
   code?: string;

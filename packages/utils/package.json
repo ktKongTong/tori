@@ -7,7 +7,6 @@
     "./crypto/*": "./dist/crypto/*.mjs",
     "./encoding/*": "./dist/encoding/*.mjs",
     "./name/*": "./dist/name/*.mjs",
-    "./protocol/*": "./dist/protocol/*.mjs",
     "./schema/*": "./dist/schema/*.mjs",
     "./*": "./dist/common/*.mjs",
     "./package.json": "./package.json"

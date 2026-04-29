@@ -4,8 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./oauth/envelope": "./dist/envelope.mjs",
-    "./oauth/schema": "./dist/schema.mjs",
+    "./access-control": "./dist/access-control.mjs",
+    "./client": "./dist/client/index.mjs",
+    "./client/react": "./dist/client/react.mjs",
+    "./oauth/envelope": "./dist/oauth/envelope.mjs",
+    "./oauth/schema": "./dist/oauth/schema.mjs",
+    "./server": "./dist/server/index.mjs",
+    "./server/config": "./dist/server/config.mjs",
+    "./server/factory": "./dist/server/factory.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -16,6 +22,10 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
+    "@better-auth/api-key": "catalog:",
+    "@better-auth/passkey": "catalog:",
+    "@simplewebauthn/server": "catalog:",
+    "better-auth": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

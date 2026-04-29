@@ -1,8 +1,8 @@
 import { isAppError, type AppError } from "@repo/core/errors/base";
 import { ErrorCode } from "@repo/core/errors/error-codes";
 import { ValidationError } from "@repo/core/errors/validation";
-import { errorEnvelope } from "@repo/utils/protocol/envelope";
-import { isJsonObject, isJsonValue } from "@repo/utils/protocol/json";
+import { errorEnvelope } from "@repo/protocol/http/envelope";
+import { isJsonObject, isJsonValue } from "@repo/protocol/json";
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";

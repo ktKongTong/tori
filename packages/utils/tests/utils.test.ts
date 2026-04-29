@@ -21,14 +21,11 @@ import {
 import { decryptAesGcmFromBase64, encryptAesGcmToBase64 } from "../src/crypto/aes-gcm.ts";
 import { cronSchema } from "../src/schema/cron.ts";
 import { dateToIsoDatetime } from "../src/schema/date.ts";
-import { errorResponseSchema, rateLimitErrorResponseSchema } from "../src/schema/http.ts";
 import { pageCodec } from "../src/schema/paging.ts";
 import { safeParseResult } from "../src/schema/result.ts";
 import { z } from "zod";
 import { randomString, sha256Hash, stringHash } from "../src/encoding/hash.ts";
 import { generateName } from "../src/name/generate-name.ts";
-import { dataEnvelope, errorEnvelope } from "../src/protocol/envelope.ts";
-import { isJsonObject, isJsonValue, type JsonRecord } from "../src/protocol/json.ts";
 
 const randomCharset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
 
@@ -139,20 +136,6 @@ describe("schema utilities", () => {
     expect(safeParseResult(schema, { id: "ok" }).unwrap()).toEqual({ id: "ok" });
     expect(safeParseResult(schema, { id: 1 }).isErr()).toBe(true);
   });
-
-  it("validates shared HTTP schemas", () => {
-    expect(errorResponseSchema.parse({ code: "BAD_REQUEST", message: "Bad request" })).toEqual({
-      code: "BAD_REQUEST",
-      message: "Bad request",
-    });
-    expect(
-      rateLimitErrorResponseSchema.safeParse({
-        code: "RATE_LIMITED",
-        message: "Rate limited",
-        detail: { retryAfter: 60 },
-      }).success,
-    ).toBe(true);
-  });
 });
 
 describe("crypto utilities", () => {
@@ -171,26 +154,5 @@ describe("name utilities", () => {
     expect(name).toContain("-");
     expect(name.split("-")).toHaveLength(2);
     randomSpy.mockRestore();
-  });
-});
-
-describe("protocol utilities", () => {
-  it("types json records and detects json objects", () => {
-    const value: JsonRecord = { ok: true, nested: { count: 1 } };
-    expect(isJsonObject(value)).toBe(true);
-    expect(isJsonValue(value)).toBe(true);
-    expect(isJsonObject(null)).toBe(false);
-    expect(isJsonObject([])).toBe(false);
-    expect(isJsonValue({ bad: () => undefined })).toBe(false);
-  });
-
-  it("creates response envelopes", () => {
-    expect(dataEnvelope({ id: "1" })).toEqual({ data: { id: "1" } });
-    expect(errorEnvelope("BAD_REQUEST", "Bad request")).toEqual({
-      error: { code: "BAD_REQUEST", message: "Bad request" },
-    });
-    expect(errorEnvelope("BAD_REQUEST", "Bad request", { traceId: "trace-1" })).toEqual({
-      error: { code: "BAD_REQUEST", message: "Bad request", traceId: "trace-1" },
-    });
   });
 });

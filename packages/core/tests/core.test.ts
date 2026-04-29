@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ConflictError, EnvError, RateLimitError } from "../src/errors/common.ts";
-import { toDatabaseError } from "../src/errors/database.ts";
 import { ErrorCode } from "../src/errors/error-codes.ts";
 import {
   createCorrelationId,
@@ -29,17 +28,6 @@ describe("core errors", () => {
     const error = RateLimitError(30);
     expect(error.detail).toEqual({ retryAfter: 30 });
     expect(error.retryable).toBe(true);
-  });
-
-  it("maps database causes to safe application errors", () => {
-    expect(toDatabaseError({ code: "23505" })).toMatchObject({
-      errorCode: ErrorCode.DB_UNIQUE_VIOLATION,
-      httpStatus: 409,
-    });
-    expect(toDatabaseError({ code: "99999" })).toMatchObject({
-      errorCode: ErrorCode.DB_ERROR,
-      httpStatus: 500,
-    });
   });
 });
 

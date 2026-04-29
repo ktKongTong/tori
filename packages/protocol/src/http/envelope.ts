@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from "./json.ts";
+import type { JsonObject, JsonValue } from "../json/index.ts";
 
 export type ErrorEnvelope<TCode extends string = string, TDetail extends JsonValue = JsonValue> = {
   code: TCode;
