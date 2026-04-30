@@ -1,0 +1,39 @@
+{
+  "name": "@repo/observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./logging": "./dist/logging/index.mjs",
+    "./logging/execution": "./dist/logging/execution.mjs",
+    "./logging/event": "./dist/logging/event.mjs",
+    "./logging/loglayer": "./dist/logging/loglayer.mjs",
+    "./logging/sinks": "./dist/logging/sinks/index.mjs",
+    "./logging/sinks/archive": "./dist/logging/sinks/archive.mjs",
+    "./logging/sinks/store": "./dist/logging/sinks/store.mjs",
+    "./metrics": "./dist/metrics/index.mjs",
+    "./tracing": "./dist/tracing/index.mjs",
+    "./package.json": "./package.json",
+    "./observe-context": "./dist/context/index.mjs",
+    "./context": "./dist/context/index.mjs"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@loglayer/transport": "^3.0.2",
+    "@loglayer/transport-pino": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "loglayer": "catalog:",
+    "pino": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

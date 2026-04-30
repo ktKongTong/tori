@@ -15,6 +15,7 @@ COPY packages/core/package.json ./packages/core/package.json
 COPY packages/utils/package.json ./packages/utils/package.json
 COPY packages/api-kit/package.json ./packages/api-kit/package.json
 COPY packages/protocol/package.json ./packages/protocol/package.json
+COPY packages/observability/package.json ./packages/observability/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/db/package.json ./packages/db/package.json
 RUN pnpm install --frozen-lockfile
@@ -30,6 +31,7 @@ COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=deps /app/packages/utils/node_modules ./packages/utils/node_modules
 COPY --from=deps /app/packages/api-kit/node_modules ./packages/api-kit/node_modules
 COPY --from=deps /app/packages/protocol/node_modules ./packages/protocol/node_modules
+COPY --from=deps /app/packages/observability/node_modules ./packages/observability/node_modules
 COPY --from=deps /app/packages/auth/node_modules ./packages/auth/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY . .
