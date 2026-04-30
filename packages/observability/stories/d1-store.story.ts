@@ -1,5 +1,5 @@
 import type { ExecutionLogChunk, ExecutionLogChunkQuery } from "../src/logging/event.ts";
-import type { ExecutionLogStoreAdapter } from "./queue-handler.story.ts";
+import type { ExecutionLogStore } from "../src/logging/sinks/store.ts";
 
 type D1DatabaseLike = {
   prepare(sql: string): D1PreparedStatementLike;
@@ -23,7 +23,7 @@ type ExecutionLogChunkRow = {
   body: string;
 };
 
-export function createD1ExecutionLogStore(db: D1DatabaseLike): ExecutionLogStoreAdapter {
+export function createD1ExecutionLogStore(db: D1DatabaseLike): ExecutionLogStore {
   return {
     async appendChunk(chunk) {
       await db

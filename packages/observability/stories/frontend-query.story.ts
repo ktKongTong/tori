@@ -1,12 +1,12 @@
 import type { ExecutionLogChunk, ExecutionLogEvent, LogLevel } from "../src/logging/event.ts";
-import type { ExecutionLogStoreAdapter } from "./queue-handler.story.ts";
+import type { ExecutionLogStore } from "../src/logging/sinks/store.ts";
 
 type RequestLike = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
 };
 
-export async function getExecutionLogs(request: RequestLike, store: ExecutionLogStoreAdapter) {
+export async function getExecutionLogs(request: RequestLike, store: ExecutionLogStore) {
   const executionId = request.params.executionId;
   const entryId = request.query.entryId;
   const level = request.query.level as LogLevel | undefined;

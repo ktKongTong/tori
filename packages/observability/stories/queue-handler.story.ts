@@ -1,20 +1,15 @@
-import { createQueueObserver } from "../src/context/queue.ts";
+import { createTaskEnvelope, taskEntryId, type TypedTaskEnvelope } from "@repo/task";
+import { createTaskQueueObserver } from "../src/context/queue.ts";
 import { createPinoTransport } from "../src/logging/loglayer.ts";
-import { createExecutionLogStoreTransport } from "../src/logging/sinks/store.ts";
-import type {
-  ExecutionLogChunk,
-  ExecutionLogChunkQuery,
-  ExecutionLogChunkQueryResult,
-} from "../src/logging/event.ts";
+import {
+  createExecutionLogStoreTransport,
+  type ExecutionLogStore,
+} from "../src/logging/sinks/store.ts";
 
 type QueueMessage = {
   id: string;
   attempts: number;
-  body: {
-    executionId: string;
-    steamAccountId: string;
-    partition: string;
-  };
+  task: TypedTaskEnvelope<InventorySyncTaskPayload>;
 };
 
 type WorkerExecutionContext = {
@@ -22,7 +17,7 @@ type WorkerExecutionContext = {
 };
 
 type Env = {
-  executionLogStore: ExecutionLogStoreAdapter;
+  executionLogStore: ExecutionLogStore;
 };
 
 export function createInventorySyncObserver(env: Env) {
@@ -33,16 +28,8 @@ export function createInventorySyncObserver(env: Env) {
     flushIntervalMs: 3000,
   });
 
-  return createQueueObserver<QueueMessage>({
+  return createTaskQueueObserver<QueueMessage>({
     transports: [createPinoTransport(), storeTransport],
-    executionId: (message) => message.body.executionId,
-    entry: (message) => ({
-      entryId: message.id,
-      kind: "queue",
-      attempt: message.attempts,
-      partition: message.body.partition,
-      messageId: message.id,
-    }),
     scope: {
       service: "steam-bot",
       module: "inventory-worker",
@@ -50,13 +37,13 @@ export function createInventorySyncObserver(env: Env) {
     },
     subject: (message) => ({
       type: "steam-account",
-      id: message.body.steamAccountId,
+      id: message.task.payload.steamAccountId,
     }),
     attrs: (message) => ({
-      partition: message.body.partition,
-      steamAccountId: message.body.steamAccountId,
+      partition: message.task.partition?.key,
+      steamAccountId: message.task.payload.steamAccountId,
     }),
-    flush: (message) => storeTransport.flushEntry(message.body.executionId, message.id),
+    flush: (message) => storeTransport.flushEntry(message.task.taskId, taskEntryId(message.task)),
   });
 }
 
@@ -68,7 +55,7 @@ export async function queueHandler(message: QueueMessage, env: Env, ctx: WorkerE
 
     const inventory = await observe.step("fetch-steam-inventory", async (step) => {
       step.log.info("calling steam inventory api");
-      return fetchSteamInventory(message.body.steamAccountId);
+      return fetchSteamInventory(message.task.payload.steamAccountId);
     });
 
     await observe.step("persist-inventory", async (step) => {
@@ -79,10 +66,28 @@ export async function queueHandler(message: QueueMessage, env: Env, ctx: WorkerE
   });
 }
 
-export type ExecutionLogStoreAdapter = {
-  appendChunk(chunk: ExecutionLogChunk): void | Promise<void>;
-  queryChunks(input: ExecutionLogChunkQuery): Promise<ExecutionLogChunkQueryResult>;
+export type InventorySyncTaskPayload = {
+  steamAccountId: string;
 };
+
+export function createInventorySyncTask(input: {
+  taskId: string;
+  steamAccountId: string;
+  partition: string;
+  createdAt?: Date;
+}) {
+  return createTaskEnvelope({
+    taskId: input.taskId,
+    taskType: "inventory.sync",
+    payload: {
+      steamAccountId: input.steamAccountId,
+    },
+    createdAt: input.createdAt,
+    partition: {
+      key: input.partition,
+    },
+  });
+}
 
 async function fetchSteamInventory(steamAccountId: string) {
   return [{ id: `${steamAccountId}:item-1` }, { id: `${steamAccountId}:item-2` }];

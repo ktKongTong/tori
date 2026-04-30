@@ -1,7 +1,7 @@
 import { createCronObserver } from "../src/context/cron.ts";
 import { createPinoTransport } from "../src/logging/loglayer.ts";
 import { createExecutionLogStoreTransport } from "../src/logging/sinks/store.ts";
-import type { ExecutionLogStoreAdapter } from "./queue-handler.story.ts";
+import type { ExecutionLogStore } from "../src/logging/sinks/store.ts";
 
 type ScheduledEvent = {
   cron: string;
@@ -13,7 +13,7 @@ type WorkerExecutionContext = {
 };
 
 type Env = {
-  executionLogStore: ExecutionLogStoreAdapter;
+  executionLogStore: ExecutionLogStore;
 };
 
 export function createDailyCleanupObserver(env: Env) {

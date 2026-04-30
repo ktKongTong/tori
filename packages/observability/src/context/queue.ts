@@ -1,3 +1,4 @@
+import { taskEntryId, type TypedTaskEnvelope } from "@repo/task";
 import type { LogAttrs, LogScope, LogSubject } from "../logging/event.ts";
 import type { StartEntryInput } from "../logging/execution.ts";
 import { createExecutionLogLayer } from "../logging/loglayer.ts";
@@ -32,6 +33,18 @@ export type QueueObserver<TMessage extends QueueObserveMessage> = {
   ): Promise<T>;
 };
 
+export type TaskQueueMessage<TPayload = unknown> = QueueObserveMessage & {
+  task: TypedTaskEnvelope<TPayload>;
+};
+
+export type TaskQueueObserveConfig<TMessage extends TaskQueueMessage> = Omit<
+  QueueObserveConfig<TMessage>,
+  "executionId" | "entry" | "attrs"
+> & {
+  attrs?: LogAttrs | ((message: TMessage) => LogAttrs);
+  entryKind?: string;
+};
+
 export function createQueueObserver<TMessage extends QueueObserveMessage>(
   config: QueueObserveConfig<TMessage>,
 ): QueueObserver<TMessage> {
@@ -57,6 +70,30 @@ export function createQueueObserver<TMessage extends QueueObserveMessage>(
       }
     },
   };
+}
+
+export function createTaskQueueObserver<TMessage extends TaskQueueMessage>(
+  config: TaskQueueObserveConfig<TMessage>,
+): QueueObserver<TMessage> {
+  return createQueueObserver({
+    ...config,
+    executionId: (message) => message.task.taskId,
+    entry: (message) => ({
+      entryId: taskEntryId(message.task),
+      kind: config.entryKind ?? "queue",
+      attempt: message.attempts,
+      partition: message.task.partition?.key,
+      batchId: message.task.taskType,
+      messageId: message.id,
+    }),
+    attrs: (message) => ({
+      taskId: message.task.taskId,
+      taskType: message.task.taskType,
+      taskPartition: message.task.partition?.key,
+      taskTraceId: message.task.traceId,
+      ...(typeof config.attrs === "function" ? config.attrs(message) : config.attrs),
+    }),
+  });
 }
 
 function defaultQueueEntry(message: QueueObserveMessage): StartEntryInput {

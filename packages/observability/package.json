@@ -29,10 +29,12 @@
     "@loglayer/transport": "^3.0.2",
     "@loglayer/transport-pino": "catalog:",
     "@opentelemetry/api": "catalog:",
+    "@repo/task": "workspace:*",
     "loglayer": "catalog:",
     "pino": "catalog:"
   },
   "devDependencies": {
+    "@repo/storage": "workspace:*",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }

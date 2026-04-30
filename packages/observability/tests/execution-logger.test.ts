@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vite-plus/test";
+import { createTaskEnvelope, taskEntryId } from "@repo/task";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type {
   ExecutionLogChunk,
   ExecutionLogChunkQuery,
   ExecutionLogChunkQueryResult,
 } from "../src/logging/event.ts";
+import { createTaskQueueObserver } from "../src/context/queue.ts";
 import { createExecutionLogger } from "../src/logging/execution.ts";
 import { createExecutionLogLayer } from "../src/logging/loglayer.ts";
 import { createArchiveLogTransport } from "../src/logging/sinks/archive.ts";
@@ -206,5 +208,46 @@ it("exposes a unified observe context for business code", async () => {
   ]);
   expect(result.events.find((event) => event.message === "business started")?.attrs).toMatchObject({
     partition: "a",
+  });
+});
+
+it("accepts task envelopes and raw execution context", async () => {
+  const store = createFakeExecutionLogStore();
+  const transport = createExecutionLogStoreTransport({ store });
+  const waitUntil = vi.fn();
+  const observer = createTaskQueueObserver({
+    transports: [transport],
+    scope: { service: "test", module: "queue" },
+    subject: (message) => ({ type: "task", id: message.task.taskId }),
+    flush: (message) => transport.flushEntry(message.task.taskId, taskEntryId(message.task)),
+  });
+  const task = createTaskEnvelope({
+    taskId: "task-queue-1",
+    taskType: "queue.process",
+    payload: { accountId: "acct-1" },
+    createdAt: new Date("2026-01-02T03:04:05.000Z"),
+    partition: { key: "part-a" },
+  });
+
+  await observer.run(
+    {
+      id: "message-1",
+      attempts: 2,
+      task,
+    },
+    { waitUntil },
+    async (observe) => {
+      observe.log.info("task queue started");
+    },
+  );
+
+  expect(waitUntil).toHaveBeenCalledTimes(1);
+
+  const result = await transport.query({ executionId: "task-queue-1" });
+  expect(
+    result.events.find((event) => event.message === "task queue started")?.attrs,
+  ).toMatchObject({
+    taskType: "queue.process",
+    taskPartition: "part-a",
   });
 });
