@@ -12,6 +12,7 @@
     "./server": "./dist/server/index.mjs",
     "./server/config": "./dist/server/config.mjs",
     "./server/factory": "./dist/server/factory.mjs",
+    "./server/session": "./dist/server/session.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {

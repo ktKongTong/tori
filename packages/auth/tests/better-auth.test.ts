@@ -3,6 +3,7 @@ import { adminRole, authStatement, hasRole, userRole } from "../src/access-contr
 import { createAppAuthClient } from "../src/client/react.ts";
 import { baseAuthConfig } from "../src/server/config.ts";
 import { createAuthOptions } from "../src/server/factory.ts";
+import { createAuthSessionResolver, resolveAuthSession } from "../src/server/session.ts";
 
 describe("better-auth foundations", () => {
   it("defines stable access-control roles", () => {
@@ -37,5 +38,22 @@ describe("better-auth foundations", () => {
   it("creates a typed react auth client", () => {
     const client = createAppAuthClient({ baseURL: "http://localhost:3000" });
     expect(typeof client).toBe("function");
+  });
+
+  it("adapts Better Auth session lookups behind a stable resolver", async () => {
+    const auth = {
+      api: {
+        async getSession(input: { headers: Headers }) {
+          return { token: input.headers.get("authorization") };
+        },
+      },
+    };
+    const resolver = createAuthSessionResolver(auth);
+
+    await expect(
+      resolveAuthSession(resolver, {
+        headers: new Headers({ authorization: "Bearer token" }),
+      }),
+    ).resolves.toEqual({ token: "Bearer token" });
   });
 });

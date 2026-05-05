@@ -6,7 +6,9 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./envelope": "./dist/envelope.mjs",
+    "./registry": "./dist/registry.mjs",
     "./retry": "./dist/retry.mjs",
+    "./runtime": "./dist/runtime.mjs",
     "./schema": "./dist/schema.mjs",
     "./package.json": "./package.json"
   },

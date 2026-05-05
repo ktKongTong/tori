@@ -13,6 +13,7 @@
     "./logging/sinks/archive": "./dist/logging/sinks/archive.mjs",
     "./logging/sinks/store": "./dist/logging/sinks/store.mjs",
     "./metrics": "./dist/metrics/index.mjs",
+    "./runtime": "./dist/runtime.mjs",
     "./tracing": "./dist/tracing/index.mjs",
     "./package.json": "./package.json",
     "./observe-context": "./dist/context/index.mjs",
