@@ -35,7 +35,30 @@ export default defineConfig(() => {
   return {
     plugins: [
       ...plugins,
-      tanstackStart(),
+      tanstackStart({
+        prerender: {
+          enabled: false,
+          filter: () => false,
+        },
+        pages: [
+          {
+            path: "/",
+            prerender: {
+              enabled: false,
+            },
+          },
+        ],
+        spa: {
+          enabled: true,
+          prerender: {
+            enabled: false,
+          },
+        },
+        router: {
+          routesDirectory: "../app/routes",
+          generatedRouteTree: "../app/routeTree.gen.ts",
+        },
+      }),
       tailwindcss(),
       viteReact(),
       babel({

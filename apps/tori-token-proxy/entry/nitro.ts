@@ -1,16 +1,14 @@
 import { Hono } from "hono";
 import { fetchViteEnv } from "nitro/vite/runtime";
-import { api } from "@/api";
+import { isApiRequestPath } from "../src/web-app.ts";
 
 const _app = new Hono();
-
-_app.route("/api", api);
 
 function shouldHandleSSR(request: Request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
-  if (pathname === "/api" || pathname.startsWith("/api/")) {
+  if (isApiRequestPath(pathname)) {
     return false;
   }
 

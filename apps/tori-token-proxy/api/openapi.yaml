@@ -1,0 +1,403 @@
+openapi: "3.1.0"
+info:
+  title: token-proxy
+  description: OAuth 2.0 Device Flow credential proxy with encrypted token vault
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: token-proxy }
+                  version: { type: string, example: 0.1.0 }
+
+  /oauth/device/authorize:
+    post:
+      summary: Begin device authorization (RFC 8628)
+      operationId: deviceAuthorize
+      security:
+        - AdminKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceAuthorizeRequest"
+      responses:
+        "200":
+          description: Device authorization started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceAuthorizeResponse"
+        "400":
+          $ref: "#/components/responses/OAuthError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /oauth/authorize:
+    get:
+      summary: Begin authorization code flow (RFC 6749)
+      operationId: authorize
+      security:
+        - AdminKey: []
+      parameters:
+        - name: provider
+          in: query
+          required: true
+          schema: { type: string }
+        - name: redirect_uri
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+      responses:
+        "302":
+          description: Redirect to provider's auth URL
+        "400":
+          $ref: "#/components/responses/OAuthError"
+
+  /oauth/callback:
+    get:
+      summary: OAuth redirect callback
+      operationId: oauthCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "302":
+          description: Redirect back with authorization code
+        "200":
+          description: Authorization code (when no redirect_uri)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string }
+
+  /oauth/token:
+    post:
+      summary: Token endpoint (RFC 6749)
+      operationId: token
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: OAuth error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+              examples:
+                pending:
+                  value:
+                    error: authorization_pending
+                    error_description: user has not yet completed authorization
+                expired:
+                  value:
+                    error: expired_token
+                    error_description: device code expired
+                denied:
+                  value:
+                    error: access_denied
+                    error_description: auth denied by user
+
+  /oauth/revoke:
+    post:
+      summary: Revoke token (RFC 7009)
+      operationId: revokeToken
+      security:
+        - AdminKey: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Token revoked (always 200 per RFC 7009)
+
+  /oauth/introspect:
+    post:
+      summary: Introspect token (RFC 7662)
+      operationId: introspectToken
+      security:
+        - AdminKey: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Token info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntrospectResponse"
+
+  /oauth/providers:
+    get:
+      summary: List available providers
+      operationId: listProviders
+      security:
+        - AdminKey: []
+      responses:
+        "200":
+          description: Provider list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string, example: steam }
+                        flow: { type: string, enum: [poll, redirect, direct] }
+                        grant_type: { type: string }
+
+  /proxy/{provider}:
+    get:
+      summary: Proxy GET request to upstream
+      operationId: proxyGet
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderPath"
+        - $ref: "#/components/parameters/ProxyUrl"
+      responses:
+        "200":
+          description: Upstream response (raw passthrough)
+        "400":
+          $ref: "#/components/responses/OAuthError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "502":
+          description: Upstream error
+    post:
+      summary: Proxy POST request to upstream
+      operationId: proxyPost
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderPath"
+        - $ref: "#/components/parameters/ProxyUrl"
+      requestBody:
+        description: Request body passed through to upstream as-is
+        content:
+          "*/*":
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Upstream response (raw passthrough)
+
+  /account:
+    get:
+      summary: Get current connection info
+      operationId: getAccount
+      security:
+        - ApiKey: []
+      responses:
+        "200":
+          description: Account info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection_id: { type: string }
+                  provider: { type: string }
+                  provider_uid: { type: string }
+                  display_name: { type: string }
+                  status: { type: string }
+
+components:
+  securitySchemes:
+    AdminKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
+  parameters:
+    ProviderPath:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string }
+      description: Provider name (e.g. steam)
+    ProxyUrl:
+      name: X-PROXY-URL
+      in: header
+      required: true
+      schema: { type: string, format: uri }
+      description: Target upstream URL
+
+  schemas:
+    DeviceAuthorizeRequest:
+      type: object
+      required: [provider]
+      properties:
+        provider:
+          type: string
+          example: steam
+        scope:
+          type: string
+
+    DeviceAuthorizeResponse:
+      type: object
+      properties:
+        device_code:
+          type: string
+          example: dc_abc123
+        verification_uri:
+          type: string
+          example: "steam://qr/1/xxx"
+        expires_in:
+          type: integer
+          example: 300
+        interval:
+          type: integer
+          example: 5
+
+    TokenRequest:
+      type: object
+      required: [grant_type]
+      properties:
+        grant_type:
+          type: string
+          enum:
+            - "urn:ietf:params:oauth:grant-type:device_code"
+            - authorization_code
+        device_code:
+          type: string
+          description: Required for device_code grant
+        code:
+          type: string
+          description: Required for authorization_code grant
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: API key for proxy access (NOT the provider token)
+          example: ak_abc123
+        token_type:
+          type: string
+          example: Bearer
+        scope:
+          type: string
+          example: steam
+        provider:
+          type: string
+        provider_uid:
+          type: string
+        display_name:
+          type: string
+
+    IntrospectResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+        scope:
+          type: string
+        client_id:
+          type: string
+        token_type:
+          type: string
+        sub:
+          type: string
+          description: Provider user ID
+        username:
+          type: string
+        iat:
+          type: integer
+
+    OAuthError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - invalid_grant
+            - unsupported_grant_type
+            - authorization_pending
+            - expired_token
+            - access_denied
+            - server_error
+        error_description:
+          type: string
+
+  responses:
+    OAuthError:
+      description: OAuth error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OAuthError"
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OAuthError"
+    Forbidden:
+      description: Request not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OAuthError"
