@@ -11,7 +11,7 @@ import { encrypt } from "../src/crypto/index.ts";
 import { ProviderRegistry } from "../src/provider/registry.ts";
 import type { PollResult, Provider } from "../src/provider/types.ts";
 import type { AuthResult, AuthSessionState } from "../src/types.ts";
-import { MemoryRepository } from "./memory-repo.ts";
+import { MemoryRepository } from "../src/repository/memory.ts";
 
 const SECRET = "integration-test-secret-32chars!";
 const ADMIN_KEY = "int-test-admin";

@@ -4,7 +4,7 @@ import { ProviderRegistry } from "../src/provider/registry.ts";
 import type { PollResult, Provider } from "../src/provider/types.ts";
 import { ensureDefaultSystemTasks, runDueSystemTasks } from "../src/system-tasks/index.ts";
 import type { AuthResult, AuthSessionState } from "../src/types.ts";
-import { MemoryRepository } from "./memory-repo.ts";
+import { MemoryRepository } from "../src/repository/memory.ts";
 
 const SECRET = "system-task-secret-32chars!!!!";
 

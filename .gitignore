@@ -39,3 +39,5 @@ tanstack
 .zed
 deno.jsonc
 .vercel
+.env
+.env*

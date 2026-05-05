@@ -1,4 +1,4 @@
-import type { Repository } from "../src/repository/types.ts";
+import type { Repository } from "./types.ts";
 import type {
   AuthSessionState,
   Connection,
@@ -9,14 +9,14 @@ import type {
   SystemTaskDefinition,
   SystemTaskRun,
   TokenRefreshLog,
-} from "../src/types.ts";
+} from "../types.ts";
 
 function generateId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 18)}`;
 }
 
 /**
- * In-memory repository for testing.
+ * In-memory repository for local development and tests.
  */
 export class MemoryRepository implements Repository {
   connections = new Map<string, Connection & { accessTokenEnc: string; refreshTokenEnc: string }>();

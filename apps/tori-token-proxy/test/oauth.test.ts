@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createApp } from "../src/app.ts";
-import { MemoryRepository } from "./memory-repo.ts";
+import { MemoryRepository } from "../src/repository/memory.ts";
 
 const SECRET = "test-secret-must-be-32-chars!!!!";
 const ADMIN_KEY = "test-admin-key";

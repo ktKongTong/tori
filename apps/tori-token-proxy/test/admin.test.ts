@@ -3,7 +3,7 @@ import { createApp } from "../src/app.ts";
 import { ProviderRegistry } from "../src/provider/registry.ts";
 import type { PollResult, Provider } from "../src/provider/types.ts";
 import type { AuthResult, AuthSessionState } from "../src/types.ts";
-import { MemoryRepository } from "./memory-repo.ts";
+import { MemoryRepository } from "../src/repository/memory.ts";
 
 const SECRET = "admin-test-secret-32chars!!!!!";
 const ADMIN_KEY = "admin-test-key";

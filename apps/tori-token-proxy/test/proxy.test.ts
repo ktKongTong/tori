@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { createApp } from "../src/app.ts";
 import { encrypt } from "../src/crypto/index.ts";
-import { MemoryRepository } from "./memory-repo.ts";
+import { MemoryRepository } from "../src/repository/memory.ts";
 
 const SECRET = "test-secret-must-be-32-chars!!!!";
 const ADMIN_KEY = "test-admin-key";
