@@ -43,8 +43,12 @@ function LoginPage() {
       <div className="relative mx-auto flex min-h-svh w-full max-w-6xl items-center px-6 py-16">
         <div className="grid w-full gap-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
           <section className="space-y-6">
-            <p className="dashboard-kicker">Token Proxy</p>
-            <h1 className="dashboard-title">Admin Control Plane</h1>
+            <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+              Token Proxy
+            </p>
+            <h1 className="max-w-[12ch] font-serif text-[clamp(2.4rem,3vw+1rem,4.8rem)] leading-[0.96] tracking-[-0.04em] text-foreground">
+              Admin Control Plane
+            </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
               Sign in with the token-proxy admin key to inspect issued tokens, review request
               telemetry, reconnect Steam credentials, and revoke or scope credentials without
@@ -53,13 +57,17 @@ function LoginPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="border bg-card/80 px-5 py-5">
-                <p className="dashboard-kicker">Issued Credentials</p>
+                <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+                  Issued Credentials
+                </p>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   Review provider identity, status, scopes, and last-used metadata from one table.
                 </p>
               </div>
               <div className="border bg-card/80 px-5 py-5">
-                <p className="dashboard-kicker">Request Telemetry</p>
+                <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+                  Request Telemetry
+                </p>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   Validate which connection invoked which route group, with response codes and
                   failure details.

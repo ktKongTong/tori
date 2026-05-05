@@ -58,7 +58,9 @@ function RouteStateView({
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-5xl items-center px-6 py-16">
       <div className="w-full border bg-card px-6 py-5 shadow-sm">
-        <p className="dashboard-kicker">{message}</p>
+        <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+          {message}
+        </p>
         <h1 className="mt-4 text-2xl font-semibold text-foreground">{details}</h1>
         {stack ? (
           <pre className="mt-6 overflow-x-auto whitespace-pre-wrap border bg-muted/30 p-4 text-xs leading-6 text-muted-foreground">
