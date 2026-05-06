@@ -34,6 +34,7 @@
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
     "@repo/ui": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@tabler/icons-react": "catalog:icons",
     "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-router": "catalog:tanstack-start",

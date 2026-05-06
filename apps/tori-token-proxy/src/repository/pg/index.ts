@@ -1,5 +1,6 @@
 import { and, desc, eq, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { randomCode } from "@repo/utils/random";
 import type {
   AuthSessionState,
   Connection,
@@ -15,10 +16,7 @@ import type { Repository } from "../types.ts";
 import * as schema from "./schema.ts";
 
 function generateId(prefix: string): string {
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${prefix}_${rand}`;
+  return randomCode(prefix, 16);
 }
 
 function parseJsonRecord(value: string | null | undefined) {

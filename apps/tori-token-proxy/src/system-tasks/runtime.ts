@@ -2,16 +2,16 @@ import type { ProviderRegistry } from "../provider/registry.ts";
 import type { Repository } from "../repository/types.ts";
 import { ensureDefaultSystemTasks, runDueSystemTasks } from "./service.ts";
 
-interface SchedulerOptions {
+export interface SystemTaskSchedulerOptions {
   repo: Repository;
   registry: ProviderRegistry;
   secret: string;
   intervalMs?: number;
 }
 
-type SchedulerDeps = Omit<SchedulerOptions, "intervalMs">;
+export type SystemTaskSchedulerDeps = Omit<SystemTaskSchedulerOptions, "intervalMs">;
 
-export function createSystemTaskSchedulerTick({ repo, registry, secret }: SchedulerDeps) {
+export function createSystemTaskSchedulerTick({ repo, registry, secret }: SystemTaskSchedulerDeps) {
   let running = false;
 
   return async () => {
@@ -34,7 +34,7 @@ export function startSystemTaskScheduler({
   registry,
   secret,
   intervalMs = 60_000,
-}: SchedulerOptions) {
+}: SystemTaskSchedulerOptions) {
   const tick = createSystemTaskSchedulerTick({ repo, registry, secret });
 
   void tick();

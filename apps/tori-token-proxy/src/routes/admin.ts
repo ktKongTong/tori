@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { z } from "zod";
+import { randomCode } from "@repo/utils/random";
 import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_TTL_SEC,
@@ -769,8 +770,5 @@ export function adminRoutes(deps: AdminDeps) {
 }
 
 function generateSessionId(prefix: string) {
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${prefix}_${rand}`;
+  return randomCode(prefix, 16);
 }

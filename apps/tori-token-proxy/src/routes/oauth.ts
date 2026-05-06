@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { randomCode } from "@repo/utils/random";
 import { encrypt } from "../crypto/index.ts";
 import type { ProviderRegistry } from "../provider/registry.ts";
 import type { Repository } from "../repository/types.ts";
@@ -17,10 +18,7 @@ interface OAuthDeps {
 }
 
 function generateCode(prefix: string): string {
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${prefix}_${rand}`;
+  return randomCode(prefix, 16);
 }
 
 function oauthError(c: any, status: number, error: string, description: string) {

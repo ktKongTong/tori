@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { randomCode } from "@repo/utils/random";
 import {
   adminKeyAuth,
   adminSessionAuth,
@@ -103,8 +104,5 @@ export function createApp(deps: AppDeps) {
 }
 
 function generateAdminKey(): string {
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(24)))
-    .map((b: number) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `admin_${rand}`;
+  return randomCode("admin", 24);
 }
