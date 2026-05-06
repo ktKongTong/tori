@@ -1,8 +1,15 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 
+import { Toaster } from "@repo/ui/components/sonner";
+import { TooltipProvider } from "@repo/ui/components/tooltip";
 import appCss from "@repo/ui/globals.css?url";
+import { ModalProvider } from "@/lib/modal";
+import { createQueryClient } from "@/lib/query-client";
 
 export const Route = createRootRoute({
+  component: RootApp,
   head: () => ({
     meta: [
       {
@@ -13,7 +20,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "ToRi",
       },
     ],
     links: [
@@ -32,7 +39,22 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootApp() {
+  const [queryClient] = useState(() => createQueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ModalProvider>
+          <Outlet />
+          <Toaster />
+        </ModalProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>

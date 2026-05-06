@@ -1,0 +1,38 @@
+import { Button } from "@repo/ui/components/button";
+import { Navigate } from "@tanstack/react-router";
+
+import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { botInstanceColumns } from "./columns";
+import { CreateBotInstanceDialog } from "./dialogs";
+import { useSession } from "@/lib/auth-client";
+import { useModal } from "@/lib/modal";
+import { useDashboardBotInstancesQuery } from "@/features/bot-instances/query";
+
+export function BotInstancesPage() {
+  const modal = useModal();
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
+  const isAdmin = role.includes("admin");
+  const botInstancesQuery = useDashboardBotInstancesQuery();
+  const botInstancesData = botInstancesQuery.data;
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <DashboardActionBar>
+        <Button onClick={() => modal.open(<CreateBotInstanceDialog />)}>Create Bot Instance</Button>
+        <Button onClick={() => void botInstancesQuery.refetch()} variant="outline">
+          Refresh
+        </Button>
+      </DashboardActionBar>
+      <DashboardTable
+        columns={botInstanceColumns}
+        data={botInstancesData?.instances ?? []}
+        empty="No bot instances available."
+      />
+    </div>
+  );
+}

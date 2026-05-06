@@ -8,61 +8,364 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteRouteImport } from './routes/_app/route'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppTasksRouteImport } from './routes/_app/tasks'
+import { Route as AppPlaygroundRouteImport } from './routes/_app/playground'
+import { Route as AppBotInstancesRouteImport } from './routes/_app/bot-instances'
+import { Route as AppNotifyIndexRouteImport } from './routes/_app/notify/index'
+import { Route as AppIntegrationIndexRouteImport } from './routes/_app/integration/index'
+import { Route as AppBindingIndexRouteImport } from './routes/_app/binding/index'
+import { Route as AuthAuthSignUpRouteImport } from './routes/_auth/auth/sign-up'
+import { Route as AuthAuthSignInRouteImport } from './routes/_auth/auth/sign-in'
+import { Route as AppNotifyEventsRouteImport } from './routes/_app/notify/events'
+import { Route as AppNotifyEndpointsRouteImport } from './routes/_app/notify/endpoints'
+import { Route as AppIntegrationProxiesRouteImport } from './routes/_app/integration/proxies'
+import { Route as AppBindingClaimsRouteImport } from './routes/_app/binding/claims'
+import { Route as AppBindingChannelsRouteImport } from './routes/_app/binding/channels'
 
-const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppTasksRoute = AppTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPlaygroundRoute = AppPlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBotInstancesRoute = AppBotInstancesRouteImport.update({
+  id: '/bot-instances',
+  path: '/bot-instances',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppNotifyIndexRoute = AppNotifyIndexRouteImport.update({
+  id: '/notify/',
+  path: '/notify/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppIntegrationIndexRoute = AppIntegrationIndexRouteImport.update({
+  id: '/integration/',
+  path: '/integration/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBindingIndexRoute = AppBindingIndexRouteImport.update({
+  id: '/binding/',
+  path: '/binding/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AuthAuthSignUpRoute = AuthAuthSignUpRouteImport.update({
+  id: '/_auth/auth/sign-up',
+  path: '/auth/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthAuthSignInRoute = AuthAuthSignInRouteImport.update({
+  id: '/_auth/auth/sign-in',
+  path: '/auth/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppNotifyEventsRoute = AppNotifyEventsRouteImport.update({
+  id: '/notify/events',
+  path: '/notify/events',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppNotifyEndpointsRoute = AppNotifyEndpointsRouteImport.update({
+  id: '/notify/endpoints',
+  path: '/notify/endpoints',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppIntegrationProxiesRoute = AppIntegrationProxiesRouteImport.update({
+  id: '/integration/proxies',
+  path: '/integration/proxies',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBindingClaimsRoute = AppBindingClaimsRouteImport.update({
+  id: '/binding/claims',
+  path: '/binding/claims',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBindingChannelsRoute = AppBindingChannelsRouteImport.update({
+  id: '/binding/channels',
+  path: '/binding/channels',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
+  '/': typeof AppIndexRoute
+  '/bot-instances': typeof AppBotInstancesRoute
+  '/playground': typeof AppPlaygroundRoute
+  '/tasks': typeof AppTasksRoute
+  '/binding/channels': typeof AppBindingChannelsRoute
+  '/binding/claims': typeof AppBindingClaimsRoute
+  '/integration/proxies': typeof AppIntegrationProxiesRoute
+  '/notify/endpoints': typeof AppNotifyEndpointsRoute
+  '/notify/events': typeof AppNotifyEventsRoute
+  '/auth/sign-in': typeof AuthAuthSignInRoute
+  '/auth/sign-up': typeof AuthAuthSignUpRoute
+  '/binding/': typeof AppBindingIndexRoute
+  '/integration/': typeof AppIntegrationIndexRoute
+  '/notify/': typeof AppNotifyIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
+  '/bot-instances': typeof AppBotInstancesRoute
+  '/playground': typeof AppPlaygroundRoute
+  '/tasks': typeof AppTasksRoute
+  '/': typeof AppIndexRoute
+  '/binding/channels': typeof AppBindingChannelsRoute
+  '/binding/claims': typeof AppBindingClaimsRoute
+  '/integration/proxies': typeof AppIntegrationProxiesRoute
+  '/notify/endpoints': typeof AppNotifyEndpointsRoute
+  '/notify/events': typeof AppNotifyEventsRoute
+  '/auth/sign-in': typeof AuthAuthSignInRoute
+  '/auth/sign-up': typeof AuthAuthSignUpRoute
+  '/binding': typeof AppBindingIndexRoute
+  '/integration': typeof AppIntegrationIndexRoute
+  '/notify': typeof AppNotifyIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
+  __root__: typeof rootRouteImport
+  '/_app': typeof AppRouteRouteWithChildren
+  '/_app/bot-instances': typeof AppBotInstancesRoute
+  '/_app/playground': typeof AppPlaygroundRoute
+  '/_app/tasks': typeof AppTasksRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/binding/channels': typeof AppBindingChannelsRoute
+  '/_app/binding/claims': typeof AppBindingClaimsRoute
+  '/_app/integration/proxies': typeof AppIntegrationProxiesRoute
+  '/_app/notify/endpoints': typeof AppNotifyEndpointsRoute
+  '/_app/notify/events': typeof AppNotifyEventsRoute
+  '/_auth/auth/sign-in': typeof AuthAuthSignInRoute
+  '/_auth/auth/sign-up': typeof AuthAuthSignUpRoute
+  '/_app/binding/': typeof AppBindingIndexRoute
+  '/_app/integration/': typeof AppIntegrationIndexRoute
+  '/_app/notify/': typeof AppNotifyIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/";
-  id: "__root__" | "/";
-  fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/bot-instances'
+    | '/playground'
+    | '/tasks'
+    | '/binding/channels'
+    | '/binding/claims'
+    | '/integration/proxies'
+    | '/notify/endpoints'
+    | '/notify/events'
+    | '/auth/sign-in'
+    | '/auth/sign-up'
+    | '/binding/'
+    | '/integration/'
+    | '/notify/'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/bot-instances'
+    | '/playground'
+    | '/tasks'
+    | '/'
+    | '/binding/channels'
+    | '/binding/claims'
+    | '/integration/proxies'
+    | '/notify/endpoints'
+    | '/notify/events'
+    | '/auth/sign-in'
+    | '/auth/sign-up'
+    | '/binding'
+    | '/integration'
+    | '/notify'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/bot-instances'
+    | '/_app/playground'
+    | '/_app/tasks'
+    | '/_app/'
+    | '/_app/binding/channels'
+    | '/_app/binding/claims'
+    | '/_app/integration/proxies'
+    | '/_app/notify/endpoints'
+    | '/_app/notify/events'
+    | '/_auth/auth/sign-in'
+    | '/_auth/auth/sign-up'
+    | '/_app/binding/'
+    | '/_app/integration/'
+    | '/_app/notify/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+  AuthAuthSignInRoute: typeof AuthAuthSignInRoute
+  AuthAuthSignUpRoute: typeof AuthAuthSignUpRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/tasks': {
+      id: '/_app/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AppTasksRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/playground': {
+      id: '/_app/playground'
+      path: '/playground'
+      fullPath: '/playground'
+      preLoaderRoute: typeof AppPlaygroundRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/bot-instances': {
+      id: '/_app/bot-instances'
+      path: '/bot-instances'
+      fullPath: '/bot-instances'
+      preLoaderRoute: typeof AppBotInstancesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/notify/': {
+      id: '/_app/notify/'
+      path: '/notify'
+      fullPath: '/notify/'
+      preLoaderRoute: typeof AppNotifyIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/integration/': {
+      id: '/_app/integration/'
+      path: '/integration'
+      fullPath: '/integration/'
+      preLoaderRoute: typeof AppIntegrationIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/binding/': {
+      id: '/_app/binding/'
+      path: '/binding'
+      fullPath: '/binding/'
+      preLoaderRoute: typeof AppBindingIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_auth/auth/sign-up': {
+      id: '/_auth/auth/sign-up'
+      path: '/auth/sign-up'
+      fullPath: '/auth/sign-up'
+      preLoaderRoute: typeof AuthAuthSignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth/auth/sign-in': {
+      id: '/_auth/auth/sign-in'
+      path: '/auth/sign-in'
+      fullPath: '/auth/sign-in'
+      preLoaderRoute: typeof AuthAuthSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/notify/events': {
+      id: '/_app/notify/events'
+      path: '/notify/events'
+      fullPath: '/notify/events'
+      preLoaderRoute: typeof AppNotifyEventsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/notify/endpoints': {
+      id: '/_app/notify/endpoints'
+      path: '/notify/endpoints'
+      fullPath: '/notify/endpoints'
+      preLoaderRoute: typeof AppNotifyEndpointsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/integration/proxies': {
+      id: '/_app/integration/proxies'
+      path: '/integration/proxies'
+      fullPath: '/integration/proxies'
+      preLoaderRoute: typeof AppIntegrationProxiesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/binding/claims': {
+      id: '/_app/binding/claims'
+      path: '/binding/claims'
+      fullPath: '/binding/claims'
+      preLoaderRoute: typeof AppBindingClaimsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/binding/channels': {
+      id: '/_app/binding/channels'
+      path: '/binding/channels'
+      fullPath: '/binding/channels'
+      preLoaderRoute: typeof AppBindingChannelsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
+interface AppRouteRouteChildren {
+  AppBotInstancesRoute: typeof AppBotInstancesRoute
+  AppPlaygroundRoute: typeof AppPlaygroundRoute
+  AppTasksRoute: typeof AppTasksRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppBindingChannelsRoute: typeof AppBindingChannelsRoute
+  AppBindingClaimsRoute: typeof AppBindingClaimsRoute
+  AppIntegrationProxiesRoute: typeof AppIntegrationProxiesRoute
+  AppNotifyEndpointsRoute: typeof AppNotifyEndpointsRoute
+  AppNotifyEventsRoute: typeof AppNotifyEventsRoute
+  AppBindingIndexRoute: typeof AppBindingIndexRoute
+  AppIntegrationIndexRoute: typeof AppIntegrationIndexRoute
+  AppNotifyIndexRoute: typeof AppNotifyIndexRoute
+}
+
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppBotInstancesRoute: AppBotInstancesRoute,
+  AppPlaygroundRoute: AppPlaygroundRoute,
+  AppTasksRoute: AppTasksRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppBindingChannelsRoute: AppBindingChannelsRoute,
+  AppBindingClaimsRoute: AppBindingClaimsRoute,
+  AppIntegrationProxiesRoute: AppIntegrationProxiesRoute,
+  AppNotifyEndpointsRoute: AppNotifyEndpointsRoute,
+  AppNotifyEventsRoute: AppNotifyEventsRoute,
+  AppBindingIndexRoute: AppBindingIndexRoute,
+  AppIntegrationIndexRoute: AppIntegrationIndexRoute,
+  AppNotifyIndexRoute: AppNotifyIndexRoute,
+}
+
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-};
+  AppRouteRoute: AppRouteRouteWithChildren,
+  AuthAuthSignInRoute: AuthAuthSignInRoute,
+  AuthAuthSignUpRoute: AuthAuthSignUpRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { createStart } from "@tanstack/react-start";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }

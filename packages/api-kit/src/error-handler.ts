@@ -24,11 +24,19 @@ export type ErrorHandlerOptions = {
   getTraceId?: (context: Parameters<ErrorHandler>[1]) => string | undefined;
   logger?: ErrorLogger;
   exposeUnexpectedErrors?: boolean;
+  normalizeError?: (error: unknown) => unknown;
 };
 
 type BetterAuthLikeError = Error & {
   statusCode: number;
   body?: unknown;
+};
+
+type ErrorHttpShape = {
+  errorCode: string;
+  httpStatus: number;
+  message: string;
+  detail?: unknown;
 };
 
 function toStatusCode(status: number): ContentfulStatusCode {
@@ -49,6 +57,15 @@ function isBetterAuthLikeError(error: unknown): error is BetterAuthLikeError {
     error instanceof Error &&
     "statusCode" in error &&
     typeof (error as { statusCode?: unknown }).statusCode === "number"
+  );
+}
+
+function isErrorHttpShape(error: unknown): error is ErrorHttpShape {
+  return (
+    isRecord(error) &&
+    typeof error.errorCode === "string" &&
+    typeof error.httpStatus === "number" &&
+    typeof error.message === "string"
   );
 }
 
@@ -73,6 +90,15 @@ function appErrorResponse(error: AppError, traceId: string | undefined): ErrorRe
   );
 }
 
+function httpShapeErrorResponse(error: ErrorHttpShape, traceId: string | undefined): ErrorResponse {
+  return stripUndefined({
+    code: error.errorCode,
+    message: error.message,
+    traceId,
+    detail: isJsonValue(error.detail) ? error.detail : undefined,
+  });
+}
+
 function stripUndefined<T extends Record<string, unknown>>(value: T): T {
   for (const key of Object.keys(value)) {
     if (value[key] === undefined) delete value[key];
@@ -82,55 +108,64 @@ function stripUndefined<T extends Record<string, unknown>>(value: T): T {
 
 export function createErrorHandler(options: ErrorHandlerOptions = {}): ErrorHandler {
   return (error, context) => {
+    const normalizedError = options.normalizeError?.(error) ?? error;
     const traceId = options.getTraceId?.(context) ?? context.get("requestId");
 
-    if (isAppError(error)) {
-      logError(options.logger, error, error.httpStatus);
+    if (isAppError(normalizedError)) {
+      logError(options.logger, normalizedError, normalizedError.httpStatus);
       return context.json(
-        stripUndefined(appErrorResponse(error, traceId)),
-        toStatusCode(error.httpStatus),
+        stripUndefined(appErrorResponse(normalizedError, traceId)),
+        toStatusCode(normalizedError.httpStatus),
       );
     }
 
-    if (error instanceof ZodError) {
-      const validationError = ValidationError(error.issues);
-      logError(options.logger, error, validationError.httpStatus);
+    if (isErrorHttpShape(normalizedError)) {
+      logError(options.logger, normalizedError, normalizedError.httpStatus);
+      return context.json(
+        httpShapeErrorResponse(normalizedError, traceId),
+        toStatusCode(normalizedError.httpStatus),
+      );
+    }
+
+    if (normalizedError instanceof ZodError) {
+      const validationError = ValidationError(normalizedError.issues);
+      logError(options.logger, normalizedError, validationError.httpStatus);
       return context.json(stripUndefined(appErrorResponse(validationError, traceId)), 400);
     }
 
-    if (error instanceof HTTPException) {
-      logError(options.logger, error, error.status);
+    if (normalizedError instanceof HTTPException) {
+      logError(options.logger, normalizedError, normalizedError.status);
       return context.json(
-        unwrapErrorEnvelope(errorEnvelope(ErrorCode.UNKNOWN, error.message, { traceId })),
-        toStatusCode(error.status),
+        unwrapErrorEnvelope(errorEnvelope(ErrorCode.UNKNOWN, normalizedError.message, { traceId })),
+        toStatusCode(normalizedError.status),
       );
     }
 
-    if (isBetterAuthLikeError(error)) {
-      logError(options.logger, error, error.statusCode);
-      const rawBody = isRecord(error.body) ? error.body : {};
+    if (isBetterAuthLikeError(normalizedError)) {
+      logError(options.logger, normalizedError, normalizedError.statusCode);
+      const rawBody = isRecord(normalizedError.body) ? normalizedError.body : {};
       return context.json(
         unwrapErrorEnvelope(
           errorEnvelope(
             getStringField(rawBody, "code") ?? ErrorCode.UNKNOWN,
-            getStringField(rawBody, "message") ?? error.message,
+            getStringField(rawBody, "message") ?? normalizedError.message,
             {
               traceId,
               detail: isJsonValue(rawBody.detail) ? { value: rawBody.detail } : undefined,
             },
           ),
         ),
-        toStatusCode(error.statusCode),
+        toStatusCode(normalizedError.statusCode),
       );
     }
 
-    logError(options.logger, error, 500);
+    logError(options.logger, normalizedError, 500);
     return context.json(
       unwrapErrorEnvelope(
         errorEnvelope(
           ErrorCode.UNKNOWN,
-          options.exposeUnexpectedErrors && error instanceof Error
-            ? error.message
+          options.exposeUnexpectedErrors && normalizedError instanceof Error
+            ? normalizedError.message
             : "An unexpected error occurred",
           { traceId },
         ),

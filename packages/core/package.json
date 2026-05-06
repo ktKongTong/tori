@@ -20,6 +20,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
+    "@repo/utils": "workspace:*",
     "better-result": "catalog:"
   },
   "devDependencies": {

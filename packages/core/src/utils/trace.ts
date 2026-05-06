@@ -1,19 +1,14 @@
+import { randomCode } from "@repo/utils/random";
+
 export type Traceparent = {
   traceId: string;
   spanId: string;
   flags: string;
 };
 
-function randomHex(byteLength: number): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export const createTraceId = (): string => randomHex(16);
-export const createSpanId = (): string => randomHex(8);
-export const createCorrelationId = (): string => crypto.randomUUID().replaceAll("-", "");
+export const createTraceId = (): string => randomCode(16);
+export const createSpanId = (): string => randomCode(8);
+export const createCorrelationId = (): string => randomCode(16);
 
 export const formatTraceparent = (traceId: string, spanId: string, flags = "01"): string =>
   `00-${traceId}-${spanId}-${flags}`;

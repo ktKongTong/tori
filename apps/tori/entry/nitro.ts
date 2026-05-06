@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { fetchViteEnv } from "nitro/vite/runtime";
-import { api } from "@/api";
+import { createApp } from "@/api";
+import { nodeServerAdapter } from "../adapter/node/server";
 
 const _app = new Hono();
 
-_app.route("/api", api);
+_app.route("/api", createApp({ adapter: nodeServerAdapter }));
 
 function shouldHandleSSR(request: Request) {
   const url = new URL(request.url);

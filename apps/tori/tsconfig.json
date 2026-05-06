@@ -1,11 +1,11 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "vite.config.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "vite.config.ts", "drizzle.config.ts", "drizzle.d1.config.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "node", "deno", "bun"],
+    "types": ["vite/client", "node", "deno", "bun", "@cloudflare/workers-types"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -21,6 +21,18 @@
     "paths": {
       "*": ["./*"],
       "@/*": ["./src/*"],
+      "@test/*": ["./src/api/test/*"],
+      "@repo/api-kit": ["../../packages/api-kit/src/index.ts"],
+      "@repo/api-kit/*": ["../../packages/api-kit/src/*.ts"],
+      "@repo/auth/*": ["../../packages/auth/src/*"],
+      "@repo/core/*": ["../../packages/core/src/*"],
+      "@repo/observability/*": ["../../packages/observability/src/*"],
+      "@repo/protocol/*": ["../../packages/protocol/src/*"],
+      "@repo/request": ["../../packages/request/src/index.ts"],
+      "@repo/request/*": ["../../packages/request/src/*.ts"],
+      "@repo/storage": ["../../packages/storage/src/index.ts"],
+      "@repo/storage/*": ["../../packages/storage/src/*.ts"],
+      "@repo/task/*": ["../../packages/task/src/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"]
     }
   }

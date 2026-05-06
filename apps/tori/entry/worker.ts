@@ -1,6 +1,9 @@
 import handler from "@tanstack/react-start/server-entry";
 import { Hono } from "hono";
-import { api } from "@/api";
+import { createApp, registerApiV2Runtime } from "@/api";
+import { cloudflareServerAdapter } from "../adapter/cloudflare/server";
+import { cloudflareCronAdapter } from "../adapter/cloudflare/cron";
+import { cloudflareMQAdapter } from "../adapter/cloudflare/queue";
 function shouldHandleSSR(request: Request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -18,7 +21,8 @@ function shouldHandleSSR(request: Request) {
 }
 const app = new Hono();
 
-app.route("/api", api);
+registerApiV2Runtime();
+app.route("/api", createApp({ adapter: cloudflareServerAdapter }));
 
 app.use("*", async (c) => {
   if (!shouldHandleSSR(c.req.raw)) {
@@ -30,7 +34,6 @@ app.use("*", async (c) => {
 
 export default {
   fetch: app.fetch,
-  scheduled: async () => {
-    console.log("example cron");
-  },
+  queue: cloudflareMQAdapter,
+  scheduled: cloudflareCronAdapter,
 };

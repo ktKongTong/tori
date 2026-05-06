@@ -5,8 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.mjs",
+    "./cloudflare-kv": "./dist/cloudflare-kv.mjs",
     "./json": "./dist/json.mjs",
+    "./kv": "./dist/kv.mjs",
     "./object-store": "./dist/object-store.mjs",
+    "./s3": "./dist/s3.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -15,6 +18,9 @@
     "test": "vp test",
     "check": "vp check",
     "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
   },
   "devDependencies": {
     "typescript": "catalog:",

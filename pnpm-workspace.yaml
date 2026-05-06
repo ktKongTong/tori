@@ -9,6 +9,7 @@ catalog:
   "@opentelemetry/api": ^1.9.0
   "@rolldown/plugin-babel": "0.2.3"
   "@simplewebauthn/server": ^13.3.0
+  "@tanstack/react-form": ^1.29.1
   "@types/bun": 1.3.13
   "@types/deno": 2.5.0
   "@types/node": ^24
@@ -25,6 +26,7 @@ catalog:
   nitro: latest
   pino: ^10.3.1
   react-router-hono-server: 2.26.0
+  sonner: ^2.0.7
   typescript: npm:@typescript/native-preview@latest
   uuid: ^14.0.0
   vite: npm:@voidzero-dev/vite-plus-core@latest
