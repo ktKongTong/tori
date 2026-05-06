@@ -1,6 +1,6 @@
 import { createEventConsumer } from "@/api/domain/infra/eventing";
 import { createNotificationBody, type NotificationBody } from "@/api/modules/platform/notify/body";
-import { notifyBus } from "@/api/modules/platform/notify/bus";
+import { deliverNotificationCandidate } from "@/api/modules/platform/notify/delivery";
 import type { SteamFamilyLibraryChangedPayload } from "@/api/modules/steam/core/family/types";
 
 export const STEAM_FAMILY_LIBRARY_CHANGED = "SteamFamilyLibraryChanged";
@@ -82,21 +82,7 @@ export const steamFamilyLibraryChangedConsumer =
       for (const candidate of candidates) {
         const notification = candidate.notification;
         try {
-          notifyBus.publish({
-            ownerUserId: candidate.ownerUserId,
-            id: notification.id,
-            subscriptionId: notification.subscriptionId ?? null,
-            channelId: notification.channelId,
-            botPluginInstanceId: notification.botPluginInstanceId ?? null,
-            deliveryEndpointId: notification.deliveryEndpointId ?? null,
-            channelBindingId: notification.channelBindingId ?? null,
-            status: "sent",
-            title: notification.title ?? null,
-            body: notification.body,
-            payload: notification.payload as Record<string, unknown>,
-            createdAt: notification.createdAt.toISOString(),
-          });
-
+          await deliverNotificationCandidate(candidate);
           await notificationRepository.markNotificationSent(notification.id);
         } catch (error) {
           await notificationRepository.markNotificationFailed(

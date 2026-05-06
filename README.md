@@ -1,3 +1,5 @@
-## react router/tanstack-start + hono + multi-runtime template
+# Tori
 
-a template repo shows that how to dev/build/deploy a fullstack app using hono + tanstack-start/react-router that support different runime/enviroment(cloudflare worker/deno deploy/vercel/docker).
+Tori 是一个面向外部平台账号、机器人入口、订阅通知和后台运维的全栈应用。
+
+核心文档见 [docs/tori.md](docs/tori.md)。

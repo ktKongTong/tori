@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { accountProfiles } from "@/api/modules/steam/core/schema/d1";
 import {
   botPluginInstances,
@@ -11,6 +11,7 @@ import {
   proxyInstances,
   subscriptions,
   taskDefinitions,
+  taskRuns,
   user,
   userBindings,
 } from "@/api/db/schema/d1";
@@ -95,5 +96,26 @@ export class DashboardSqliteRepository implements IDashboardRepository {
     ]);
 
     return { tasks, connectionRows };
+  }
+
+  async getTaskDetailRows(taskDefinitionId: string, input: { limit: number; offset: number }) {
+    const db = this.db;
+    const [taskRows, runs, countRows, connectionRows] = await Promise.all([
+      db.select().from(taskDefinitions).where(eq(taskDefinitions.id, taskDefinitionId)).limit(1),
+      db
+        .select()
+        .from(taskRuns)
+        .where(eq(taskRuns.taskDefinitionId, taskDefinitionId))
+        .orderBy(desc(taskRuns.createdAt))
+        .limit(input.limit)
+        .offset(input.offset),
+      db
+        .select({ value: count() })
+        .from(taskRuns)
+        .where(eq(taskRuns.taskDefinitionId, taskDefinitionId)),
+      db.select().from(connections).limit(200),
+    ]);
+
+    return { task: taskRows[0] ?? null, runs, totalRuns: countRows[0]?.value ?? 0, connectionRows };
   }
 }

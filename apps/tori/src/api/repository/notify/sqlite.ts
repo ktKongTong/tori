@@ -94,7 +94,12 @@ export class NotifySqliteRepository implements INotifyRepository {
         continue;
       }
 
-      candidates.push({ notification, ownerUserId });
+      candidates.push({
+        notification,
+        channelBinding: binding ?? null,
+        deliveryEndpoint,
+        ownerUserId,
+      });
     }
 
     return candidates;

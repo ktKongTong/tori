@@ -31,14 +31,8 @@ const PAGE_META: Record<string, { title: string }> = {
   "/notify": {
     title: "My Subscriptions",
   },
-  "/notify/events": {
-    title: "Delivery History",
-  },
   "/tasks": {
     title: "Tasks",
-  },
-  "/notify/endpoints": {
-    title: "Delivery Endpoints",
   },
   "/bot-instances": {
     title: "Bot Runtime",
@@ -63,7 +57,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return <Navigate to="/auth/sign-in" replace />;
   }
 
-  const meta = PAGE_META[location.pathname] ?? PAGE_META["/"];
+  const meta =
+    PAGE_META[location.pathname] ??
+    (location.pathname.startsWith("/tasks/") ? { title: "Task Detail" } : PAGE_META["/"]);
   const userLabel = `${session.user.name ?? "Operator"} · ${session.user.email}`;
   const role = (session.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
@@ -86,7 +82,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <h1 className="truncate text-lg font-semibold text-foreground">{meta.title}</h1>
           </div>
         </header>
-        <div className="flex min-h-0 flex-1 w-full">
+        <div className="flex min-h-0 flex-1 w-full overflow-y-auto">
           <div className="mx-auto mt-4 w-full max-w-6xl px-4 pb-6 md:px-6">{children}</div>
         </div>
       </SidebarInset>

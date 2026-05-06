@@ -148,22 +148,32 @@ export async function getDashboardBotInstances(repo: IDashboardRepository) {
   const { instances, endpoints } = await repo.listBotInstanceRows();
 
   return {
-    instances: instances.map((row) => ({
-      id: row.id,
-      ownerUserId: row.ownerUserId,
-      platform: row.platform,
-      namespace: row.namespace ?? "managed",
-      instanceKey: row.instanceKey,
-      displayName: row.displayName ?? "—",
-      callbackMode: row.callbackMode,
-      deliveryEndpointId: row.deliveryEndpointId ?? null,
-      deliveryEndpointLabel:
-        endpoints.find((endpoint) => endpoint.id === row.deliveryEndpointId)?.displayName ??
-        endpoints.find((endpoint) => endpoint.id === row.deliveryEndpointId)?.target ??
-        null,
-      status: row.status,
-      lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
-    })),
+    instances: instances.map((row) => {
+      const endpoint = endpoints.find((item) => item.id === row.deliveryEndpointId);
+      const metadata =
+        row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+          ? (row.metadata as Record<string, unknown>)
+          : null;
+      const credentialRotatedAt =
+        typeof metadata?.credentialRotatedAt === "string" ? metadata.credentialRotatedAt : null;
+
+      return {
+        id: row.id,
+        ownerUserId: row.ownerUserId,
+        platform: row.platform,
+        namespace: row.namespace ?? "managed",
+        instanceKey: row.instanceKey,
+        displayName: row.displayName ?? "—",
+        callbackMode: row.callbackMode,
+        deliveryEndpointId: row.deliveryEndpointId ?? null,
+        deliveryEndpointKind: endpoint?.kind ?? null,
+        deliveryEndpointTarget: endpoint?.target ?? null,
+        deliveryEndpointLabel: endpoint?.displayName ?? endpoint?.target ?? null,
+        credentialRotatedAt,
+        status: row.status,
+        lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
+      };
+    }),
     deliveryEndpoints: endpoints.map((row) => ({
       id: row.id,
       platform: row.platform,
@@ -234,6 +244,9 @@ export async function getDashboardNotify(repo: IDashboardRepository, isAdmin: bo
       title: row.title ?? null,
       body: row.body,
       status: row.status,
+      sentAt: row.sentAt?.toISOString() ?? null,
+      failedAt: row.failedAt?.toISOString() ?? null,
+      errorMessage: row.errorMessage ?? null,
       createdAt: row.createdAt.toISOString(),
     })),
   };
@@ -262,28 +275,77 @@ export async function getDashboardTasks(repo: IDashboardRepository, isAdmin: boo
 
   const { tasks, connectionRows } = await repo.listTaskRows();
   return {
-    tasks: tasks.flatMap((row) => {
-      const payload =
-        row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
-          ? (row.payload as Record<string, unknown>)
-          : null;
-      const connectionId = typeof payload?.connectionId === "string" ? payload.connectionId : null;
+    tasks: tasks.map((row) => mapDashboardTask(row, connectionRows)),
+  };
+}
 
-      return [
-        {
-          id: row.id,
-          kind: row.kind,
-          schedule: row.schedule,
-          enabled: row.enabled === 1,
-          connectionId,
-          connectionLabel: connectionId
-            ? (connectionRows.find((item) => item.id === connectionId)?.providerAccountName ??
-              connectionRows.find((item) => item.id === connectionId)?.providerAccountId ??
-              connectionId)
-            : null,
-          lastRunStatus: row.lastRunStatus ?? null,
-        },
-      ];
-    }),
+export async function getDashboardTaskDetail(
+  repo: IDashboardRepository,
+  isAdmin: boolean,
+  taskDefinitionId: string,
+  input: { page: number; pageSize: number },
+) {
+  if (!isAdmin) return null;
+
+  const page = Math.max(1, input.page);
+  const pageSize = Math.min(Math.max(1, input.pageSize), 50);
+  const { task, runs, totalRuns, connectionRows } = await repo.getTaskDetailRows(taskDefinitionId, {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+  if (!task) return null;
+
+  return {
+    task: {
+      ...mapDashboardTask(task, connectionRows),
+      lastTriggeredAt: task.lastTriggeredAt?.toISOString() ?? null,
+      lastRunAt: task.lastRunAt?.toISOString() ?? null,
+      lastError: task.lastError ?? null,
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString(),
+    },
+    runs: runs.map((row) => ({
+      id: row.id,
+      taskDefinitionId: row.taskDefinitionId,
+      kind: row.kind,
+      status: row.status,
+      summary: row.summary ?? null,
+      errorMessage: row.errorMessage ?? null,
+      scheduledFor: row.scheduledFor?.toISOString() ?? null,
+      startedAt: row.startedAt?.toISOString() ?? null,
+      finishedAt: row.finishedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total: totalRuns,
+      totalPages: Math.max(1, Math.ceil(totalRuns / pageSize)),
+    },
+  };
+}
+
+function mapDashboardTask(
+  row: Awaited<ReturnType<IDashboardRepository["listTaskRows"]>>["tasks"][number],
+  connectionRows: Awaited<ReturnType<IDashboardRepository["listTaskRows"]>>["connectionRows"],
+) {
+  const payload =
+    row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+      ? (row.payload as Record<string, unknown>)
+      : null;
+  const connectionId = typeof payload?.connectionId === "string" ? payload.connectionId : null;
+
+  return {
+    id: row.id,
+    kind: row.kind,
+    schedule: row.schedule,
+    enabled: row.enabled === 1,
+    connectionId,
+    connectionLabel: connectionId
+      ? (connectionRows.find((item) => item.id === connectionId)?.providerAccountName ??
+        connectionRows.find((item) => item.id === connectionId)?.providerAccountId ??
+        connectionId)
+      : null,
+    lastRunStatus: row.lastRunStatus ?? null,
   };
 }

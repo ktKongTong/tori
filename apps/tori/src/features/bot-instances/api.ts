@@ -21,7 +21,10 @@ export const dashboardBotInstancesSchema = z.object({
       displayName: z.string(),
       callbackMode: z.string(),
       deliveryEndpointId: z.string().nullable(),
+      deliveryEndpointKind: z.string().nullable(),
+      deliveryEndpointTarget: z.string().nullable(),
       deliveryEndpointLabel: z.string().nullable(),
+      credentialRotatedAt: z.string().nullable(),
       status: z.string(),
       lastSeenAt: z.string().nullable(),
     }),
@@ -68,7 +71,14 @@ export type CreateBotInstanceInput = {
   instanceKey: string;
   displayName: string;
   capabilities?: unknown;
-  autoCreateInternalEndpoint: boolean;
+  deliveryEndpoint?: {
+    kind: string;
+    target: string;
+    displayName?: string | null;
+    secret?: string | null;
+    config?: unknown;
+    metadata?: unknown;
+  };
 };
 
 export type AttachBotInstanceEndpointInput = {

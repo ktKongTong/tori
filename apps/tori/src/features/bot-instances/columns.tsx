@@ -3,13 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
-import { AttachDeliveryEndpointDialog } from "./dialogs";
+import { BotCredentialDialog } from "./dialogs";
 import {
   revokeBotInstance,
   rotateBotInstanceCredential,
   type DashboardBotInstancesData,
 } from "@/features/bot-instances/api";
-import { useDashboardBotInstancesQuery } from "@/features/bot-instances/query";
 import { useModal } from "@/lib/modal";
 
 export type BotInstanceRow = DashboardBotInstancesData["instances"][number];
@@ -33,7 +32,22 @@ export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
   {
     accessorKey: "deliveryEndpointLabel",
     header: "Endpoint",
-    cell: ({ row }) => row.original.deliveryEndpointLabel ?? "—",
+    cell: ({ row }) => (
+      <div className="space-y-1">
+        <p>{row.original.deliveryEndpointLabel ?? "—"}</p>
+        {row.original.deliveryEndpointKind ? (
+          <DashboardStatusPill
+            text={row.original.deliveryEndpointKind}
+            tone={row.original.deliveryEndpointKind === "webhook" ? "success" : "warning"}
+          />
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "credentialRotatedAt",
+    header: "Credential",
+    cell: ({ row }) => row.original.credentialRotatedAt ?? "—",
   },
   {
     accessorKey: "status",
@@ -55,13 +69,17 @@ export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
 function BotInstanceActions({ instance }: { instance: BotInstanceRow }) {
   const modal = useModal();
   const queryClient = useQueryClient();
-  const botInstancesQuery = useDashboardBotInstancesQuery();
   const rotateCredential = useMutation({
     mutationFn: async (id: string) => rotateBotInstanceCredential(id),
     onSuccess: (data) => {
-      toast.success("Credential rotated", {
-        description: `Rotated credential for ${data.id}: ${data.plaintextCredential}`,
-      });
+      modal.open(
+        <BotCredentialDialog
+          title="Bot Credential Rotated"
+          description="The previous credential is no longer valid. Update the deployed plugin with this value."
+          instanceId={data.id}
+          plaintextCredential={data.plaintextCredential}
+        />,
+      );
     },
   });
   const revokeInstance = useMutation({
@@ -80,18 +98,14 @@ function BotInstanceActions({ instance }: { instance: BotInstanceRow }) {
       items={[
         {
           label: "Rotate",
-          onSelect: () => rotateCredential.mutate(instance.id),
-        },
-        {
-          label: "Attach Endpoint",
           onSelect: () => {
-            modal.open(
-              <AttachDeliveryEndpointDialog
-                defaultEndpointId={instance.deliveryEndpointId}
-                deliveryEndpoints={botInstancesQuery.data?.deliveryEndpoints ?? []}
-                instanceId={instance.id}
-              />,
-            );
+            if (
+              window.confirm(
+                "Rotate this bot credential? The deployed plugin will stop working until it is updated.",
+              )
+            ) {
+              rotateCredential.mutate(instance.id);
+            }
           },
         },
         {

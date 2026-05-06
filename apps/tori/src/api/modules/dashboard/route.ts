@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { NotFoundError } from "@/api/domain/error";
 import { requireAdmin, requireAuth } from "@/api/server/middleware/auth";
 import { describeRoute } from "@/api/server/middleware/openapi";
 import {
@@ -10,6 +11,7 @@ import {
   getDashboardNotifyDeliveryEndpoints,
   getDashboardNotifyEvents,
   getDashboardNotifySubscriptions,
+  getDashboardTaskDetail,
   getDashboardTasks,
 } from "./query";
 import { getDashboardRepository } from "./repository";
@@ -131,7 +133,10 @@ const botInstancesSchema = z.object({
       displayName: z.string(),
       callbackMode: z.string(),
       deliveryEndpointId: z.string().nullable(),
+      deliveryEndpointKind: z.string().nullable(),
+      deliveryEndpointTarget: z.string().nullable(),
       deliveryEndpointLabel: z.string().nullable(),
+      credentialRotatedAt: z.string().nullable(),
       status: z.string(),
       lastSeenAt: z.string().nullable(),
     }),
@@ -195,6 +200,9 @@ const notifyEventsSchema = z.object({
       deliveryEndpointLabel: z.string().nullable(),
       title: z.string().nullable(),
       status: z.string(),
+      sentAt: z.string().nullable(),
+      failedAt: z.string().nullable(),
+      errorMessage: z.string().nullable(),
       createdAt: z.string(),
     }),
   ),
@@ -212,6 +220,48 @@ const tasksSchema = z.object({
       lastRunStatus: z.string().nullable(),
     }),
   ),
+});
+
+const taskHistoryPaginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+const taskDetailSchema = z.object({
+  task: z.object({
+    id: z.string(),
+    kind: z.string(),
+    schedule: z.string(),
+    enabled: z.boolean(),
+    connectionId: z.string().nullable(),
+    connectionLabel: z.string().nullable(),
+    lastRunStatus: z.string().nullable(),
+    lastTriggeredAt: z.string().nullable(),
+    lastRunAt: z.string().nullable(),
+    lastError: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+  runs: z.array(
+    z.object({
+      id: z.string(),
+      taskDefinitionId: z.string(),
+      kind: z.string(),
+      status: z.string(),
+      summary: z.unknown().nullable(),
+      errorMessage: z.string().nullable(),
+      scheduledFor: z.string().nullable(),
+      startedAt: z.string().nullable(),
+      finishedAt: z.string().nullable(),
+      createdAt: z.string(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number(),
+    pageSize: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
 });
 
 const notifySchema = notifyDeliveryEndpointsSchema
@@ -354,6 +404,38 @@ app.get(
         c.get("serviceContext").isAdmin(),
       ),
     ),
+);
+app.get(
+  "/tasks/:id",
+  requireAdmin(),
+  describeRoute({
+    tags: ["Dashboard"],
+    summary: "Dashboard task detail payload",
+    response: { description: "task detail", body: taskDetailSchema },
+  }),
+  async (c) => {
+    const taskDefinitionId = c.req.param("id");
+    if (!taskDefinitionId) {
+      throw new NotFoundError("task definition not found");
+    }
+    const paginationQuery = taskHistoryPaginationQuerySchema.parse({
+      page: c.req.query("page"),
+      pageSize: c.req.query("pageSize"),
+    });
+
+    const detail = await getDashboardTaskDetail(
+      getDashboardRepository(c.get("serviceContext")),
+      c.get("serviceContext").isAdmin(),
+      taskDefinitionId,
+      paginationQuery,
+    );
+
+    if (!detail) {
+      throw new NotFoundError("task definition not found");
+    }
+
+    return c.json(detail);
+  },
 );
 app.get(
   "/demo/overview",

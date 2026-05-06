@@ -9,6 +9,10 @@ type StreamNotification = {
   botPluginInstanceId: string | null;
   deliveryEndpointId: string | null;
   channelBindingId: string | null;
+  externalChannelId: string | null;
+  externalChannelName: string | null;
+  platform: string | null;
+  namespace: string | null;
   status: string;
   title: string | null;
   body: NotificationBody;

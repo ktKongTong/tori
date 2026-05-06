@@ -59,6 +59,8 @@ export interface NotificationEventRow {
 
 export type NotificationDeliveryCandidate = {
   notification: NotificationEventRow;
+  channelBinding: ChannelBindingRow | null;
+  deliveryEndpoint: DeliveryEndpointRow;
   ownerUserId: string | null;
 };
 

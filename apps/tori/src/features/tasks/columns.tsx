@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { DashboardStatusPill } from "@/components/dashboard-ui";
+import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
 import type { DashboardTasksData } from "@/features/tasks/api";
 import { useDashboardIntegrationQuery } from "@/features/integration/query";
 
@@ -31,6 +31,16 @@ export const taskColumns: ColumnDef<TaskRow>[] = [
     accessorKey: "lastRunStatus",
     header: "Last Run",
     cell: ({ row }) => row.original.lastRunStatus ?? "—",
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => (
+      <DashboardTableActions
+        label="Task actions"
+        items={[{ label: "View history", to: `/tasks/${row.original.id}` }]}
+      />
+    ),
   },
 ];
 

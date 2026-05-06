@@ -16,35 +16,50 @@ import { useToastError } from "@/lib/toast-error";
 
 export type NotifySubscriptionRow = DashboardNotifySubscriptionsData["subscriptions"][number];
 
-export const notifySubscriptionColumns: ColumnDef<NotifySubscriptionRow>[] = [
-  {
-    accessorKey: "channelLabel",
-    header: "Channel Binding",
-    cell: ({ row }) => row.original.channelLabel,
-  },
-  {
-    accessorKey: "botPluginInstanceLabel",
-    header: "Bot Runtime",
-    cell: ({ row }) => row.original.botPluginInstanceLabel,
-  },
-  {
-    accessorKey: "topic",
-    header: "Topic",
-    cell: ({ row }) => `${row.original.topicType} / ${row.original.topicKey}`,
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.status} />,
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => <NotifySubscriptionActions subscription={row.original} />,
-  },
-];
+export function createNotifySubscriptionColumns(input: {
+  onOpenDetails: (subscription: NotifySubscriptionRow) => void;
+}): ColumnDef<NotifySubscriptionRow>[] {
+  return [
+    {
+      accessorKey: "channelLabel",
+      header: "Channel Binding",
+      cell: ({ row }) => row.original.channelLabel,
+    },
+    {
+      accessorKey: "botPluginInstanceLabel",
+      header: "Bot Runtime",
+      cell: ({ row }) => row.original.botPluginInstanceLabel,
+    },
+    {
+      accessorKey: "topic",
+      header: "Topic",
+      cell: ({ row }) => `${row.original.topicType} / ${row.original.topicKey}`,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <DashboardStatusPill text={row.original.status} />,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <NotifySubscriptionActions
+          onOpenDetails={input.onOpenDetails}
+          subscription={row.original}
+        />
+      ),
+    },
+  ];
+}
 
-function NotifySubscriptionActions({ subscription }: { subscription: NotifySubscriptionRow }) {
+function NotifySubscriptionActions({
+  onOpenDetails,
+  subscription,
+}: {
+  onOpenDetails: (subscription: NotifySubscriptionRow) => void;
+  subscription: NotifySubscriptionRow;
+}) {
   const modal = useModal();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -70,6 +85,10 @@ function NotifySubscriptionActions({ subscription }: { subscription: NotifySubsc
     <DashboardTableActions
       label={`Open actions for ${subscription.channelLabel}`}
       items={[
+        {
+          label: "Details",
+          onSelect: () => onOpenDetails(subscription),
+        },
         {
           label: "Reuse",
           disabled: !session?.user?.id,

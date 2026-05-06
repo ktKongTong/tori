@@ -9,7 +9,6 @@ import {
   IconMessageCircleBolt,
   IconPlugConnected,
   IconRobot,
-  IconServer2,
 } from "@tabler/icons-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import type { ComponentProps, ComponentType } from "react";
@@ -94,6 +93,11 @@ const WORKSPACE_ITEMS: NavTreeItem[] = [
         label: "My Connections",
         exact: true,
       },
+      {
+        to: "/integration/proxies",
+        label: "Proxy Registry",
+        adminOnly: true,
+      },
     ],
   },
   {
@@ -106,10 +110,6 @@ const WORKSPACE_ITEMS: NavTreeItem[] = [
         label: "My Subscriptions",
         exact: true,
       },
-      {
-        to: "/notify/events",
-        label: "Delivery History",
-      },
     ],
   },
   {
@@ -121,11 +121,6 @@ const WORKSPACE_ITEMS: NavTreeItem[] = [
 
 const OPS_ITEMS: NavTreeItem[] = [
   {
-    to: "/integration/proxies",
-    label: "Proxy Registry",
-    icon: IconServer2,
-  },
-  {
     to: "/tasks",
     label: "Tasks",
     icon: IconClock,
@@ -134,17 +129,6 @@ const OPS_ITEMS: NavTreeItem[] = [
     to: "/bot-instances",
     label: "Bot Runtime",
     icon: IconRobot,
-    children: [
-      {
-        to: "/bot-instances",
-        label: "Instances",
-        exact: true,
-      },
-      {
-        to: "/notify/endpoints",
-        label: "Delivery Endpoints",
-      },
-    ],
   },
 ];
 

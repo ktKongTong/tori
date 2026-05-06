@@ -1,4 +1,5 @@
 import { Button } from "@repo/ui/components/button";
+import { DashboardNotice } from "@/components/dashboard-ui";
 import {
   DialogContent,
   DialogDescription,
@@ -19,60 +20,93 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  attachBotInstanceEndpoint,
-  createBotInstance,
-  type CreateBotInstanceInput,
-} from "@/features/bot-instances/api";
+import { createBotInstance, type CreateBotInstanceInput } from "@/features/bot-instances/api";
 import { useModal } from "@/lib/modal";
 
-const noEndpointValue = "__none__";
+const createBotInstanceFormSchema = z
+  .object({
+    endpointConfig: z.string().refine(
+      (value) => {
+        if (!value.trim()) return true;
 
-const createBotInstanceFormSchema = z.object({
-  autoCreateInternalEndpoint: z.boolean(),
-  capabilities: z.string().refine(
-    (value) => {
-      if (!value.trim()) return true;
+        try {
+          JSON.parse(value);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Endpoint config must be valid JSON" },
+    ),
+    endpointKind: z.enum(["webhook", "internal"]),
+    endpointSecret: z.string(),
+    endpointTarget: z.string().trim().min(1, "Endpoint target is required"),
+    capabilities: z.string().refine(
+      (value) => {
+        if (!value.trim()) return true;
 
-      try {
-        JSON.parse(value);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: "Capabilities must be valid JSON" },
-  ),
-  displayName: z.string(),
-  instanceKey: z.string().trim().min(1, "Instance key is required"),
-  namespace: z.string().trim().min(1, "Namespace is required"),
-  platform: z.string().trim().min(1, "Platform is required"),
-});
+        try {
+          JSON.parse(value);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Capabilities must be valid JSON" },
+    ),
+    displayName: z.string(),
+    instanceKey: z.string().trim().min(1, "Instance key is required"),
+    namespace: z.string().trim().min(1, "Namespace is required"),
+    platform: z.string().trim().min(1, "Platform is required"),
+  })
+  .superRefine((value, ctx) => {
+    if (value.endpointKind === "webhook" && !/^https?:\/\//.test(value.endpointTarget)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endpointTarget"],
+        message: "Webhook target must be an http(s) URL",
+      });
+    }
+    if (value.endpointKind === "internal" && !value.endpointTarget.startsWith("internal://")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endpointTarget"],
+        message: "Internal target must start with internal://",
+      });
+    }
+  });
 
 const createBotInstanceDefaultValues: z.input<typeof createBotInstanceFormSchema> = {
   platform: "",
   namespace: "managed",
   instanceKey: "",
   displayName: "",
-  capabilities: '{"ingress":true,"sse":true}',
-  autoCreateInternalEndpoint: true,
+  capabilities: '{"ingress":true}',
+  endpointKind: "webhook",
+  endpointTarget: "",
+  endpointSecret: "",
+  endpointConfig: "{}",
 };
-
-const attachEndpointFormSchema = z.object({
-  deliveryEndpointId: z.string(),
-});
 
 export function CreateBotInstanceDialog() {
   const modal = useModal();
   const queryClient = useQueryClient();
   const createInstance = useMutation({
     mutationFn: async (input: CreateBotInstanceInput) => createBotInstance(input),
-    onSuccess: (data) => {
-      modal.close();
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", "bot-instances"] });
-      toast.success("Bot instance ready", {
-        description: `Bot instance ${data.id} ready. Credential: ${data.plaintextCredential}`,
-      });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard", "bot-instances"] });
+      modal.open(
+        <BotCredentialDialog
+          title={data.created ? "Bot Instance Credential" : "Bot Credential Rotated"}
+          description={
+            data.created
+              ? "Store this credential now. Tori only shows it once."
+              : "The existing runtime credential was replaced. Update the deployed plugin before closing."
+          }
+          instanceId={data.id}
+          plaintextCredential={data.plaintextCredential}
+        />,
+      );
     },
   });
   const createForm = useForm({
@@ -84,8 +118,19 @@ export function CreateBotInstanceDialog() {
       const parsed = createBotInstanceFormSchema.parse(value);
 
       createInstance.mutate({
-        ...parsed,
+        platform: parsed.platform,
+        namespace: parsed.namespace,
+        instanceKey: parsed.instanceKey,
+        displayName: parsed.displayName,
         capabilities: parsed.capabilities.trim() ? JSON.parse(parsed.capabilities) : undefined,
+        deliveryEndpoint: {
+          kind: parsed.endpointKind,
+          target: parsed.endpointTarget,
+          displayName: parsed.displayName ? `${parsed.displayName} delivery` : null,
+          secret: parsed.endpointSecret.trim() || null,
+          config: parsed.endpointConfig.trim() ? JSON.parse(parsed.endpointConfig) : undefined,
+          metadata: { source: "bot-instance-create" },
+        },
       });
     },
   });
@@ -95,8 +140,7 @@ export function CreateBotInstanceDialog() {
       <DialogHeader>
         <DialogTitle className="normal-case">Create Bot Instance</DialogTitle>
         <DialogDescription>
-          Create a managed bot runtime instance. Optionally auto-create the internal delivery
-          endpoint.
+          Create a managed bot runtime instance and its delivery endpoint in one step.
         </DialogDescription>
       </DialogHeader>
       <form
@@ -212,21 +256,105 @@ export function CreateBotInstanceDialog() {
               );
             }}
           />
+          <div className="md:col-span-2 border-t border-border pt-4">
+            <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+              Delivery Endpoint
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Webhook is the default for separated bot plugins. Internal is only for playground/mock
+              runtimes.
+            </p>
+          </div>
           <createForm.Field
-            name="autoCreateInternalEndpoint"
-            children={(field) => (
-              <Field className="md:col-span-2">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={field.state.value}
+            name="endpointKind"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel>Endpoint Kind</FieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      field.handleChange(value === "internal" ? "internal" : "webhook")
+                    }
+                  >
+                    <SelectTrigger className="w-full" aria-invalid={invalid}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="webhook">webhook</SelectItem>
+                      <SelectItem value="internal">internal playground</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+          <createForm.Field
+            name="endpointTarget"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel htmlFor={field.name}>Endpoint Target</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.checked)}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-invalid={invalid}
+                    placeholder="https://plugin.example.com/webhooks/tori/notifications"
                   />
-                  Auto create internal delivery endpoint
-                </label>
-              </Field>
-            )}
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+          <createForm.Field
+            name="endpointSecret"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel htmlFor={field.name}>Endpoint Secret</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-invalid={invalid}
+                  />
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+          <createForm.Field
+            name="endpointConfig"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel htmlFor={field.name}>Endpoint Config JSON</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-invalid={invalid}
+                  />
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
           />
           <div className="md:col-span-2 flex justify-end">
             <createForm.Subscribe
@@ -247,102 +375,51 @@ export function CreateBotInstanceDialog() {
   );
 }
 
-export function AttachDeliveryEndpointDialog({
-  defaultEndpointId,
-  deliveryEndpoints,
+export function BotCredentialDialog({
+  description,
   instanceId,
+  plaintextCredential,
+  title,
 }: {
-  defaultEndpointId?: string | null;
-  deliveryEndpoints: Array<{
-    displayName: string;
-    id: string;
-    kind: string;
-    platform: string;
-  }>;
+  description: string;
   instanceId: string;
+  plaintextCredential: string;
+  title: string;
 }) {
-  const modal = useModal();
-  const queryClient = useQueryClient();
-  const attachEndpoint = useMutation({
-    mutationFn: async (input: z.output<typeof attachEndpointFormSchema>) =>
-      attachBotInstanceEndpoint(instanceId, input),
-    onSuccess: (data) => {
-      modal.close();
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", "bot-instances"] });
-      toast.success("Delivery endpoint attached", {
-        description: `Attached endpoint ${data.deliveryEndpointId ?? "none"} to ${data.id}.`,
-      });
-    },
-  });
-  const attachForm = useForm({
-    defaultValues: {
-      deliveryEndpointId: defaultEndpointId ?? "",
-    },
-    validators: {
-      onSubmit: attachEndpointFormSchema,
-    },
-    onSubmit: ({ value }) => {
-      attachEndpoint.mutate(attachEndpointFormSchema.parse(value));
-    },
-  });
+  const copyCredential = async () => {
+    await navigator.clipboard.writeText(plaintextCredential);
+    toast.success("Credential copied");
+  };
 
   return (
     <DialogContent className="sm:max-w-xl">
       <DialogHeader>
-        <DialogTitle className="normal-case">Attach Delivery Endpoint</DialogTitle>
-        <DialogDescription>
-          Attach or detach a delivery endpoint for the selected bot runtime instance.
-        </DialogDescription>
+        <DialogTitle className="normal-case">{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void attachForm.handleSubmit();
-        }}
-      >
-        <FieldGroup>
-          <attachForm.Field
-            name="deliveryEndpointId"
-            children={(field) => (
-              <Field>
-                <FieldLabel>Delivery Endpoint</FieldLabel>
-                <Select
-                  value={field.state.value || noEndpointValue}
-                  onValueChange={(value) =>
-                    field.handleChange(!value || value === noEndpointValue ? "" : value)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={noEndpointValue}>No endpoint</SelectItem>
-                    {deliveryEndpoints.map((endpoint) => (
-                      <SelectItem key={endpoint.id} value={endpoint.id}>
-                        {endpoint.platform} · {endpoint.kind} · {endpoint.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-          />
-          <div className="flex justify-end">
-            <attachForm.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <Button
-                  type="submit"
-                  disabled={attachEndpoint.isPending || isSubmitting || !canSubmit}
-                >
-                  {attachEndpoint.isPending || isSubmitting ? "Saving…" : "Attach Endpoint"}
-                </Button>
-              )}
-            />
-          </div>
-        </FieldGroup>
-      </form>
+      <DashboardNotice title="One-time secret" tone="success">
+        <p>
+          This credential is only visible in this dialog. Closing it means you must rotate the
+          credential to see a new value.
+        </p>
+      </DashboardNotice>
+      <div className="space-y-3">
+        <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          Instance
+        </p>
+        <code className="block overflow-x-auto border border-border bg-muted/30 px-3 py-2 text-sm">
+          {instanceId}
+        </code>
+        <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          Credential
+        </p>
+        <code className="block overflow-x-auto border border-border bg-muted/30 px-3 py-2 text-sm">
+          {plaintextCredential}
+        </code>
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={() => void copyCredential()}>Copy Credential</Button>
+      </div>
     </DialogContent>
   );
 }

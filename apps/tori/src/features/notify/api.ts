@@ -10,19 +10,6 @@ const notifyRequest = createRequestClient({
   },
 });
 
-export const dashboardNotifyEndpointsSchema = z.object({
-  deliveryEndpoints: z.array(
-    z.object({
-      id: z.string(),
-      platform: z.string(),
-      kind: z.string(),
-      displayName: z.string(),
-      target: z.string(),
-      status: z.string(),
-    }),
-  ),
-});
-
 export const dashboardNotifySubscriptionsSchema = z.object({
   subscriptions: z.array(
     z.object({
@@ -57,6 +44,9 @@ export const dashboardNotifyEventsSchema = z.object({
       deliveryEndpointLabel: z.string().nullable(),
       title: z.string().nullable(),
       status: z.string(),
+      sentAt: z.string().nullable(),
+      failedAt: z.string().nullable(),
+      errorMessage: z.string().nullable(),
       createdAt: z.string(),
     }),
   ),
@@ -65,13 +55,6 @@ export const dashboardNotifyEventsSchema = z.object({
 const statusResponseSchema = z.object({
   id: z.string(),
   status: z.string(),
-});
-
-const createDeliveryEndpointResponseSchema = z.object({
-  id: z.string(),
-  platform: z.string(),
-  kind: z.string(),
-  target: z.string(),
 });
 
 const createSubscriptionResponseSchema = z.object({
@@ -83,18 +66,8 @@ const createSubscriptionResponseSchema = z.object({
   refreshTaskCreated: z.boolean(),
 });
 
-export type DashboardNotifyEndpointsData = z.infer<typeof dashboardNotifyEndpointsSchema>;
 export type DashboardNotifySubscriptionsData = z.infer<typeof dashboardNotifySubscriptionsSchema>;
 export type DashboardNotifyEventsData = z.infer<typeof dashboardNotifyEventsSchema>;
-
-export type CreateDeliveryEndpointInput = {
-  platform: string;
-  kind: string;
-  target: string;
-  displayName: string;
-  secret: string;
-  config: unknown;
-};
 
 export type CreateSubscriptionInput = {
   channelId: string;
@@ -106,11 +79,6 @@ export type CreateSubscriptionInput = {
   eventTypes: string[];
 };
 
-export const getNotifyEndpoints = () =>
-  notifyRequest.get("/api/dashboard/notify/delivery-endpoints", {
-    schema: dashboardNotifyEndpointsSchema,
-  });
-
 export const getNotifySubscriptions = () =>
   notifyRequest.get("/api/dashboard/notify/subscriptions", {
     schema: dashboardNotifySubscriptionsSchema,
@@ -120,21 +88,6 @@ export const getNotifyEvents = () =>
   notifyRequest.get("/api/dashboard/notify/events", {
     schema: dashboardNotifyEventsSchema,
   });
-
-export const createDeliveryEndpoint = (input: CreateDeliveryEndpointInput) =>
-  notifyRequest.post("/api/notify/delivery-endpoints", input, {
-    schema: createDeliveryEndpointResponseSchema,
-  });
-
-export const updateDeliveryEndpointStatus = (input: {
-  id: string;
-  status: "active" | "disabled";
-}) =>
-  notifyRequest.patch(
-    `/api/notify/delivery-endpoints/${encodeURIComponent(input.id)}`,
-    { status: input.status },
-    { schema: statusResponseSchema },
-  );
 
 export const createSubscription = (input: CreateSubscriptionInput) =>
   notifyRequest.post("/api/notify/subscriptions", input, {

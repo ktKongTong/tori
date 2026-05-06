@@ -7,7 +7,7 @@ import type {
   NotificationEventRow,
 } from "@/api/domain/platform/repository/ports/notify.ts";
 import type { SubscriptionRow } from "@/api/domain/platform/repository/ports/subscription.ts";
-import type { TaskDefinitionRow } from "@/api/domain/infra/repository/ports/task.ts";
+import type { TaskDefinitionRow, TaskRunRow } from "@/api/domain/infra/repository/ports/task.ts";
 
 export interface DashboardUserBindingRow {
   id: string;
@@ -63,6 +63,7 @@ export interface DashboardBotInstanceRow {
   displayName: string | null;
   callbackMode: string;
   deliveryEndpointId: string | null;
+  metadata: unknown;
   status: string;
   lastSeenAt: Date | null;
 }
@@ -111,10 +112,21 @@ export interface DashboardTaskRows {
   connectionRows: ConnectionRow[];
 }
 
+export interface DashboardTaskDetailRows {
+  task: TaskDefinitionRow | null;
+  runs: TaskRunRow[];
+  totalRuns: number;
+  connectionRows: ConnectionRow[];
+}
+
 export interface IDashboardRepository {
   listBindingRows(): Promise<DashboardBindingRows>;
   listIntegrationRows(): Promise<DashboardIntegrationRows>;
   listBotInstanceRows(): Promise<DashboardBotInstanceRows>;
   listNotifyRows(): Promise<DashboardNotifyRows>;
   listTaskRows(): Promise<DashboardTaskRows>;
+  getTaskDetailRows(
+    taskDefinitionId: string,
+    input: { limit: number; offset: number },
+  ): Promise<DashboardTaskDetailRows>;
 }

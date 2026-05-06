@@ -19,8 +19,7 @@ import { Route as AppIntegrationIndexRouteImport } from './routes/_app/integrati
 import { Route as AppBindingIndexRouteImport } from './routes/_app/binding/index'
 import { Route as AuthAuthSignUpRouteImport } from './routes/_auth/auth/sign-up'
 import { Route as AuthAuthSignInRouteImport } from './routes/_auth/auth/sign-in'
-import { Route as AppNotifyEventsRouteImport } from './routes/_app/notify/events'
-import { Route as AppNotifyEndpointsRouteImport } from './routes/_app/notify/endpoints'
+import { Route as AppTasksTaskIdRouteImport } from './routes/_app/tasks.$taskId'
 import { Route as AppIntegrationProxiesRouteImport } from './routes/_app/integration/proxies'
 import { Route as AppBindingClaimsRouteImport } from './routes/_app/binding/claims'
 import { Route as AppBindingChannelsRouteImport } from './routes/_app/binding/channels'
@@ -74,15 +73,10 @@ const AuthAuthSignInRoute = AuthAuthSignInRouteImport.update({
   path: '/auth/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppNotifyEventsRoute = AppNotifyEventsRouteImport.update({
-  id: '/notify/events',
-  path: '/notify/events',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AppNotifyEndpointsRoute = AppNotifyEndpointsRouteImport.update({
-  id: '/notify/endpoints',
-  path: '/notify/endpoints',
-  getParentRoute: () => AppRouteRoute,
+const AppTasksTaskIdRoute = AppTasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => AppTasksRoute,
 } as any)
 const AppIntegrationProxiesRoute = AppIntegrationProxiesRouteImport.update({
   id: '/integration/proxies',
@@ -104,12 +98,11 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/bot-instances': typeof AppBotInstancesRoute
   '/playground': typeof AppPlaygroundRoute
-  '/tasks': typeof AppTasksRoute
+  '/tasks': typeof AppTasksRouteWithChildren
   '/binding/channels': typeof AppBindingChannelsRoute
   '/binding/claims': typeof AppBindingClaimsRoute
   '/integration/proxies': typeof AppIntegrationProxiesRoute
-  '/notify/endpoints': typeof AppNotifyEndpointsRoute
-  '/notify/events': typeof AppNotifyEventsRoute
+  '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/auth/sign-in': typeof AuthAuthSignInRoute
   '/auth/sign-up': typeof AuthAuthSignUpRoute
   '/binding/': typeof AppBindingIndexRoute
@@ -119,13 +112,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/bot-instances': typeof AppBotInstancesRoute
   '/playground': typeof AppPlaygroundRoute
-  '/tasks': typeof AppTasksRoute
+  '/tasks': typeof AppTasksRouteWithChildren
   '/': typeof AppIndexRoute
   '/binding/channels': typeof AppBindingChannelsRoute
   '/binding/claims': typeof AppBindingClaimsRoute
   '/integration/proxies': typeof AppIntegrationProxiesRoute
-  '/notify/endpoints': typeof AppNotifyEndpointsRoute
-  '/notify/events': typeof AppNotifyEventsRoute
+  '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/auth/sign-in': typeof AuthAuthSignInRoute
   '/auth/sign-up': typeof AuthAuthSignUpRoute
   '/binding': typeof AppBindingIndexRoute
@@ -137,13 +129,12 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteRouteWithChildren
   '/_app/bot-instances': typeof AppBotInstancesRoute
   '/_app/playground': typeof AppPlaygroundRoute
-  '/_app/tasks': typeof AppTasksRoute
+  '/_app/tasks': typeof AppTasksRouteWithChildren
   '/_app/': typeof AppIndexRoute
   '/_app/binding/channels': typeof AppBindingChannelsRoute
   '/_app/binding/claims': typeof AppBindingClaimsRoute
   '/_app/integration/proxies': typeof AppIntegrationProxiesRoute
-  '/_app/notify/endpoints': typeof AppNotifyEndpointsRoute
-  '/_app/notify/events': typeof AppNotifyEventsRoute
+  '/_app/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/_auth/auth/sign-in': typeof AuthAuthSignInRoute
   '/_auth/auth/sign-up': typeof AuthAuthSignUpRoute
   '/_app/binding/': typeof AppBindingIndexRoute
@@ -160,8 +151,7 @@ export interface FileRouteTypes {
     | '/binding/channels'
     | '/binding/claims'
     | '/integration/proxies'
-    | '/notify/endpoints'
-    | '/notify/events'
+    | '/tasks/$taskId'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/binding/'
@@ -176,8 +166,7 @@ export interface FileRouteTypes {
     | '/binding/channels'
     | '/binding/claims'
     | '/integration/proxies'
-    | '/notify/endpoints'
-    | '/notify/events'
+    | '/tasks/$taskId'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/binding'
@@ -193,8 +182,7 @@ export interface FileRouteTypes {
     | '/_app/binding/channels'
     | '/_app/binding/claims'
     | '/_app/integration/proxies'
-    | '/_app/notify/endpoints'
-    | '/_app/notify/events'
+    | '/_app/tasks/$taskId'
     | '/_auth/auth/sign-in'
     | '/_auth/auth/sign-up'
     | '/_app/binding/'
@@ -280,19 +268,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAuthSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/notify/events': {
-      id: '/_app/notify/events'
-      path: '/notify/events'
-      fullPath: '/notify/events'
-      preLoaderRoute: typeof AppNotifyEventsRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/_app/notify/endpoints': {
-      id: '/_app/notify/endpoints'
-      path: '/notify/endpoints'
-      fullPath: '/notify/endpoints'
-      preLoaderRoute: typeof AppNotifyEndpointsRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/_app/tasks/$taskId': {
+      id: '/_app/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof AppTasksTaskIdRouteImport
+      parentRoute: typeof AppTasksRoute
     }
     '/_app/integration/proxies': {
       id: '/_app/integration/proxies'
@@ -318,16 +299,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppTasksRouteChildren {
+  AppTasksTaskIdRoute: typeof AppTasksTaskIdRoute
+}
+
+const AppTasksRouteChildren: AppTasksRouteChildren = {
+  AppTasksTaskIdRoute: AppTasksTaskIdRoute,
+}
+
+const AppTasksRouteWithChildren = AppTasksRoute._addFileChildren(
+  AppTasksRouteChildren,
+)
+
 interface AppRouteRouteChildren {
   AppBotInstancesRoute: typeof AppBotInstancesRoute
   AppPlaygroundRoute: typeof AppPlaygroundRoute
-  AppTasksRoute: typeof AppTasksRoute
+  AppTasksRoute: typeof AppTasksRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppBindingChannelsRoute: typeof AppBindingChannelsRoute
   AppBindingClaimsRoute: typeof AppBindingClaimsRoute
   AppIntegrationProxiesRoute: typeof AppIntegrationProxiesRoute
-  AppNotifyEndpointsRoute: typeof AppNotifyEndpointsRoute
-  AppNotifyEventsRoute: typeof AppNotifyEventsRoute
   AppBindingIndexRoute: typeof AppBindingIndexRoute
   AppIntegrationIndexRoute: typeof AppIntegrationIndexRoute
   AppNotifyIndexRoute: typeof AppNotifyIndexRoute
@@ -336,13 +327,11 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppBotInstancesRoute: AppBotInstancesRoute,
   AppPlaygroundRoute: AppPlaygroundRoute,
-  AppTasksRoute: AppTasksRoute,
+  AppTasksRoute: AppTasksRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppBindingChannelsRoute: AppBindingChannelsRoute,
   AppBindingClaimsRoute: AppBindingClaimsRoute,
   AppIntegrationProxiesRoute: AppIntegrationProxiesRoute,
-  AppNotifyEndpointsRoute: AppNotifyEndpointsRoute,
-  AppNotifyEventsRoute: AppNotifyEventsRoute,
   AppBindingIndexRoute: AppBindingIndexRoute,
   AppIntegrationIndexRoute: AppIntegrationIndexRoute,
   AppNotifyIndexRoute: AppNotifyIndexRoute,

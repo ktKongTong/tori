@@ -146,7 +146,7 @@ export function DashboardOverviewPage() {
               detail: latestEvent
                 ? `${latestEvent.subscriptionLabel ?? "Notification"} was last recorded for ${latestEvent.channelLabel} at ${latestEvent.createdAt}.`
                 : "No notification event has been recorded yet.",
-              to: "/notify/events",
+              to: "/notify",
             },
           ].map((item) => (
             <div
