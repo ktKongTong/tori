@@ -1,7 +1,6 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
-
-import type { ConnectionRow, ProxyInstanceRow } from "./connection.ts";
-import type { JsonRecord } from "./common.ts";
+import type { Connection, ProxyInstance } from "./connection.ts";
+export type { Connection, ProxyInstance };
+import type { AccountProfileRow } from "@/api/modules/steam/core/account/repository";
 
 export interface CreateProxyInstanceInput {
   id: string;
@@ -12,8 +11,8 @@ export interface CreateProxyInstanceInput {
   name?: string | null;
   status?: string;
   healthStatus?: string;
-  capabilities?: JsonRecord | null;
-  metadata?: JsonRecord | null;
+  capabilities?: unknown;
+  metadata?: unknown;
   lastSeenAt?: Date | null;
 }
 
@@ -22,14 +21,14 @@ export interface UpdateProxyInstanceRegistrationInput {
   credentialRef: string;
   name?: string | null;
   healthStatus: string;
-  capabilities: JsonRecord;
-  metadata?: JsonRecord | null;
+  capabilities: unknown;
+  metadata?: unknown;
 }
 
 export interface UpdateProxyInstanceProbeInput {
   id: string;
   healthStatus: string;
-  capabilities: JsonRecord;
+  capabilities: unknown;
 }
 
 export interface UpdateProxyInstanceStatusInput {
@@ -49,33 +48,36 @@ export interface CreateConnectionInput {
   proxyInstanceId?: string | null;
   isDefault?: boolean;
   status?: string;
-  metadata?: JsonRecord | null;
+  metadata?: unknown;
   connectedAt?: Date;
   lastSyncedAt?: Date | null;
 }
 
 export interface IIntegrationRepository {
+  listProxyInstances(): Promise<ProxyInstance[]>;
+  listConnections(): Promise<Connection[]>;
+  listAccountProfiles(): Promise<AccountProfileRow[]>;
   findProxyInstanceByOwnerAndBaseUrl(input: {
     ownerUserId: string;
     baseUrl: string;
-  }): Promise<ProxyInstanceRow | null>;
+  }): Promise<ProxyInstance | null>;
   updateProxyInstanceRegistration(
     input: UpdateProxyInstanceRegistrationInput,
-  ): Promise<ProxyInstanceRow>;
-  createProxyInstance(input: CreateProxyInstanceInput): Promise<ProxyInstanceRow>;
+  ): Promise<ProxyInstance>;
+  createProxyInstance(input: CreateProxyInstanceInput): Promise<ProxyInstance>;
   findProxyInstanceForOwner(input: {
     id: string;
     ownerUserId: string;
-  }): Promise<ProxyInstanceRow | null>;
-  updateProxyInstanceProbe(input: UpdateProxyInstanceProbeInput): Promise<ProxyInstanceRow>;
+  }): Promise<ProxyInstance | null>;
+  updateProxyInstanceProbe(input: UpdateProxyInstanceProbeInput): Promise<ProxyInstance>;
   updateProxyInstanceStatus(
     input: UpdateProxyInstanceStatusInput,
-  ): Promise<ProxyInstanceRow | null>;
+  ): Promise<ProxyInstance | null>;
   findConnectionByOwnerAndProviderAccount(input: {
     ownerUserId: string;
     provider: string;
     providerAccountId: string;
-  }): Promise<ConnectionRow | null>;
-  createConnection(input: CreateConnectionInput): Promise<ConnectionRow>;
-  findConnectionById(id: string): Promise<ConnectionRow | null>;
+  }): Promise<Connection | null>;
+  createConnection(input: CreateConnectionInput): Promise<Connection>;
+  findConnectionById(id: string): Promise<Connection | null>;
 }

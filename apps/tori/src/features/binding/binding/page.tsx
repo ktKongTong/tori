@@ -4,12 +4,12 @@ import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
 import { useModal } from "@/lib/modal";
 import { bindingColumns } from "./columns";
 import { RedeemTokenDialog } from "./redeem-token-dialog";
-import { useDashboardBindingQuery } from "@/features/binding/query";
+import { useUserBindingsQuery } from "@/features/binding/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function BindingPage() {
   const modal = useModal();
-  const bindingQuery = useDashboardBindingQuery();
+  const bindingQuery = useUserBindingsQuery();
   const data = bindingQuery.data;
 
   useToastError(bindingQuery.error, { title: "Failed to load bindings" });
@@ -22,7 +22,7 @@ export function BindingPage() {
 
       <DashboardTable
         columns={bindingColumns}
-        data={data?.userBindings ?? []}
+        data={data?.items ?? []}
         empty="No completed user bindings available."
       />
     </div>

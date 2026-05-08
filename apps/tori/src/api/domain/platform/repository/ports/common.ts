@@ -1,1 +1,1 @@
-export type JsonRecord = unknown;
+export type JsonRecord = object;

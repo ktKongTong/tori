@@ -22,7 +22,7 @@ const defaultErrorSchema = z
     code: z.string(),
     message: z.string(),
     traceId: z.string().optional(),
-    detail: z.any().optional(),
+    detail: z.unknown().optional(),
   })
   .meta({
     id: "common_error",
@@ -86,8 +86,8 @@ export const describeRoute = <
   BodySchema extends StandardSchemaV1 = StandardSchemaV1,
   FormSchema extends StandardSchemaV1 = StandardSchemaV1,
   ResponseSchema extends StandardSchemaV1 = StandardSchemaV1,
-  E extends Env = any,
-  P extends string = any,
+  E extends Env = Env,
+  P extends string = string,
   I extends Input = {
     in: ApplyInKeySchema<"query", QuerySchema> &
       ApplyInKeySchema<"header", HeaderSchema> &
@@ -118,8 +118,8 @@ export const describeRoute = <
   >,
 ) => {
   const { request, response } = spec;
-  const validators: any[] = [];
-  const validatorMap: Record<string, any> = {};
+  const validators: MiddlewareHandler[] = [];
+  const validatorMap: Record<string, unknown> = {};
   const addValidatorTarget = (target: keyof ValidationTargets, schema: StandardSchemaV1) => {
     validators.push(
       validator(target, schema, (result: { success: boolean; error?: unknown }, _c: unknown) => {
@@ -205,7 +205,9 @@ export const describeRoute = <
     P,
     V
   >;
-  const item = validators.map((it) => it[uniqueSymbol]);
+  const item = validators.map(
+    (it) => (it as MiddlewareHandler & { [uniqueSymbol]?: unknown })[uniqueSymbol],
+  );
   return Object.assign(middleware, {
     [uniqueSymbol]: [
       {

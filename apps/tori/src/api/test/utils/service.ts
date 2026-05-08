@@ -3,7 +3,11 @@ import type { DB } from "@/api/domain/infra/db";
 import type { ENV } from "@/api/domain/infra/env";
 import type { IMQ } from "@/api/domain/infra/eventing/dispatcher";
 import type { IKV } from "@/api/domain/infra/kv";
-import { createServiceContext } from "@/api/support/service-context";
+import type { PlatformRepositoryContainer } from "@/api/domain/platform/repository/container";
+import {
+  createServiceContext,
+  type CreateServiceContextInput,
+} from "@/api/support/service-context";
 
 export function createMockServiceContext(overrides: Record<string, unknown> = {}) {
   const tx = (overrides.tx ?? ({} as DB)) as DB;
@@ -21,7 +25,7 @@ export function createMockServiceContext(overrides: Record<string, unknown> = {}
   const queue = (overrides.queue ??
     ({ publish: async () => {}, publishBatch: async () => {} } as IMQ)) as IMQ;
 
-  const options: any = {
+  const options: CreateServiceContextInput<PlatformRepositoryContainer> = {
     tx,
     env,
     kv,
@@ -45,7 +49,7 @@ export function createMockServiceContext(overrides: Record<string, unknown> = {}
       } as never),
     role: overrides.role ?? "admin",
     ...overrides,
-  };
+  } as CreateServiceContextInput<PlatformRepositoryContainer>;
 
   return createServiceContext(options);
 }

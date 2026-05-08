@@ -26,7 +26,6 @@ export const scanDueTaskCron = createCronHandler("platform.task.scan-due", async
       id: taskRunId,
       taskDefinitionId: taskDefinition.id,
       kind: taskDefinition.kind,
-      status: "QUEUED",
       scheduledFor: now,
     });
 

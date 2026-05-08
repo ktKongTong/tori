@@ -115,14 +115,13 @@ export async function issueBindingToken(ctx: ServiceContext, input: IssueBinding
   const plaintextToken = createPlaintextToken();
 
   const grant = await getBindingRepository(ctx).createBindingGrant({
-    id: uniqueId(),
     code: createBindingCodeValue(),
     tokenHash: await hashToken(plaintextToken),
     purpose: input.purpose,
     subjectType: input.subjectType,
     subjectId: input.subjectId,
     issuedByUserId: ctx.userId ?? null,
-    issuedFrom: "backend",
+    issuedFrom: "web",
     issuedToSurface: input.issuedToSurface,
     codeExpiresAt,
     tokenExpiresAt,
@@ -156,7 +155,7 @@ export async function consumeAnonymousClaim(
   if (!authenticatedUserId) throw new NotFoundError("Authenticated user not found");
   const resolution = authenticatedUserId === anonymousUser.id ? "claimed" : "merged";
 
-  const resolved = await repository.resolveAnonymousClaim({
+  await repository.resolveAnonymousClaim({
     grantId: grant.id,
     claimSessionId: claimSession.id,
     anonymousUserId: anonymousUser.id,
@@ -165,7 +164,7 @@ export async function consumeAnonymousClaim(
   });
 
   return {
-    claimSession: resolved,
+    claimSession,
     anonymousUser,
     authenticatedUserId,
     resolution,
@@ -185,6 +184,7 @@ export async function revokeUserBinding(ctx: ServiceContext, bindingId: string) 
   }
 
   const revoked = await repository.revokeUserBinding(binding.id);
+  if (!revoked) throw new NotFoundError("User binding not found");
 
   return revoked;
 }

@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "cron-parser": "^5.5.0",
+    "@repo/utils": "workspace:",
     "zod": "catalog:"
   },
   "devDependencies": {

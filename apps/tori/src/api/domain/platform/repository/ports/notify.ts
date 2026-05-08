@@ -1,10 +1,11 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
-
 import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
-import type { JsonRecord } from "./common.ts";
-import type { SubscriptionRow } from "./subscription.ts";
+import type { ManagedBotPluginInstance } from "@/api/modules/platform/bot-plugin/repository";
+import type { Connection } from "./connection.ts";
+import type { Subscription } from "./subscription.ts";
+import type { ChannelBinding } from "@/api/modules/platform/binding/repository";
+import type {User} from "@/api/domain/infra";
 
-export interface DeliveryEndpointRow {
+export interface DeliveryEndpoint {
   id: string;
   ownerUserId: string | null;
   platform: string;
@@ -13,34 +14,14 @@ export interface DeliveryEndpointRow {
   target: string;
   secret: string | null;
   status: string;
-  config: JsonRecord | null;
-  metadata: JsonRecord | null;
+  config: unknown;
+  metadata: unknown;
   lastUsedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ChannelBindingRow {
-  id: string;
-  channelId: string;
-  platform: string;
-  externalChannelId: string;
-  externalChannelName: string | null;
-  namespace: string | null;
-  botPluginInstanceId: string | null;
-  source: string;
-  assurance: string;
-  establishedByGrantId: string | null;
-  status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
-  metadata: JsonRecord | null;
-  createdAt: Date;
-  updatedAt: Date;
-  endedAt: Date | null;
-}
-
-export interface NotificationEventRow {
+export interface NotificationEvent {
   id: string;
   subscriptionId: string | null;
   channelId: string;
@@ -49,7 +30,7 @@ export interface NotificationEventRow {
   channelBindingId: string | null;
   title: string | null;
   body: NotificationBody;
-  payload: JsonRecord;
+  payload: unknown;
   status: string;
   sentAt: Date | null;
   failedAt: Date | null;
@@ -57,11 +38,38 @@ export interface NotificationEventRow {
   createdAt: Date;
 }
 
+export interface Channel {
+  id: string;
+  type: string;
+  name: string | null;
+  status: string;
+  metadata: unknown;
+  createdByUserId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export type NotificationDeliveryCandidate = {
-  notification: NotificationEventRow;
-  channelBinding: ChannelBindingRow | null;
-  deliveryEndpoint: DeliveryEndpointRow;
+  notification: NotificationEvent;
+  channelBinding: ChannelBinding | null;
+  deliveryEndpoint: DeliveryEndpoint;
   ownerUserId: string | null;
+};
+
+export type SubscriptionDetail = Subscription & {
+  channel: Channel | null;
+  botInstance: ManagedBotPluginInstance | null;
+  connection: Connection | null;
+  ownerUser: User | null;
+  ownerChannel: Channel | null;
+};
+
+export type NotificationEventJoinedRow = {
+  event: NotificationEvent;
+  subscription: Subscription | null;
+  channel: Channel | null;
+  botInstance: ManagedBotPluginInstance | null;
+  endpoint: DeliveryEndpoint | null;
 };
 
 export type CreateNotificationCandidatesInput = {
@@ -70,11 +78,11 @@ export type CreateNotificationCandidatesInput = {
   eventType: string;
   title: string;
   body: NotificationBody;
-  payload: JsonRecord;
+  payload: unknown;
 };
 
 export interface CreateDeliveryEndpointInput {
-  id: string;
+  id?: string;
   ownerUserId?: string | null;
   platform: string;
   kind: string;
@@ -82,13 +90,12 @@ export interface CreateDeliveryEndpointInput {
   displayName?: string | null;
   secret?: string | null;
   status?: string;
-  config?: JsonRecord | null;
-  metadata?: JsonRecord | null;
-  lastUsedAt?: Date | null;
+  config?: unknown;
+  metadata?: unknown;
 }
 
 export interface CreateSubscriptionInput {
-  id: string;
+  id?: string;
   channelId: string;
   botPluginInstanceId: string;
   connectionId: string;
@@ -98,12 +105,12 @@ export interface CreateSubscriptionInput {
   topicKey: string;
   eventTypes: string[];
   status?: string;
-  filterExpr?: JsonRecord | null;
+  filterExpr?: unknown;
   createdByUserId?: string | null;
 }
 
 export interface CreateNotificationEventInput {
-  id: string;
+  id?: string;
   subscriptionId?: string | null;
   channelId: string;
   botPluginInstanceId?: string | null;
@@ -111,33 +118,47 @@ export interface CreateNotificationEventInput {
   channelBindingId?: string | null;
   title?: string | null;
   body: NotificationBody;
-  payload: JsonRecord;
+  payload: unknown;
   status?: string;
-  sentAt?: Date | null;
-  failedAt?: Date | null;
+  sentAt?: Date;
   errorMessage?: string | null;
   createdAt?: Date;
 }
 
 export interface INotifyRepository {
+  // listDeliveryEndpoints(): Promise<DeliveryEndpoint[]>;
+  // listSubscriptions(): Promise<Subscription[]>;
+  // listSubscriptionDetails(): Promise<SubscriptionDetail[]>;
+  // getSubscriptionJoinedRowById(id: string): Promise<SubscriptionDetail | null>;
+  // listNotificationEvents(): Promise<NotificationEvent[]>;
+  // listNotificationEventJoinedRows(): Promise<NotificationEventJoinedRow[]>;
+  // listNotificationEventsBySubscription(
+  //   id: string,
+  //   input: { page: number; pageSize: number },
+  // ): Promise<{ events: NotificationEvent[]; total: number }>;
+  // getSubscriptionById(id: string): Promise<Subscription | null>;
   createNotificationCandidates(
     input: CreateNotificationCandidatesInput,
   ): Promise<NotificationDeliveryCandidate[]>;
-  findDeliveryEndpointByTarget(target: string): Promise<DeliveryEndpointRow | null>;
-  findActiveDeliveryEndpointById(id: string): Promise<DeliveryEndpointRow | null>;
-  createDeliveryEndpoint(input: CreateDeliveryEndpointInput): Promise<DeliveryEndpointRow>;
-  findActiveChannelBindingByChannelId(channelId: string): Promise<ChannelBindingRow | null>;
+  findChannelById(id: string): Promise<Channel | null>;
+  findUserById(id: string): Promise<User | null>;
+  findBotPluginInstanceById(id: string): Promise<ManagedBotPluginInstance | null>;
+  findDeliveryEndpointById(id: string): Promise<DeliveryEndpoint | null>;
+  findDeliveryEndpointByTarget(target: string): Promise<DeliveryEndpoint | null>;
+  findActiveDeliveryEndpointById(id: string): Promise<DeliveryEndpoint | null>;
+  createDeliveryEndpoint(input: CreateDeliveryEndpointInput): Promise<DeliveryEndpoint>;
+  findActiveChannelBindingByChannelId(channelId: string): Promise<ChannelBinding | null>;
   findSubscriptionIdentity(input: {
     channelId: string;
     connectionId: string;
     botPluginInstanceId: string;
     topicType: string;
     topicKey: string;
-  }): Promise<SubscriptionRow | null>;
-  createSubscription(input: CreateSubscriptionInput): Promise<SubscriptionRow>;
-  updateDeliveryEndpointStatus(id: string, status: string): Promise<DeliveryEndpointRow | null>;
-  updateSubscriptionStatus(id: string, status: string): Promise<SubscriptionRow | null>;
-  createNotificationEvent(input: CreateNotificationEventInput): Promise<NotificationEventRow>;
+  }): Promise<Subscription | null>;
+  createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
+  updateDeliveryEndpointStatus(id: string, status: string): Promise<DeliveryEndpoint | null>;
+  updateSubscriptionStatus(id: string, status: string): Promise<Subscription | null>;
+  createNotificationEvent(input: CreateNotificationEventInput): Promise<NotificationEvent>;
   markNotificationFailed(id: string, errorMessage: string): Promise<void>;
   markNotificationSent(id: string): Promise<void>;
 }

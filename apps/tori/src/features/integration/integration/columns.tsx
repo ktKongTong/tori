@@ -5,73 +5,73 @@ import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboa
 import {
   fetchIntegrationAccountProfile,
   refreshIntegrationFamily,
-  type DashboardIntegrationData,
+  type ConnectionRow,
+  type IntegrationConnectionRow,
 } from "@/features/integration/api";
 import { useToastError } from "@/lib/toast-error";
-
-export type IntegrationConnectionRow = DashboardIntegrationData["connections"][number];
 
 export const integrationConnectionColumns: ColumnDef<IntegrationConnectionRow>[] = [
   {
     accessorKey: "accountLabel",
     header: "Account",
-    cell: ({ row }) => row.original.accountLabel,
+    cell: ({ row }) =>
+      row.original.connection.providerAccountName ?? row.original.connection.providerAccountId,
   },
   {
     accessorKey: "provider",
     header: "Provider",
-    cell: ({ row }) => row.original.provider,
+    cell: ({ row }) => row.original.connection.provider,
   },
   {
     accessorKey: "accessMode",
     header: "Access",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.accessMode} />,
+    cell: ({ row }) => <DashboardStatusPill text={row.original.connection.accessMode} />,
   },
   {
     accessorKey: "attachedProxy",
     header: "Attached Proxy",
-    cell: ({ row }) => row.original.proxyName ?? "No proxy attached",
+    cell: ({ row }) => row.original.proxy?.name ?? "No proxy attached",
   },
   {
     accessorKey: "accountProfile",
     header: "Profile",
     cell: ({ row }) => {
-      const profile = row.original.accountProfile;
+      const profile = row.original.profile;
 
       if (!profile) return "Not fetched";
 
-      return profile.displayName ?? profile.externalAccountId;
+      return profile.personaName ?? profile.steamId;
     },
   },
   {
     accessorKey: "defaultState",
     header: "Default",
-    cell: ({ row }) => (row.original.isDefault ? "Default" : "—"),
+    cell: ({ row }) => (row.original.connection.isDefault ? "Default" : "—"),
   },
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.status} />,
+    cell: ({ row }) => <DashboardStatusPill text={row.original.connection.status} />,
   },
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => <IntegrationConnectionActions connection={row.original} />,
+    cell: ({ row }) => <IntegrationConnectionActions connection={row.original.connection} />,
   },
 ];
 
-function IntegrationConnectionActions({ connection }: { connection: IntegrationConnectionRow }) {
+function IntegrationConnectionActions({ connection }: { connection: ConnectionRow }) {
   const queryClient = useQueryClient();
   const fetchProfile = useMutation({
     mutationFn: async (connectionId: string) => fetchIntegrationAccountProfile(connectionId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "integration"] });
+      await queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
     },
   });
   const refreshFamily = useMutation({
     mutationFn: async (connectionId: string) => refreshIntegrationFamily(connectionId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "integration"] });
+      await queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
     },
   });
 
@@ -79,7 +79,7 @@ function IntegrationConnectionActions({ connection }: { connection: IntegrationC
 
   return (
     <DashboardTableActions
-      label={`Open actions for ${connection.accountLabel}`}
+      label={`Open actions for ${connection.providerAccountName ?? connection.providerAccountId}`}
       items={[
         {
           label: "Fetch Profile",

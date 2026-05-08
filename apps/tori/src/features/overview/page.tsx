@@ -1,34 +1,31 @@
 import { Button } from "@repo/ui/components/button";
 import { Link } from "@tanstack/react-router";
 import { DashboardMetric, DashboardNotice, DashboardPanel } from "@/components/dashboard-ui";
-import { useDashboardBindingQuery } from "@/features/binding/query";
-import { useDashboardIntegrationQuery } from "@/features/integration/query";
-import {
-  useDashboardNotifyEventsQuery,
-  useDashboardNotifySubscriptionsQuery,
-} from "@/features/notify/query";
+import { useUserBindingsQuery } from "@/features/binding/query";
+import { useConnectionsQuery } from "@/features/integration/query";
+import { useNotificationSubscriptionsQuery } from "@/features/notify/query";
 
 export function DashboardOverviewPage() {
-  const bindingQuery = useDashboardBindingQuery();
-  const integrationQuery = useDashboardIntegrationQuery();
-  const notifySubscriptionsQuery = useDashboardNotifySubscriptionsQuery();
-  const notifyEventsQuery = useDashboardNotifyEventsQuery();
+  const bindingQuery = useUserBindingsQuery();
+  const integrationQuery = useConnectionsQuery();
+  const notifySubscriptionsQuery = useNotificationSubscriptionsQuery();
+  // const notifyEventsQuery = useNotifyEventsQuery();
   const binding = bindingQuery.data;
   const integration = integrationQuery.data;
   const notifySubscriptions = notifySubscriptionsQuery.data;
-  const notifyEvents = notifyEventsQuery.data;
+  const notifyEvents = [];
 
-  const activeUserBindings = binding?.userBindings.length ?? 0;
+  const activeUserBindings = binding?.items.length ?? 0;
   const activeConnections =
-    integration?.connections.filter((item) => item.status === "active").length ?? 0;
+    integration?.items.filter((item) => item.connection.status === "active").length ?? 0;
   const activeSubscriptions =
-    notifySubscriptions?.subscriptions.filter((item) => item.status === "active").length ?? 0;
-  const failedNotifications =
-    notifyEvents?.notificationEvents.filter((item) => item.status === "failed").length ?? 0;
-  const latestSubscription = notifySubscriptions?.subscriptions[0] ?? null;
-  const latestEvent = notifyEvents?.notificationEvents[0] ?? null;
-  const latestConnection = integration?.connections[0] ?? null;
-  const latestBinding = binding?.userBindings[0] ?? null;
+    notifySubscriptions?.items.filter((item) => item.status === "active").length ?? 0;
+  // const failedNotifications =
+  //   notifyEvents?.items.filter((item) => item.event.status === "failed").length ?? 0;
+  const latestSubscription = notifySubscriptions?.items[0] ?? null;
+  // const latestEvent = notifyEvents?.items[0] ?? null;
+  const latestConnection = integration?.items[0] ?? null;
+  const latestBinding = binding?.items[0] ?? null;
 
   const nextStep =
     activeUserBindings === 0
@@ -123,28 +120,28 @@ export function DashboardOverviewPage() {
             {
               label: "Latest binding",
               detail: latestBinding
-                ? `${latestBinding.userName} is bound on ${latestBinding.platform} as ${latestBinding.externalUserName}.`
+                ? `${latestBinding.user?.name ?? latestBinding.binding.userId} is bound on ${latestBinding.binding.platform} as ${latestBinding.binding.externalUserName ?? latestBinding.binding.externalUserId}.`
                 : "No user binding has been created yet.",
               to: "/binding",
             },
             {
               label: "Latest connection",
               detail: latestConnection
-                ? `${latestConnection.accountLabel} is available through ${latestConnection.provider}.`
+                ? `${latestConnection.connection.providerAccountName ?? latestConnection.connection.providerAccountId} is available through ${latestConnection.connection.provider}.`
                 : "No provider connection has been added yet.",
               to: "/integration",
             },
             {
               label: "Latest subscription",
               detail: latestSubscription
-                ? `${latestSubscription.channelLabel} is subscribed to ${latestSubscription.topicType}.`
+                ? `${latestSubscription.channel?.name ?? latestSubscription.channelId} is subscribed to ${latestSubscription.topicType}.`
                 : "No subscription has been created yet.",
               to: "/notify",
             },
             {
               label: "Latest notification event",
               detail: latestEvent
-                ? `${latestEvent.subscriptionLabel ?? "Notification"} was last recorded for ${latestEvent.channelLabel} at ${latestEvent.createdAt}.`
+                ? `${latestEvent.subscription?.topicType ?? "Notification"} was last recorded for ${latestEvent.channel?.name ?? latestEvent.event.channelId} at ${latestEvent.event.createdAt}.`
                 : "No notification event has been recorded yet.",
               to: "/notify",
             },

@@ -23,8 +23,8 @@ export function SignUpPage() {
       } else {
         await navigate({ to: "/" });
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }

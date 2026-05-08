@@ -26,6 +26,8 @@
       "@repo/api-kit/*": ["../../packages/api-kit/src/*.ts"],
       "@repo/auth/*": ["../../packages/auth/src/*"],
       "@repo/core/*": ["../../packages/core/src/*"],
+      "@repo/data-table": ["../../packages/data-table/src/index.ts"],
+      "@repo/data-table/*": ["../../packages/data-table/src/*"],
       "@repo/observability/*": ["../../packages/observability/src/*"],
       "@repo/protocol/*": ["../../packages/protocol/src/*"],
       "@repo/request": ["../../packages/request/src/index.ts"],

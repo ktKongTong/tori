@@ -1,40 +1,67 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
-
-import { and, eq } from "drizzle-orm";
-import { taskDefinitions, taskRuns } from "@/api/db/schema/pg";
+import {and, eq, desc, count, getColumns, type SQL, type InferSelectModel} from "drizzle-orm";
+import {subscriptions, taskDefinitions, taskRuns} from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
   CreateTaskDefinitionInput,
   CreateTaskRunInput,
   ITaskRepository,
-  JsonRecord,
   UpdateTaskDefinitionInput,
 } from "@/api/domain/infra/repository/ports/task.ts";
+import type {PageBasedPaginationParam} from "@repo/utils/schema/paging";
+
+import { list } from "@repo/db/utils/pg";
+import {NotFoundError} from "@/api/domain/error";
 
 export class TaskPgRepository implements ITaskRepository {
+
   constructor(private db: PGDB) {}
 
-  async getTaskDefinitionsByKind(kind: string, userId?: string | null) {
-    return await this.db
-      .select()
-      .from(taskDefinitions)
-      .where(
-        and(
-          eq(taskDefinitions.kind, kind),
-          userId ? eq(taskDefinitions.ownerUserId, userId) : undefined,
-        ),
-      );
+  async listTasks(page: PageBasedPaginationParam) {
+    return await list(this.db, taskDefinitions, {
+      orderBy: [{ column: 'createdAt', direction: 'desc' }],
+      page: page,
+    })
+  }
+  async getTaskDefinitionsByKind(kind: string, userId: string | null, page: PageBasedPaginationParam) {
+    const where = and(
+      eq(taskDefinitions.kind, kind),
+      userId ? eq(taskDefinitions.ownerUserId, userId) : undefined,
+    )
+
+    return list(
+      this.db,
+      taskDefinitions,
+      { where, page }
+    )
   }
 
-  async listTaskDefinitionsByOwner(ownerUserId: string) {
-    return await this.db
+  async getTaskRunByTaskDefinitionId(taskDefinitionId: string, page: PageBasedPaginationParam) {
+    const [task] = await this.db
       .select()
       .from(taskDefinitions)
-      .where(eq(taskDefinitions.ownerUserId, ownerUserId));
+      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .limit(1);
+    if (!task) throw new NotFoundError(`NotFound task definition: ${taskDefinitionId}`);
+
+    const where = eq(taskRuns.taskDefinitionId, taskDefinitionId)
+    return await list(this.db, taskRuns, {
+      where,
+      orderBy: [{ column: 'createdAt', direction: 'desc' }],
+      page,
+    })
   }
 
-  async listEnabledTaskDefinitions() {
-    return await this.db.select().from(taskDefinitions).where(eq(taskDefinitions.enabled, 1));
+  async listTaskDefinitionsByOwner(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = eq(taskDefinitions.ownerUserId, ownerUserId)
+    return await list(this.db, taskDefinitions, { where, page })
+  }
+
+  async listEnabledTaskDefinitions(page: PageBasedPaginationParam) {
+    return await list(
+      this.db,
+      taskDefinitions,
+      { where: eq(taskDefinitions.enabled, true), page }
+    )
   }
 
   async getTaskRunById(taskRunId: string) {
@@ -62,10 +89,7 @@ export class TaskPgRepository implements ITaskRepository {
       .where(eq(taskRuns.id, taskRunId));
   }
 
-  async markTaskRunDone(
-    taskRunId: string,
-    input: { summary?: JsonRecord | null; finishedAt: Date },
-  ) {
+  async markTaskRunDone(taskRunId: string, input: { summary?: unknown; finishedAt: Date }) {
     await this.db
       .update(taskRuns)
       .set({
@@ -117,10 +141,7 @@ export class TaskPgRepository implements ITaskRepository {
   }
 
   async createTaskDefinition(input: CreateTaskDefinitionInput) {
-    const [taskDefinition] = await this.db
-      .insert(taskDefinitions)
-      .values(input as typeof taskDefinitions.$inferInsert)
-      .returning();
+    const [taskDefinition] = await this.db.insert(taskDefinitions).values(input).returning();
     return taskDefinition;
   }
 
@@ -134,10 +155,14 @@ export class TaskPgRepository implements ITaskRepository {
   }
 
   async createTaskRun(input: CreateTaskRunInput) {
-    const [taskRun] = await this.db
-      .insert(taskRuns)
-      .values(input as typeof taskRuns.$inferInsert)
-      .returning();
+    const values: typeof taskRuns.$inferInsert = {
+      id: input.id,
+      taskDefinitionId: input.taskDefinitionId,
+      kind: input.kind,
+      status: input.status ?? "PENDING",
+      scheduledFor: input.scheduledFor ?? undefined,
+    };
+    const [taskRun] = await this.db.insert(taskRuns).values(values).returning();
     return taskRun;
   }
 

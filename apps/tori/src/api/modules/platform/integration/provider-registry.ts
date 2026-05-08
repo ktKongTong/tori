@@ -1,6 +1,6 @@
 import { ParameterError } from "@/api/domain/error/index.ts";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
-import { resolveConnectionAccess } from "./query.js";
+import { resolveConnectionAccess } from "@/api/modules/platform/integration/command.ts";
 
 export type ConnectionAccountProfileResult = {
   connectionId: string;

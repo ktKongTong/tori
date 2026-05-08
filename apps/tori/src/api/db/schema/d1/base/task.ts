@@ -8,7 +8,7 @@ export const taskDefinitions = sqliteTable("task_definition", {
     .$defaultFn(() => uniqueId()),
   ownerUserId: text("owner_user_id"),
   kind: text("kind").notNull(),
-  enabled: integer("enabled").notNull().default(1),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   schedule: text("schedule").notNull(),
   payload: text("payload", { mode: "json" }).notNull(),
   lastTriggeredAt: timestamptz("last_triggered_at"),
@@ -23,6 +23,8 @@ export const taskRuns = sqliteTable("task_run", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => uniqueId()),
+  name: text("name"),
+  index: text("index"),
   taskDefinitionId: text("task_definition_id").notNull(),
   kind: text("kind").notNull(),
   status: text("status").notNull(),

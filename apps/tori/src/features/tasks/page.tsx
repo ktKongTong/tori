@@ -11,8 +11,8 @@ import {
 } from "@/components/dashboard-ui";
 import { taskColumns } from "./columns";
 import { useSession } from "@/lib/auth-client";
-import type { DashboardTaskDetailData } from "@/features/tasks/api";
-import { useDashboardTaskDetailQuery, useDashboardTasksQuery } from "@/features/tasks/query";
+import type { TaskRun } from "@/features/tasks/api";
+import {useTaskDetailQuery, useTaskRuns, useTasksQuery} from "@/features/tasks/query";
 
 export function TasksPage() {
   const { data: session } = useSession();
@@ -20,7 +20,7 @@ export function TasksPage() {
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
   const isTaskChildRoute = location.pathname.startsWith("/tasks/");
-  const tasksQuery = useDashboardTasksQuery();
+  const tasksQuery = useTasksQuery();
   const tasksData = tasksQuery.data;
 
   if (!isAdmin) {
@@ -41,7 +41,7 @@ export function TasksPage() {
 
       <DashboardTable
         columns={taskColumns}
-        data={tasksData?.tasks ?? []}
+        data={tasksData?.data ?? []}
         empty="No tasks available."
       />
     </div>
@@ -54,18 +54,18 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
-  const taskQuery = useDashboardTaskDetailQuery(taskId, { page: historyPage, pageSize });
-  const taskData = taskQuery.data;
+  const taskQuery = useTaskDetailQuery(taskId);
+  const {data: taskRuns} = useTaskRuns(taskId, { page: historyPage, pageSize });
 
-  useEffect(() => {
-    setHistoryPage(1);
-  }, [taskId]);
+  // useEffect(() => {
+  //   setHistoryPage(1);
+  // }, [taskId]);
 
-  useEffect(() => {
-    if (taskData && historyPage > taskData.pagination.totalPages) {
-      setHistoryPage(taskData.pagination.totalPages);
-    }
-  }, [historyPage, taskData]);
+  // useEffect(() => {
+  //   if (taskData && historyPage > taskRuns?.total) {
+  //     setHistoryPage(taskData.totalPages);
+  //   }
+  // }, [historyPage, taskData]);
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -77,7 +77,7 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
         <Button variant="outline" render={<Link to="/tasks" />}>
           Back
         </Button>
-        <Button onClick={() => void taskQuery.refetch()} variant="outline">
+        <Button onClick={() => taskQuery.refetch()} variant="outline">
           Refresh
         </Button>
       </DashboardActionBar>
@@ -88,20 +88,22 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
         </DashboardNotice>
       ) : null}
 
-      {taskData ? (
+      {taskQuery.data ? (
         <>
           <DashboardPanel
             eyebrow="Definition"
-            title={taskData.task.kind}
-            description={taskData.task.id}
+            title={taskQuery.data.kind}
+            description={taskQuery.data.id}
           >
             <dl className="grid gap-4 text-sm md:grid-cols-3">
-              <TaskMeta label="Connection">{taskData.task.connectionLabel ?? "—"}</TaskMeta>
-              <TaskMeta label="Schedule">{taskData.task.schedule}</TaskMeta>
+              <TaskMeta label="Connection">
+                {getTaskConnectionId(taskQuery.data.payload) ?? "—"}
+              </TaskMeta>
+              <TaskMeta label="Schedule">{taskQuery.data.schedule}</TaskMeta>
               <TaskMeta label="Enabled">
                 <DashboardStatusPill
-                  text={taskData.task.enabled ? "enabled" : "disabled"}
-                  tone={taskData.task.enabled ? "success" : "neutral"}
+                  text={taskQuery.data.enabled ? "enabled" : "disabled"}
+                  tone={taskQuery.data.enabled ? "success" : "neutral"}
                 />
               </TaskMeta>
             </dl>
@@ -115,18 +117,18 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             <dl className="grid gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
               <TaskMeta label="Last Status">
                 <DashboardStatusPill
-                  text={taskData.task.lastRunStatus ?? "never run"}
-                  tone={statusTone(taskData.task.lastRunStatus)}
+                  text={taskQuery.data.lastRunStatus ?? "never run"}
+                  tone={statusTone(taskQuery.data.lastRunStatus)}
                 />
               </TaskMeta>
               <TaskMeta label="Last Triggered">
-                {formatDateTime(taskData.task.lastTriggeredAt)}
+                {formatDateTime(taskQuery.data.lastTriggeredAt)}
               </TaskMeta>
-              <TaskMeta label="Last Run">{formatDateTime(taskData.task.lastRunAt)}</TaskMeta>
-              <TaskMeta label="Updated">{formatDateTime(taskData.task.updatedAt)}</TaskMeta>
-              {taskData.task.lastError ? (
+              <TaskMeta label="Last Run">{formatDateTime(taskQuery.data.lastRunAt)}</TaskMeta>
+              {/*<TaskMeta label="Updated">{formatDateTime(taskQuery.data.updatedAt)}</TaskMeta>*/}
+              {taskQuery.data.lastError ? (
                 <div className="md:col-span-2 lg:col-span-4">
-                  <TaskMeta label="Last Error">{taskData.task.lastError}</TaskMeta>
+                  <TaskMeta label="Last Error">{taskQuery.data.lastError}</TaskMeta>
                 </div>
               ) : null}
             </dl>
@@ -137,12 +139,12 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             title="Run History"
             description="Recent task runs ordered by creation time."
           >
-            <DashboardTable columns={taskRunColumns} data={taskData.runs} empty="No runs yet." />
+            <DashboardTable columns={taskRunColumns} data={taskRuns?.data ?? []} empty="No runs yet." />
             <RunHistoryPagination
-              page={taskData.pagination.page}
-              pageSize={taskData.pagination.pageSize}
-              total={taskData.pagination.total}
-              totalPages={taskData.pagination.totalPages}
+              page={taskRuns?.page?.page ?? 1}
+              pageSize={taskRuns?.page?.pageSize ?? 10}
+              total={taskRuns?.page?.total ?? 0}
+              totalPages={ taskRuns?.page?.totalPages ?? 0 }
               onPageChange={setHistoryPage}
             />
           </DashboardPanel>
@@ -154,9 +156,8 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   );
 }
 
-type TaskRunRow = DashboardTaskDetailData["runs"][number];
 
-const taskRunColumns: ColumnDef<TaskRunRow>[] = [
+const taskRunColumns: ColumnDef<TaskRun>[] = [
   {
     accessorKey: "createdAt",
     header: "Created",
@@ -276,10 +277,10 @@ function statusTone(
   return "neutral";
 }
 
-function formatDateTime(value: string | null | undefined) {
+function formatDateTime(value: Date | string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return value as string;
   return new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "2-digit",
@@ -293,4 +294,10 @@ function formatDateTime(value: string | null | undefined) {
 function formatSummary(value: unknown) {
   if (typeof value === "string") return value;
   return JSON.stringify(value, null, 2);
+}
+
+function getTaskConnectionId(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const value = (payload as Record<string, unknown>).connectionId;
+  return typeof value === "string" ? value : null;
 }

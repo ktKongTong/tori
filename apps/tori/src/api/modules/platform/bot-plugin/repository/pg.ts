@@ -6,6 +6,7 @@ import type {
   CreateManagedBotInstanceInput,
   IBotPluginRepository,
 } from "./repository";
+import { uniqueId } from "@repo/utils/id";
 
 export class BotPluginPgRepository implements IBotPluginRepository {
   constructor(private readonly db: PGDB) {}
@@ -48,10 +49,19 @@ export class BotPluginPgRepository implements IBotPluginRepository {
   }
 
   async createInternalDeliveryEndpoint(input: CreateInternalDeliveryEndpointInput) {
-    const [endpoint] = await this.db
-      .insert(deliveryEndpoints)
-      .values(input as typeof deliveryEndpoints.$inferInsert)
-      .returning();
+    const values: typeof deliveryEndpoints.$inferInsert = {
+      id: uniqueId(),
+      ownerUserId: input.ownerUserId ?? null,
+      platform: input.platform,
+      kind: input.kind,
+      target: input.target,
+      displayName: input.displayName ?? null,
+      secret: input.secret ?? null,
+      status: input.status ?? "active",
+      config: input.config ?? null,
+      metadata: input.metadata ?? null,
+    };
+    const [endpoint] = await this.db.insert(deliveryEndpoints).values(values).returning();
     return endpoint;
   }
 
@@ -84,10 +94,21 @@ export class BotPluginPgRepository implements IBotPluginRepository {
   }
 
   async createManagedBotInstance(input: CreateManagedBotInstanceInput) {
-    const [instance] = await this.db
-      .insert(botPluginInstances)
-      .values(input as typeof botPluginInstances.$inferInsert)
-      .returning();
+    const values: typeof botPluginInstances.$inferInsert = {
+      id: input.id,
+      ownerUserId: input.ownerUserId,
+      platform: input.platform,
+      namespace: input.namespace ?? null,
+      instanceKey: input.instanceKey,
+      displayName: input.displayName ?? null,
+      callbackMode: input.callbackMode ?? "internal-sse",
+      deliveryEndpointId: input.deliveryEndpointId ?? null,
+      status: input.status ?? "active",
+      capabilities: input.capabilities ?? null,
+      metadata: input.metadata ?? null,
+      lastSeenAt: input.lastSeenAt ?? undefined,
+    };
+    const [instance] = await this.db.insert(botPluginInstances).values(values).returning();
     return instance;
   }
 

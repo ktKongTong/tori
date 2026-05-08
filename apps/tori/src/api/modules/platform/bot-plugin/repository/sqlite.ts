@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { uniqueId } from "@repo/utils/id";
 import { botPluginInstances, deliveryEndpoints } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra/db";
 import type {
@@ -50,7 +51,18 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
   async createInternalDeliveryEndpoint(input: CreateInternalDeliveryEndpointInput) {
     const [endpoint] = await this.db
       .insert(deliveryEndpoints)
-      .values(input as typeof deliveryEndpoints.$inferInsert)
+      .values({
+        id: input.id ?? uniqueId(),
+        ownerUserId: input.ownerUserId ?? null,
+        platform: input.platform,
+        kind: input.kind,
+        target: input.target,
+        displayName: input.displayName ?? null,
+        secret: input.secret ?? null,
+        status: input.status ?? "active",
+        config: input.config ?? null,
+        metadata: input.metadata ?? null,
+      })
       .returning();
     return endpoint;
   }
@@ -86,7 +98,20 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
   async createManagedBotInstance(input: CreateManagedBotInstanceInput) {
     const [instance] = await this.db
       .insert(botPluginInstances)
-      .values(input as typeof botPluginInstances.$inferInsert)
+      .values({
+        id: input.id,
+        ownerUserId: input.ownerUserId,
+        platform: input.platform,
+        namespace: input.namespace ?? null,
+        instanceKey: input.instanceKey,
+        displayName: input.displayName ?? null,
+        callbackMode: input.callbackMode ?? "internal-sse",
+        deliveryEndpointId: input.deliveryEndpointId ?? null,
+        status: input.status ?? "active",
+        capabilities: input.capabilities ?? null,
+        metadata: input.metadata ?? null,
+        lastSeenAt: input.lastSeenAt ?? null,
+      })
       .returning();
     return instance;
   }

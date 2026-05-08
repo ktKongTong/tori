@@ -2,11 +2,11 @@ import { Button } from "@repo/ui/components/button";
 
 import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
 import { bindingChannelColumns } from "./columns";
-import { useDashboardBindingQuery } from "@/features/binding/query";
+import { useChannelBindingsQuery } from "@/features/binding/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function BindingChannelsPage() {
-  const bindingQuery = useDashboardBindingQuery();
+  const bindingQuery = useChannelBindingsQuery();
   const bindingData = bindingQuery.data;
   useToastError(bindingQuery.error, { title: "Failed to load channel bindings" });
 
@@ -20,7 +20,7 @@ export function BindingChannelsPage() {
 
       <DashboardTable
         columns={bindingChannelColumns}
-        data={bindingData?.channelBindings ?? []}
+        data={bindingData?.items ?? []}
         empty="No active channel bindings available."
       />
     </div>

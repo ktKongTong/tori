@@ -7,11 +7,11 @@ import { InspectTokenProxyDialog } from "./proxy-dialogs";
 import {
   probeProxyInstance,
   updateProxyStatus as updateProxyInstanceStatus,
-  type DashboardIntegrationData,
+  type ProxyInstanceRow,
 } from "@/features/integration/api";
 import { useModal } from "@/lib/modal";
 
-export type IntegrationProxyRow = DashboardIntegrationData["proxyInstances"][number];
+export type IntegrationProxyRow = ProxyInstanceRow;
 
 export const integrationProxyColumns: ColumnDef<IntegrationProxyRow>[] = [
   {
@@ -54,7 +54,7 @@ function IntegrationProxyActions({ proxy }: { proxy: IntegrationProxyRow }) {
   const probeProxy = useMutation({
     mutationFn: async (proxyId: string) => probeProxyInstance(proxyId),
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "integration"] });
+      await queryClient.invalidateQueries({ queryKey: ["integration", "proxy-instances"] });
       toast.success("Proxy probed", {
         description: `Health: ${data.healthStatus}\nProviders: ${data.providers.map((provider) => `${provider.name} (${provider.flow})`).join(", ") || "none"}`,
       });
@@ -64,9 +64,9 @@ function IntegrationProxyActions({ proxy }: { proxy: IntegrationProxyRow }) {
     mutationFn: async (input: { id: string; status: "active" | "disabled" }) =>
       updateProxyInstanceStatus(input),
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "integration"] });
+      await queryClient.invalidateQueries({ queryKey: ["integration", "proxy-instances"] });
       toast.success("Proxy updated", {
-        description: `Proxy ${data.id} is now ${data.status}.`,
+        description: `Proxy instance is now ${data.status}.`,
       });
     },
   });
@@ -83,7 +83,7 @@ function IntegrationProxyActions({ proxy }: { proxy: IntegrationProxyRow }) {
                 proxy={{
                   baseUrl: proxy.baseUrl,
                   healthStatus: proxy.healthStatus,
-                  name: proxy.name,
+                  name: proxy.name ?? proxy.baseUrl,
                   providers: proxy.providers,
                 }}
               />,

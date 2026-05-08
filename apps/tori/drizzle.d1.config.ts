@@ -4,7 +4,7 @@ import { defineConfig } from "drizzle-kit";
 loadEnvFile();
 
 export default defineConfig({
-  schema: process.env.DRIZZLE_D1_SCHEMA ?? "./app/api/db/schema/d1/index.ts",
+  schema: process.env.DRIZZLE_D1_SCHEMA ?? "./src/api/db/schema/d1/index.ts",
   out: process.env.DRIZZLE_D1_OUT ?? "./drizzle-d1",
   dialect: "sqlite",
   driver: "d1-http",

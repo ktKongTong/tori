@@ -21,6 +21,7 @@ import type {
   CreateBotIngressUserInput,
   IBotIngressRepository,
 } from "./repository";
+import { uniqueId } from "@repo/utils/id";
 
 export class BotIngressPgRepository implements IBotIngressRepository {
   constructor(private readonly db: PGDB) {}
@@ -91,7 +92,12 @@ export class BotIngressPgRepository implements IBotIngressRepository {
   async createAnonymousUser(input: CreateBotIngressUserInput) {
     const [row] = await this.db
       .insert(user)
-      .values(input as typeof user.$inferInsert)
+      .values([
+        {
+          id: uniqueId(),
+          ...input,
+        },
+      ])
       .returning();
     return row;
   }
@@ -99,7 +105,10 @@ export class BotIngressPgRepository implements IBotIngressRepository {
   async createUserBinding(input: CreateBotIngressUserBindingInput) {
     const [binding] = await this.db
       .insert(userBindings)
-      .values(input as typeof userBindings.$inferInsert)
+      .values({
+        id: uniqueId(),
+        ...input,
+      })
       .returning();
     return binding;
   }
@@ -123,18 +132,29 @@ export class BotIngressPgRepository implements IBotIngressRepository {
   }
 
   async createChannel(input: CreateBotIngressChannelInput) {
-    const [channel] = await this.db
-      .insert(channels)
-      .values(input as typeof channels.$inferInsert)
-      .returning();
+    const [channel] = await this.db.insert(channels).values(input).returning();
     return channel;
   }
 
   async createChannelBinding(input: CreateBotIngressChannelBindingInput) {
-    const [binding] = await this.db
-      .insert(channelBindings)
-      .values(input as typeof channelBindings.$inferInsert)
-      .returning();
+    const values: typeof channelBindings.$inferInsert = {
+      id: input.id ?? uniqueId(),
+      channelId: input.channelId,
+      platform: input.platform,
+      externalChannelId: input.externalChannelId,
+      externalChannelName: input.externalChannelName ?? null,
+      namespace: input.namespace ?? null,
+      botPluginInstanceId: input.botPluginInstanceId ?? null,
+      source: input.source,
+      assurance: input.assurance,
+      establishedByGrantId: input.establishedByGrantId ?? null,
+      status: input.status ?? "active",
+      supersededByBindingId: input.supersededByBindingId ?? null,
+      revokedReason: input.revokedReason ?? null,
+      metadata: input.metadata ?? null,
+      endedAt: input.endedAt ?? undefined,
+    };
+    const [binding] = await this.db.insert(channelBindings).values(values).returning();
     return binding;
   }
 
@@ -198,15 +218,36 @@ export class BotIngressPgRepository implements IBotIngressRepository {
   }
 
   async createClaimSession(input: CreateBotIngressClaimSessionInput) {
-    const [claimSession] = await this.db
-      .insert(claimSessions)
-      .values(input as typeof claimSessions.$inferInsert)
-      .returning();
+    const values: typeof claimSessions.$inferInsert = {
+      id: input.id,
+      initiatedFrom: input.initiatedFrom,
+      purpose: input.purpose,
+      subjectType: input.subjectType,
+      subjectId: input.subjectId ?? null,
+      anonymousUserId: input.anonymousUserId ?? null,
+      anonymousUserName: input.anonymousUserName ?? null,
+      observedUserPlatform: input.observedUserPlatform ?? null,
+      observedUserId: input.observedUserId ?? null,
+      observedUserName: input.observedUserName ?? null,
+      observedUserNamespace: input.observedUserNamespace ?? null,
+      observedChannelPlatform: input.observedChannelPlatform ?? null,
+      observedChannelId: input.observedChannelId ?? null,
+      observedChannelName: input.observedChannelName ?? null,
+      observedChannelNamespace: input.observedChannelNamespace ?? null,
+      grantId: input.grantId ?? null,
+      status: input.status,
+      resolvedUserId: input.resolvedUserId ?? null,
+      resolvedChannelId: input.resolvedChannelId ?? null,
+      resolution: input.resolution ?? null,
+      metadata: input.metadata ?? null,
+      resolvedAt: input.resolvedAt ?? undefined,
+    };
+    const [claimSession] = await this.db.insert(claimSessions).values(values).returning();
     return claimSession;
   }
 
   async resolveActiveConnectionForUser(input: { userId: string; provider?: string }) {
-    const rows = await this.db
+    const [row] = await this.db
       .select()
       .from(connections)
       .where(
@@ -222,7 +263,7 @@ export class BotIngressPgRepository implements IBotIngressRepository {
         desc(connections.updatedAt),
       )
       .limit(1);
-    return rows[0] ?? null;
+    return row ?? null;
   }
 
   async findPendingClaimSessionForContext(input: {
@@ -372,10 +413,7 @@ export class BotIngressPgRepository implements IBotIngressRepository {
   }
 
   async createSubscription(input: CreateBotIngressSubscriptionInput) {
-    const [subscription] = await this.db
-      .insert(subscriptions)
-      .values(input as typeof subscriptions.$inferInsert)
-      .returning();
+    const [subscription] = await this.db.insert(subscriptions).values(input).returning();
     return subscription;
   }
 

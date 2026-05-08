@@ -1,4 +1,3 @@
-export * from "./command.js";
-export * from "./provider-registry.js";
-export * from "./query.js";
-export * from "./type.js";
+export * from "./command.ts";
+export * from "./provider-registry.ts";
+export * from "./type.ts";

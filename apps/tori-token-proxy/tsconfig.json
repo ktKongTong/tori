@@ -28,6 +28,8 @@
     "allowJs": true,
     "paths": {
       "~/*": ["./app/*"],
+      "@repo/data-table": ["../../packages/data-table/src/index.ts"],
+      "@repo/data-table/*": ["../../packages/data-table/src/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"]
     }
   },

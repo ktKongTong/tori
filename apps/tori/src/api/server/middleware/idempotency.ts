@@ -29,7 +29,7 @@ export const checkIdempotencyKey = createMiddleware(async (c, next) => {
   }
   const cached = await kv.get<CachedResponse>(responseKey);
   if (cached) {
-    return c.json(cached.body, cached.status as any);
+    return c.json(cached.body, cached.status as 200);
   }
   await next();
   const contentType = c.res.headers.get("content-type") ?? "";

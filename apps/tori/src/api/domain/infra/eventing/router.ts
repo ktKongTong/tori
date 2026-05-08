@@ -62,7 +62,7 @@ export class EventRouter implements IEventHandler {
     this.createContext = options.createContext;
   }
 
-  registerConsumer(...c: EventConsumer<any>[]): IEventHandler {
+  registerConsumer(...c: EventConsumer<never>[]): IEventHandler {
     for (const item of c) {
       this.register(item.id, item.type, item.handler);
     }

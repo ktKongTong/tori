@@ -10,33 +10,19 @@ const botInstancesRequest = createRequestClient({
   },
 });
 
-export const dashboardBotInstancesSchema = z.object({
-  instances: z.array(
+export const botInstancesSchema = z.object({
+  items: z.array(
     z.object({
       id: z.string(),
       ownerUserId: z.string(),
       platform: z.string(),
       namespace: z.string(),
       instanceKey: z.string(),
-      displayName: z.string(),
+      displayName: z.string().nullable(),
       callbackMode: z.string(),
       deliveryEndpointId: z.string().nullable(),
-      deliveryEndpointKind: z.string().nullable(),
-      deliveryEndpointTarget: z.string().nullable(),
-      deliveryEndpointLabel: z.string().nullable(),
-      credentialRotatedAt: z.string().nullable(),
       status: z.string(),
       lastSeenAt: z.string().nullable(),
-    }),
-  ),
-  deliveryEndpoints: z.array(
-    z.object({
-      id: z.string(),
-      platform: z.string(),
-      kind: z.string(),
-      displayName: z.string(),
-      target: z.string(),
-      status: z.string(),
     }),
   ),
 });
@@ -63,7 +49,7 @@ const attachBotInstanceEndpointResponseSchema = z.object({
   deliveryEndpointId: z.string().nullable(),
 });
 
-export type DashboardBotInstancesData = z.infer<typeof dashboardBotInstancesSchema>;
+export type BotInstanceRow = z.infer<typeof botInstancesSchema>["items"][number];
 
 export type CreateBotInstanceInput = {
   platform: string;
@@ -85,9 +71,9 @@ export type AttachBotInstanceEndpointInput = {
   deliveryEndpointId: string;
 };
 
-export const getBotInstances = () =>
-  botInstancesRequest.get("/api/dashboard/bot-instances", {
-    schema: dashboardBotInstancesSchema,
+export const listBotInstances = () =>
+  botInstancesRequest.get("/api/bot-plugin/instances", {
+    schema: botInstancesSchema,
   });
 
 export const createBotInstance = (input: CreateBotInstanceInput) =>

@@ -5,13 +5,13 @@ import { bindingClaimColumns } from "./columns";
 import { IssueTokenDialog } from "./issue-token-dialog";
 import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
-import { useDashboardBindingQuery } from "@/features/binding/query";
+import { useClaimSessionsQuery } from "@/features/binding/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function BindingClaimsPage() {
   const { data: session } = useSession();
   const modal = useModal();
-  const bindingQuery = useDashboardBindingQuery();
+  const bindingQuery = useClaimSessionsQuery();
   const data = bindingQuery.data;
 
   useToastError(bindingQuery.error, { title: "Failed to load claim sessions" });
@@ -33,7 +33,7 @@ export function BindingClaimsPage() {
 
       <DashboardTable
         columns={bindingClaimColumns}
-        data={data?.claimSessions ?? []}
+        data={data?.items ?? []}
         empty="No claim sessions available."
       />
     </div>

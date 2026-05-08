@@ -12,8 +12,8 @@ export interface ManagedBotPluginInstance {
   callbackMode: string;
   deliveryEndpointId: string | null;
   status: string;
-  capabilities: BotPluginRepositoryJson | null;
-  metadata: BotPluginRepositoryJson | null;
+  capabilities: unknown;
+  metadata: unknown;
   lastSeenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -28,15 +28,15 @@ export interface ManagedDeliveryEndpoint {
   target: string;
   secret: string | null;
   status: string;
-  config: BotPluginRepositoryJson | null;
-  metadata: BotPluginRepositoryJson | null;
+  config: unknown;
+  metadata: unknown;
   lastUsedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface CreateInternalDeliveryEndpointInput {
-  id: string;
+  id?: string;
   ownerUserId?: string | null;
   platform: string;
   kind: string;
@@ -44,9 +44,8 @@ export interface CreateInternalDeliveryEndpointInput {
   displayName?: string | null;
   secret?: string | null;
   status?: string;
-  config?: BotPluginRepositoryJson | null;
-  metadata?: BotPluginRepositoryJson | null;
-  lastUsedAt?: Date | null;
+  config?: unknown;
+  metadata?: unknown;
 }
 
 export interface CreateManagedBotInstanceInput {
@@ -59,8 +58,8 @@ export interface CreateManagedBotInstanceInput {
   callbackMode?: string;
   deliveryEndpointId?: string | null;
   status?: string;
-  capabilities?: BotPluginRepositoryJson | null;
-  metadata?: BotPluginRepositoryJson | null;
+  capabilities?: unknown;
+  metadata?: unknown;
   lastSeenAt?: Date | null;
 }
 
@@ -79,14 +78,14 @@ export interface IBotPluginRepository {
   updateManagedBotInstanceRegistration(input: {
     id: string;
     displayName?: string | null;
-    capabilities?: BotPluginRepositoryJson | null;
+    capabilities?: unknown;
     credentialHash: string;
   }): Promise<ManagedBotPluginInstance>;
   createManagedBotInstance(input: CreateManagedBotInstanceInput): Promise<ManagedBotPluginInstance>;
   updateManagedBotInstance(input: {
     id: string;
     displayName?: string | null;
-    capabilities?: BotPluginRepositoryJson | null;
+    capabilities?: unknown;
     status?: string | null;
   }): Promise<ManagedBotPluginInstance | null>;
   findManagedBotInstanceById(id: string): Promise<ManagedBotPluginInstance | null>;

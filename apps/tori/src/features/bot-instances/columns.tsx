@@ -7,11 +7,11 @@ import { BotCredentialDialog } from "./dialogs";
 import {
   revokeBotInstance,
   rotateBotInstanceCredential,
-  type DashboardBotInstancesData,
+  type BotInstanceRow as OriginalBotInstanceRow,
 } from "@/features/bot-instances/api";
 import { useModal } from "@/lib/modal";
 
-export type BotInstanceRow = DashboardBotInstancesData["instances"][number];
+export type BotInstanceRow = OriginalBotInstanceRow;
 
 export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
   {
@@ -30,24 +30,9 @@ export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
     cell: ({ row }) => row.original.namespace,
   },
   {
-    accessorKey: "deliveryEndpointLabel",
-    header: "Endpoint",
-    cell: ({ row }) => (
-      <div className="space-y-1">
-        <p>{row.original.deliveryEndpointLabel ?? "—"}</p>
-        {row.original.deliveryEndpointKind ? (
-          <DashboardStatusPill
-            text={row.original.deliveryEndpointKind}
-            tone={row.original.deliveryEndpointKind === "webhook" ? "success" : "warning"}
-          />
-        ) : null}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "credentialRotatedAt",
-    header: "Credential",
-    cell: ({ row }) => row.original.credentialRotatedAt ?? "—",
+    accessorKey: "deliveryEndpointId",
+    header: "Endpoint ID",
+    cell: ({ row }) => row.original.deliveryEndpointId ?? "—",
   },
   {
     accessorKey: "status",

@@ -1,29 +1,26 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
+import type { PageBasedPaginationParam, PageBasedPaginationResult } from "@repo/utils/schema/paging";
 
-export type JsonRecord = unknown;
-
-export interface TaskDefinitionRow {
+export interface TaskDefinition {
   id: string;
   ownerUserId: string | null;
   kind: string;
-  enabled: number;
+  enabled: boolean;
   schedule: string;
-  payload: JsonRecord;
+  payload: unknown;
   lastTriggeredAt: Date | null;
   lastRunAt: Date | null;
   lastRunStatus: string | null;
   lastError: string | null;
-  metadata: JsonRecord | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface TaskRunRow {
+export interface TaskRun {
   id: string;
   taskDefinitionId: string;
   kind: string;
   status: string;
-  summary: JsonRecord | null;
+  summary: unknown;
   errorMessage: string | null;
   scheduledFor: Date | null;
   startedAt: Date | null;
@@ -32,45 +29,42 @@ export interface TaskRunRow {
 }
 
 export interface CreateTaskDefinitionInput {
-  id: string;
+  id?: string;
   ownerUserId?: string | null;
   kind: string;
-  enabled?: number;
+  enabled?: boolean;
   schedule: string;
-  payload: JsonRecord;
-  metadata?: JsonRecord | null;
+  payload: unknown;
+  metadata?: unknown;
 }
 
 export interface UpdateTaskDefinitionInput {
-  enabled?: number;
+  enabled?: boolean;
   schedule?: string;
-  payload?: JsonRecord;
-  metadata?: JsonRecord | null;
+  payload?: unknown;
+  metadata?: unknown;
 }
 
 export interface CreateTaskRunInput {
-  id: string;
+  id?: string;
   taskDefinitionId: string;
   kind: string;
-  status: string;
-  summary?: JsonRecord | null;
-  errorMessage?: string | null;
+  status?: string;
   scheduledFor?: Date | null;
-  startedAt?: Date | null;
-  finishedAt?: Date | null;
 }
 
+
 export interface ITaskRepository {
-  getTaskDefinitionsByKind(kind: string, userId?: string | null): Promise<TaskDefinitionRow[]>;
-  listTaskDefinitionsByOwner(ownerUserId: string): Promise<TaskDefinitionRow[]>;
-  listEnabledTaskDefinitions(): Promise<TaskDefinitionRow[]>;
-  getTaskRunById(taskRunId: string): Promise<TaskRunRow | null>;
-  getTaskDefinitionById(taskDefinitionId: string): Promise<TaskDefinitionRow | null>;
+  listTasks(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<TaskDefinition>>;
+  // getTaskDetail( taskDefinitionId: string, page: PageBasedPaginationParam): Promise<TaskDetail | null>;
+  getTaskDefinitionsByKind(kind: string, userId: string | null, page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<TaskDefinition>>;
+  listTaskDefinitionsByOwner(ownerUserId: string, page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<TaskDefinition>>;
+  listEnabledTaskDefinitions(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<TaskDefinition>>;
+  getTaskRunByTaskDefinitionId(taskDefinitionId: string, page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<TaskRun>>;
+  getTaskRunById(taskRunId: string): Promise<TaskRun | null>;
+  getTaskDefinitionById(taskDefinitionId: string): Promise<TaskDefinition | null>;
   markTaskRunProcessing(taskRunId: string, startedAt: Date): Promise<void>;
-  markTaskRunDone(
-    taskRunId: string,
-    input: { summary?: JsonRecord | null; finishedAt: Date },
-  ): Promise<void>;
+  markTaskRunDone(taskRunId: string, input: { summary?: unknown; finishedAt: Date }): Promise<void>;
   markTaskRunFailed(
     taskRunId: string,
     input: { errorMessage: string; finishedAt: Date },
@@ -83,11 +77,11 @@ export interface ITaskRepository {
     taskDefinitionId: string,
     input: { triggeredAt: Date; finishedAt: Date; errorMessage: string },
   ): Promise<void>;
-  createTaskDefinition(input: CreateTaskDefinitionInput): Promise<TaskDefinitionRow>;
+  createTaskDefinition(input: CreateTaskDefinitionInput): Promise<TaskDefinition>;
   updateTaskDefinition(
     taskDefinitionId: string,
     input: UpdateTaskDefinitionInput,
-  ): Promise<TaskDefinitionRow | null>;
-  createTaskRun(input: CreateTaskRunInput): Promise<TaskRunRow>;
+  ): Promise<TaskDefinition | null>;
+  createTaskRun(input: CreateTaskRunInput): Promise<TaskRun>;
   markTaskDefinitionTriggered(taskDefinitionId: string, triggeredAt: Date): Promise<void>;
 }

@@ -9,7 +9,7 @@ export const messageContextSchema = z.object({
   namespace: z.string().nullable().optional(),
   channelType: z.string().default("dm"),
   channelName: z.string().min(1),
-  rawPayload: z.record(z.string(), z.any()).optional(),
+  rawPayload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const commandRequestSchema = z.object({

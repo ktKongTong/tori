@@ -1,5 +1,7 @@
 import { createRequestClient } from "@repo/request";
 import { z } from "zod";
+import { taskRunSchema, taskDefinitionSchema } from "@/api/modules/platform/task/schema.ts";
+import {PageBasedPaginationResultSchema} from "@repo/utils/schema/paging";
 
 const tasksRequest = createRequestClient({
   credentials: "include",
@@ -10,70 +12,30 @@ const tasksRequest = createRequestClient({
   },
 });
 
-export const dashboardTasksSchema = z.object({
-  tasks: z.array(
-    z.object({
-      id: z.string(),
-      kind: z.string(),
-      schedule: z.string(),
-      enabled: z.boolean(),
-      connectionId: z.string().nullable(),
-      connectionLabel: z.string().nullable(),
-      lastRunStatus: z.string().nullable(),
-    }),
-  ),
-});
+export type TaskDef =  z.infer<typeof taskDefinitionSchema>
 
-export const dashboardTaskDetailSchema = z.object({
-  task: z.object({
-    id: z.string(),
-    kind: z.string(),
-    schedule: z.string(),
-    enabled: z.boolean(),
-    connectionId: z.string().nullable(),
-    connectionLabel: z.string().nullable(),
-    lastRunStatus: z.string().nullable(),
-    lastTriggeredAt: z.string().nullable(),
-    lastRunAt: z.string().nullable(),
-    lastError: z.string().nullable(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  }),
-  runs: z.array(
-    z.object({
-      id: z.string(),
-      taskDefinitionId: z.string(),
-      kind: z.string(),
-      status: z.string(),
-      summary: z.unknown().nullable(),
-      errorMessage: z.string().nullable(),
-      scheduledFor: z.string().nullable(),
-      startedAt: z.string().nullable(),
-      finishedAt: z.string().nullable(),
-      createdAt: z.string(),
-    }),
-  ),
-  pagination: z.object({
-    page: z.number(),
-    pageSize: z.number(),
-    total: z.number(),
-    totalPages: z.number(),
-  }),
-});
-
-export type DashboardTasksData = z.infer<typeof dashboardTasksSchema>;
-export type DashboardTaskDetailData = z.infer<typeof dashboardTaskDetailSchema>;
-
+export type TaskRun =  z.infer<typeof taskRunSchema>
 export const getTasks = () =>
-  tasksRequest.get("/api/dashboard/tasks", {
-    schema: dashboardTasksSchema,
+  tasksRequest.get("/api/tasks", {
+    schema: PageBasedPaginationResultSchema(taskDefinitionSchema),
   });
 
-export const getTaskDetail = (
+export const getTaskDetail = async (
+  taskId: string,
+) => {
+  return tasksRequest.get(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    schema: taskDefinitionSchema,
+  });
+}
+
+
+export const getTaskRuns = async (
   taskId: string,
   input: { page: number; pageSize: number } = { page: 1, pageSize: 10 },
-) =>
-  tasksRequest.get(`/api/dashboard/tasks/${encodeURIComponent(taskId)}`, {
+) => {
+  return tasksRequest.get(`/api/tasks/${encodeURIComponent(taskId)}/runs`, {
     query: input,
-    schema: dashboardTaskDetailSchema,
+    schema: PageBasedPaginationResultSchema(taskRunSchema),
   });
+}
+

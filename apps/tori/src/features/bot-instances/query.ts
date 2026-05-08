@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getBotInstances } from "./api";
+import { listBotInstances } from "./api";
 
 export const botInstancesQueryKeys = {
-  botInstances: () => ["dashboard", "bot-instances"] as const,
+  instances: () => ["bot-plugin", "instances"] as const,
 };
 
-export function useDashboardBotInstancesQuery() {
+export function useBotInstancesQuery() {
   return useQuery({
-    queryKey: botInstancesQueryKeys.botInstances(),
-    queryFn: getBotInstances,
+    queryKey: botInstancesQueryKeys.instances(),
+    queryFn: listBotInstances,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });

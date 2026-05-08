@@ -1,11 +1,15 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { uniqueId } from "@repo/utils/id";
 import {
   botPluginInstances,
+  channels,
   channelBindings,
+  connections,
   deliveryEndpoints,
   notificationEvents,
   subscriptions,
+  user,
 } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import type {
@@ -17,6 +21,146 @@ import type {
 } from "@/api/domain/platform/repository/ports/notify.ts";
 
 export class NotifySqliteRepository implements INotifyRepository {
+  async listDeliveryEndpoints() {
+    return this.db
+      .select()
+      .from(deliveryEndpoints)
+      .orderBy(desc(deliveryEndpoints.createdAt))
+      .limit(100);
+  }
+
+  async listSubscriptions() {
+    return this.db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(100);
+  }
+
+  async listSubscriptionDetails() {
+    const ownerChannel = alias(channels, "notify_owner_channel");
+    const rows = await this.db
+      .select({
+        subscription: subscriptions,
+        channel: channels,
+        botInstance: botPluginInstances,
+        connection: connections,
+        ownerUser: user,
+        ownerChannel,
+      })
+      .from(subscriptions)
+      .leftJoin(channels, eq(subscriptions.channelId, channels.id))
+      .leftJoin(botPluginInstances, eq(subscriptions.botPluginInstanceId, botPluginInstances.id))
+      .leftJoin(connections, eq(subscriptions.connectionId, connections.id))
+      .leftJoin(user, and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, user.id)))
+      .leftJoin(
+        ownerChannel,
+        and(eq(subscriptions.ownerType, "CHANNEL"), eq(subscriptions.ownerId, ownerChannel.id)),
+      )
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(100);
+    return rows.map(
+      ({ subscription, channel, botInstance, connection, ownerUser, ownerChannel }) => ({
+        ...subscription,
+        channel,
+        botInstance,
+        connection,
+        ownerUser,
+        ownerChannel,
+      }),
+    );
+  }
+
+  async getSubscriptionJoinedRowById(id: string) {
+    const ownerChannel = alias(channels, "notify_owner_channel");
+    const [row] = await this.db
+      .select({
+        subscription: subscriptions,
+        channel: channels,
+        botInstance: botPluginInstances,
+        connection: connections,
+        ownerUser: user,
+        ownerChannel,
+      })
+      .from(subscriptions)
+      .leftJoin(channels, eq(subscriptions.channelId, channels.id))
+      .leftJoin(botPluginInstances, eq(subscriptions.botPluginInstanceId, botPluginInstances.id))
+      .leftJoin(connections, eq(subscriptions.connectionId, connections.id))
+      .leftJoin(user, and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, user.id)))
+      .leftJoin(
+        ownerChannel,
+        and(eq(subscriptions.ownerType, "CHANNEL"), eq(subscriptions.ownerId, ownerChannel.id)),
+      )
+      .where(eq(subscriptions.id, id))
+      .limit(1);
+    if (!row) return null;
+    return {
+      ...row.subscription,
+      channel: row.channel,
+      botInstance: row.botInstance,
+      connection: row.connection,
+      ownerUser: row.ownerUser,
+      ownerChannel: row.ownerChannel,
+    };
+  }
+
+  async listNotificationEvents() {
+    return this.db
+      .select()
+      .from(notificationEvents)
+      .orderBy(desc(notificationEvents.createdAt))
+      .limit(100);
+  }
+
+  async listNotificationEventJoinedRows() {
+    return this.db
+      .select({
+        event: notificationEvents,
+        subscription: subscriptions,
+        channel: channels,
+        botInstance: botPluginInstances,
+        endpoint: deliveryEndpoints,
+      })
+      .from(notificationEvents)
+      .leftJoin(subscriptions, eq(notificationEvents.subscriptionId, subscriptions.id))
+      .leftJoin(channels, eq(notificationEvents.channelId, channels.id))
+      .leftJoin(
+        botPluginInstances,
+        eq(notificationEvents.botPluginInstanceId, botPluginInstances.id),
+      )
+      .leftJoin(deliveryEndpoints, eq(notificationEvents.deliveryEndpointId, deliveryEndpoints.id))
+      .orderBy(desc(notificationEvents.createdAt))
+      .limit(100);
+  }
+
+  async getSubscriptionById(id: string) {
+    const [subscription] = await this.db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id))
+      .limit(1);
+    return subscription ?? null;
+  }
+
+  async listNotificationEventsBySubscription(
+    id: string,
+    input: { page: number; pageSize: number },
+  ) {
+    const page = Math.max(1, input.page);
+    const pageSize = Math.min(Math.max(1, input.pageSize), 50);
+
+    const events = await this.db
+      .select()
+      .from(notificationEvents)
+      .where(eq(notificationEvents.subscriptionId, id))
+      .orderBy(desc(notificationEvents.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    const [{ value: totalRuns }] = await this.db
+      .select({ value: count() })
+      .from(notificationEvents)
+      .where(eq(notificationEvents.subscriptionId, id));
+
+    return { events, total: totalRuns };
+  }
+
   async createNotificationCandidates(input: CreateNotificationCandidatesInput) {
     const candidateSubscriptions = await this.db
       .select()
@@ -116,6 +260,34 @@ export class NotifySqliteRepository implements INotifyRepository {
     return deliveryEndpoint ?? null;
   }
 
+  async findChannelById(id: string) {
+    const [channel] = await this.db.select().from(channels).where(eq(channels.id, id)).limit(1);
+    return channel ?? null;
+  }
+
+  async findUserById(id: string) {
+    const [row] = await this.db.select().from(user).where(eq(user.id, id)).limit(1);
+    return row ?? null;
+  }
+
+  async findBotPluginInstanceById(id: string) {
+    const [instance] = await this.db
+      .select()
+      .from(botPluginInstances)
+      .where(eq(botPluginInstances.id, id))
+      .limit(1);
+    return instance ?? null;
+  }
+
+  async findDeliveryEndpointById(id: string) {
+    const [deliveryEndpoint] = await this.db
+      .select()
+      .from(deliveryEndpoints)
+      .where(eq(deliveryEndpoints.id, id))
+      .limit(1);
+    return deliveryEndpoint ?? null;
+  }
+
   async findActiveDeliveryEndpointById(id: string) {
     const [deliveryEndpoint] = await this.db
       .select()
@@ -126,10 +298,7 @@ export class NotifySqliteRepository implements INotifyRepository {
   }
 
   async createDeliveryEndpoint(input: CreateDeliveryEndpointInput) {
-    const [deliveryEndpoint] = await this.db
-      .insert(deliveryEndpoints)
-      .values(input as typeof deliveryEndpoints.$inferInsert)
-      .returning();
+    const [deliveryEndpoint] = await this.db.insert(deliveryEndpoints).values(input).returning();
     return deliveryEndpoint;
   }
 
@@ -166,10 +335,7 @@ export class NotifySqliteRepository implements INotifyRepository {
   }
 
   async createSubscription(input: CreateSubscriptionInput) {
-    const [subscription] = await this.db
-      .insert(subscriptions)
-      .values(input as typeof subscriptions.$inferInsert)
-      .returning();
+    const [subscription] = await this.db.insert(subscriptions).values(input).returning();
     return subscription;
   }
 
@@ -192,10 +358,7 @@ export class NotifySqliteRepository implements INotifyRepository {
   }
 
   async createNotificationEvent(input: CreateNotificationEventInput) {
-    const [notification] = await this.db
-      .insert(notificationEvents)
-      .values(input as typeof notificationEvents.$inferInsert)
-      .returning();
+    const [notification] = await this.db.insert(notificationEvents).values(input).returning();
     return notification;
   }
 

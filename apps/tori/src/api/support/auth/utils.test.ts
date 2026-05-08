@@ -6,6 +6,7 @@ vi.mock("@/support/auth/index.ts", () => ({
 
 import { UnauthorizedError } from "@/api/domain/error/index.ts";
 import type { ENV } from "@/api/domain/infra/env.ts";
+import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import {
   isAuthzEnabled,
   requireAuth,
@@ -18,7 +19,7 @@ import {
 const AUTHZ_ENABLED_SYMBOL = Symbol.for("monoark.authz.enabled");
 
 const clearAuthzEnabled = () => {
-  delete (globalThis as any)[AUTHZ_ENABLED_SYMBOL];
+  delete (globalThis as Record<symbol, unknown>)[AUTHZ_ENABLED_SYMBOL];
 };
 
 const createContext = (overrides: Record<string, unknown> = {}) =>
@@ -31,7 +32,7 @@ const createContext = (overrides: Record<string, unknown> = {}) =>
       },
     },
     ...overrides,
-  }) as any;
+  }) as unknown as ServiceContext;
 
 describe("support/auth/utils", () => {
   beforeEach(() => {
@@ -65,12 +66,12 @@ describe("support/auth/utils", () => {
   describe("requireAuth", () => {
     it("throws when authz is enabled and user is missing", () => {
       setAuthzEnabled(true);
-      expect(() => requireAuth(undefined as any)).toThrow(UnauthorizedError);
+      expect(() => requireAuth(undefined)).toThrow(UnauthorizedError);
     });
 
     it("passes when authz is disabled", () => {
       setAuthzEnabled(false);
-      expect(() => requireAuth(undefined as any)).not.toThrow();
+      expect(() => requireAuth(undefined)).not.toThrow();
     });
   });
 
@@ -80,7 +81,10 @@ describe("support/auth/utils", () => {
       const ctx = createContext();
 
       await expect(requirePermission(ctx)).resolves.toBeUndefined();
-      expect(ctx.auth.api.userHasPermission).not.toHaveBeenCalled();
+      expect(
+        (ctx.auth.api as unknown as { userHasPermission: ReturnType<typeof vi.fn> })
+          .userHasPermission,
+      ).not.toHaveBeenCalled();
     });
 
     it("allows system context when allowSystem=true and causationType is not req", async () => {
@@ -125,7 +129,7 @@ describe("support/auth/utils", () => {
       await expect(
         requirePermission(ctx, {
           role: "admin",
-          permissions: { comment: ["delete"] } as any,
+          permissions: { comment: ["delete"] } as never,
         }),
       ).resolves.toBeUndefined();
 

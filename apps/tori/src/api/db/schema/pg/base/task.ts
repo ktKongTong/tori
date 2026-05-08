@@ -1,4 +1,4 @@
-import { integer, jsonb, pgSchema, text } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgSchema, text } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import { timestamps, timestamptz } from "../utils";
 
@@ -11,7 +11,7 @@ export const taskDefinitions = pgTable("definition", {
     .$defaultFn(() => uniqueId()),
   ownerUserId: text("owner_user_id"),
   kind: text("kind").notNull(),
-  enabled: integer("enabled").notNull().default(1),
+  enabled: boolean("enabled").notNull().default(true),
   schedule: text("schedule").notNull(),
   payload: jsonb("payload").notNull(),
   lastTriggeredAt: timestamptz("last_triggered_at"),

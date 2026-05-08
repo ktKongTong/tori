@@ -152,6 +152,7 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
   });
 
   if (existing) {
+    // throw new conflict error()
     return { connection: existing, created: false };
   }
 
@@ -173,4 +174,16 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
   });
 
   return { connection: row, created: true };
+}
+
+export async function resolveConnectionAccess(ctx: ServiceContext, connectionId: string) {
+  const connection = await ctx.repositories.integration.findConnectionById(connectionId);
+  if (!connection) throw new NotFoundError("connection not found");
+
+  return {
+    connection,
+    requiresProxy: connection.accessMode !== "public-id",
+    supportsPublicAccess: connection.accessMode !== "proxy-token",
+    proxyInstanceId: connection.proxyInstanceId ?? null,
+  };
 }

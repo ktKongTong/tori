@@ -8,7 +8,7 @@ export interface AccountProfileRow {
   personaName: string | null;
   avatarUrl: string | null;
   profileUrl: string | null;
-  metadata: SteamAccountRepositoryJson | null;
+  metadata: unknown;
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -19,7 +19,7 @@ export interface UserLibraryItemRow {
   appId: number;
   playtimeMinutes: number | null;
   lastPlayedAt: Date | null;
-  metadata: SteamAccountRepositoryJson | null;
+  metadata: unknown;
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -31,7 +31,7 @@ export type UpsertAccountProfileInput = {
   personaName?: string | null;
   avatarUrl?: string | null;
   profileUrl?: string | null;
-  metadata?: SteamAccountRepositoryJson | null;
+  metadata?: unknown;
   lastSyncedAt: Date;
 };
 
@@ -41,7 +41,7 @@ export type ReplaceUserLibraryItemsInput = {
     appId: number;
     playtimeMinutes?: number | null;
     lastPlayedAt?: Date | null;
-    metadata?: SteamAccountRepositoryJson | null;
+    metadata?: unknown;
     lastSyncedAt: Date;
   }>;
 };

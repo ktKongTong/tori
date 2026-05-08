@@ -8,173 +8,171 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
-import { Route as DashboardTokensRouteImport } from './routes/dashboard.tokens'
-import { Route as DashboardLogsRouteImport } from './routes/dashboard.logs'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as DashboardRouteImport } from "./routes/dashboard";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as DashboardIndexRouteImport } from "./routes/dashboard.index";
+import { Route as DashboardTokensRouteImport } from "./routes/dashboard.tokens";
+import { Route as DashboardLogsRouteImport } from "./routes/dashboard.logs";
 
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+  id: "/dashboard",
+  path: "/dashboard",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => DashboardRoute,
-} as any)
+} as any);
 const DashboardTokensRoute = DashboardTokensRouteImport.update({
-  id: '/tokens',
-  path: '/tokens',
+  id: "/tokens",
+  path: "/tokens",
   getParentRoute: () => DashboardRoute,
-} as any)
+} as any);
 const DashboardLogsRoute = DashboardLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
+  id: "/logs",
+  path: "/logs",
   getParentRoute: () => DashboardRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteWithChildren
-  '/login': typeof LoginRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/tokens': typeof DashboardTokensRoute
-  '/dashboard/': typeof DashboardIndexRoute
+  "/": typeof IndexRoute;
+  "/dashboard": typeof DashboardRouteWithChildren;
+  "/login": typeof LoginRoute;
+  "/dashboard/logs": typeof DashboardLogsRoute;
+  "/dashboard/tokens": typeof DashboardTokensRoute;
+  "/dashboard/": typeof DashboardIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/tokens': typeof DashboardTokensRoute
-  '/dashboard': typeof DashboardIndexRoute
+  "/": typeof IndexRoute;
+  "/login": typeof LoginRoute;
+  "/dashboard/logs": typeof DashboardLogsRoute;
+  "/dashboard/tokens": typeof DashboardTokensRoute;
+  "/dashboard": typeof DashboardIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteWithChildren
-  '/login': typeof LoginRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/tokens': typeof DashboardTokensRoute
-  '/dashboard/': typeof DashboardIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/dashboard": typeof DashboardRouteWithChildren;
+  "/login": typeof LoginRoute;
+  "/dashboard/logs": typeof DashboardLogsRoute;
+  "/dashboard/tokens": typeof DashboardTokensRoute;
+  "/dashboard/": typeof DashboardIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/dashboard'
-    | '/login'
-    | '/dashboard/logs'
-    | '/dashboard/tokens'
-    | '/dashboard/'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard/logs' | '/dashboard/tokens' | '/dashboard'
+    | "/"
+    | "/dashboard"
+    | "/login"
+    | "/dashboard/logs"
+    | "/dashboard/tokens"
+    | "/dashboard/";
+  fileRoutesByTo: FileRoutesByTo;
+  to: "/" | "/login" | "/dashboard/logs" | "/dashboard/tokens" | "/dashboard";
   id:
-    | '__root__'
-    | '/'
-    | '/dashboard'
-    | '/login'
-    | '/dashboard/logs'
-    | '/dashboard/tokens'
-    | '/dashboard/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/dashboard"
+    | "/login"
+    | "/dashboard/logs"
+    | "/dashboard/tokens"
+    | "/dashboard/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  IndexRoute: typeof IndexRoute;
+  DashboardRoute: typeof DashboardRouteWithChildren;
+  LoginRoute: typeof LoginRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/': {
-      id: '/dashboard/'
-      path: '/'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/tokens': {
-      id: '/dashboard/tokens'
-      path: '/tokens'
-      fullPath: '/dashboard/tokens'
-      preLoaderRoute: typeof DashboardTokensRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/logs': {
-      id: '/dashboard/logs'
-      path: '/logs'
-      fullPath: '/dashboard/logs'
-      preLoaderRoute: typeof DashboardLogsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dashboard": {
+      id: "/dashboard";
+      path: "/dashboard";
+      fullPath: "/dashboard";
+      preLoaderRoute: typeof DashboardRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dashboard/": {
+      id: "/dashboard/";
+      path: "/";
+      fullPath: "/dashboard/";
+      preLoaderRoute: typeof DashboardIndexRouteImport;
+      parentRoute: typeof DashboardRoute;
+    };
+    "/dashboard/tokens": {
+      id: "/dashboard/tokens";
+      path: "/tokens";
+      fullPath: "/dashboard/tokens";
+      preLoaderRoute: typeof DashboardTokensRouteImport;
+      parentRoute: typeof DashboardRoute;
+    };
+    "/dashboard/logs": {
+      id: "/dashboard/logs";
+      path: "/logs";
+      fullPath: "/dashboard/logs";
+      preLoaderRoute: typeof DashboardLogsRouteImport;
+      parentRoute: typeof DashboardRoute;
+    };
   }
 }
 
 interface DashboardRouteChildren {
-  DashboardLogsRoute: typeof DashboardLogsRoute
-  DashboardTokensRoute: typeof DashboardTokensRoute
-  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardLogsRoute: typeof DashboardLogsRoute;
+  DashboardTokensRoute: typeof DashboardTokensRoute;
+  DashboardIndexRoute: typeof DashboardIndexRoute;
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
   DashboardTokensRoute: DashboardTokensRoute,
   DashboardIndexRoute: DashboardIndexRoute,
-}
+};
 
-const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
-  DashboardRouteChildren,
-)
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(DashboardRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from '../src/router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "../src/router.tsx";
+import type { createStart } from "@tanstack/react-start";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }

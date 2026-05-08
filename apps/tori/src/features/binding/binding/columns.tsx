@@ -2,31 +2,31 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DashboardTableActions } from "@/components/dashboard-ui";
-import { revokeUserBinding, type DashboardBindingData } from "@/features/binding/api";
+import { revokeUserBinding, type UserBindingRow } from "@/features/binding/api";
 import { useToastError } from "@/lib/toast-error";
 
-export type BindingRow = DashboardBindingData["userBindings"][number];
+export type BindingRow = UserBindingRow;
 
 export const bindingColumns: ColumnDef<BindingRow>[] = [
   {
     accessorKey: "userName",
     header: "User Name",
-    cell: ({ row }) => row.original.userName,
+    cell: ({ row }) => row.original.user?.name ?? row.original.binding.userId,
   },
   {
     accessorKey: "platform",
     header: "Platform",
-    cell: ({ row }) => row.original.platform,
+    cell: ({ row }) => row.original.binding.platform,
   },
   {
     accessorKey: "externalUserName",
     header: "External User Name",
-    cell: ({ row }) => row.original.externalUserName,
+    cell: ({ row }) => row.original.binding.externalUserName,
   },
   {
     accessorKey: "assurance",
     header: "Assurance",
-    cell: ({ row }) => row.original.assurance,
+    cell: ({ row }) => row.original.binding.assurance,
   },
   {
     id: "actions",
@@ -41,21 +41,24 @@ function BindingActions({ binding }: { binding: BindingRow }) {
     mutationFn: async (bindingId: string) => revokeUserBinding(bindingId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["dashboard", "binding"],
+        queryKey: ["binding", "user-bindings"],
       });
     },
   });
 
   useToastError(removeBinding.error, { title: "Failed to remove binding" });
 
+  const bindingRow = binding.binding;
+  const userName = binding.user?.name ?? bindingRow.userId;
+
   return (
     <DashboardTableActions
-      label={`Open actions for ${binding.userName}`}
+      label={`Open actions for ${userName}`}
       items={[
         {
           label: "Remove",
           variant: "destructive",
-          onSelect: () => removeBinding.mutate(binding.id),
+          onSelect: () => removeBinding.mutate(bindingRow.id),
         },
       ]}
     />

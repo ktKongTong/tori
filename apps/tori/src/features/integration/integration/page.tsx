@@ -1,11 +1,11 @@
 import { Button } from "@repo/ui/components/button";
 import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
 import { integrationConnectionColumns } from "./columns";
-import { useDashboardIntegrationQuery } from "@/features/integration/query";
+import { useConnectionsQuery } from "@/features/integration/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function IntegrationPage() {
-  const integrationQuery = useDashboardIntegrationQuery();
+  const integrationQuery = useConnectionsQuery();
   const integrationData = integrationQuery.data;
   useToastError(integrationQuery.error, { title: "Failed to load integrations" });
 
@@ -18,7 +18,7 @@ export function IntegrationPage() {
       </DashboardActionBar>
       <DashboardTable
         columns={integrationConnectionColumns}
-        data={integrationData?.connections ?? []}
+        data={integrationData?.items ?? []}
         empty="No provider connections available."
       />
     </div>

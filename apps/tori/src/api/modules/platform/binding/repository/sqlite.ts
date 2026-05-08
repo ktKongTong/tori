@@ -1,21 +1,49 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import {
   bindingGrants,
   claimSessions,
   subscriptions,
   user,
   userBindings,
+  channelBindings,
 } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra/db";
 import type { CreateBindingGrantInput, IBindingRepository } from "./repository";
+import { uniqueId } from "@repo/utils/id";
 
 export class BindingSqliteRepository implements IBindingRepository {
   constructor(private readonly db: SqliteDB) {}
 
+  async listUserBindings() {
+    return this.db
+      .select()
+      .from(userBindings)
+      .where(eq(userBindings.status, "active"))
+      .orderBy(desc(userBindings.createdAt))
+      .limit(100);
+  }
+
+  async listChannelBindings() {
+    return this.db
+      .select()
+      .from(channelBindings)
+      .where(eq(channelBindings.status, "active"))
+      .orderBy(desc(channelBindings.createdAt))
+      .limit(100);
+  }
+
+  async listClaimSessions() {
+    return this.db.select().from(claimSessions).orderBy(desc(claimSessions.createdAt)).limit(100);
+  }
+
   async createBindingGrant(input: CreateBindingGrantInput) {
+    const id = uniqueId();
     const [grant] = await this.db
       .insert(bindingGrants)
-      .values(input as typeof bindingGrants.$inferInsert)
+      .values({
+        ...input,
+        id,
+      })
       .returning();
     return grant;
   }
@@ -61,48 +89,41 @@ export class BindingSqliteRepository implements IBindingRepository {
       .where(eq(user.id, input.anonymousUserId));
 
     await this.db
-      .update(userBindings)
+      .update(claimSessions)
       .set({
-        userId: input.authenticatedUserId,
-        assurance: "token-confirmed",
-        establishedByGrantId: input.grantId,
+        status: "resolved",
+        resolvedUserId: input.authenticatedUserId,
+        resolution: input.resolution,
+        resolvedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(
-        and(eq(userBindings.userId, input.anonymousUserId), eq(userBindings.status, "active")),
-      );
+      .where(eq(claimSessions.id, input.claimSessionId));
 
     await this.db
       .update(subscriptions)
       .set({
         ownerId: input.authenticatedUserId,
+        createdByUserId: input.authenticatedUserId,
         updatedAt: new Date(),
       })
-      .where(
-        and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, input.anonymousUserId)),
-      );
+      .where(eq(subscriptions.ownerId, input.anonymousUserId));
+
+    await this.db
+      .update(userBindings)
+      .set({
+        userId: input.authenticatedUserId,
+        updatedAt: new Date(),
+      })
+      .where(eq(userBindings.userId, input.anonymousUserId));
 
     await this.db
       .update(bindingGrants)
       .set({
         status: "consumed",
         consumedAt: new Date(),
-        usedCount: 1,
+        updatedAt: new Date(),
       })
       .where(eq(bindingGrants.id, input.grantId));
-
-    const [resolved] = await this.db
-      .update(claimSessions)
-      .set({
-        status: "resolved",
-        resolution: input.resolution,
-        resolvedAt: new Date(),
-        resolvedUserId: input.authenticatedUserId,
-      })
-      .where(eq(claimSessions.id, input.claimSessionId))
-      .returning();
-
-    return resolved;
   }
 
   async findUserBindingById(bindingId: string) {

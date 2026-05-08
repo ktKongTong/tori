@@ -1,21 +1,13 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
-import type { DashboardTasksData } from "@/features/tasks/api";
-import { useDashboardIntegrationQuery } from "@/features/integration/query";
+import type { TaskDef } from "@/features/tasks/api";
 
-export type TaskRow = DashboardTasksData["tasks"][number];
-
-export const taskColumns: ColumnDef<TaskRow>[] = [
+export const taskColumns: ColumnDef<TaskDef>[] = [
   {
     accessorKey: "kind",
     header: "Task",
     cell: ({ row }) => row.original.kind,
-  },
-  {
-    accessorKey: "connection",
-    header: "Connection",
-    cell: ({ row }) => <TaskConnection task={row.original} />,
   },
   {
     accessorKey: "schedule",
@@ -25,7 +17,9 @@ export const taskColumns: ColumnDef<TaskRow>[] = [
   {
     accessorKey: "enabled",
     header: "Enabled",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.enabled ? "enabled" : "disabled"} />,
+    cell: ({ row }) => (
+      <DashboardStatusPill text={row.original.enabled ? "enabled" : "disabled"} />
+    ),
   },
   {
     accessorKey: "lastRunStatus",
@@ -43,13 +37,3 @@ export const taskColumns: ColumnDef<TaskRow>[] = [
     ),
   },
 ];
-
-function TaskConnection({ task }: { task: TaskRow }) {
-  const integrationQuery = useDashboardIntegrationQuery();
-  return (
-    task.connectionLabel ??
-    integrationQuery.data?.connections.find((connection) => connection.id === task.connectionId)
-      ?.accountLabel ??
-    "—"
-  );
-}

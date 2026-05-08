@@ -1,8 +1,6 @@
 import type { ResolvedSubscriptionTarget } from "../commands/subscription-targets";
 
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
-
-export type BotIngressRepositoryJson = unknown;
+export type Json = unknown;
 
 export interface BotIngressBindingGrantRow {
   id: string;
@@ -20,7 +18,7 @@ export interface BotIngressBindingGrantRow {
   consumedAt: Date | null;
   maxUses: number;
   usedCount: number;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,8 +33,8 @@ export interface BotIngressBotPluginInstanceRow {
   callbackMode: string;
   deliveryEndpointId: string | null;
   status: string;
-  capabilities: BotIngressRepositoryJson | null;
-  metadata: BotIngressRepositoryJson | null;
+  capabilities: unknown;
+  metadata: unknown;
   lastSeenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -56,7 +54,7 @@ export interface BotIngressChannelBindingRow {
   status: string;
   supersededByBindingId: string | null;
   revokedReason: string | null;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
   endedAt: Date | null;
@@ -67,7 +65,7 @@ export interface BotIngressChannelRow {
   type: string;
   name: string | null;
   status: string;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -94,7 +92,7 @@ export interface BotIngressClaimSessionRow {
   resolvedUserId: string | null;
   resolvedChannelId: string | null;
   resolution: string | null;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
   resolvedAt: Date | null;
@@ -111,7 +109,7 @@ export interface BotIngressConnectionRow {
   accessMode: string;
   status: string;
   isDefault: boolean;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   connectedAt: Date;
   lastSyncedAt: Date | null;
   createdAt: Date;
@@ -129,7 +127,7 @@ export interface BotIngressSubscriptionRow {
   topicKey: string;
   eventTypes: string[];
   status: string;
-  filterExpr: BotIngressRepositoryJson | null;
+  filterExpr: unknown;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -166,14 +164,14 @@ export interface BotIngressUserBindingRow {
   status: string;
   supersededByBindingId: string | null;
   revokedReason: string | null;
-  metadata: BotIngressRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
   endedAt: Date | null;
 }
 
 export interface CreateBotIngressUserInput {
-  id: string;
+  id?: string;
   name: string;
   email: string;
   emailVerified: boolean;
@@ -184,14 +182,14 @@ export interface CreateBotIngressUserInput {
   role?: string | null;
   banned?: boolean | null;
   banReason?: string | null;
-  banExpires?: Date | null;
+  banExpires?: Date;
   status?: string;
-  claimedAt?: Date | null;
+  claimedAt?: Date;
   mergedIntoUserId?: string | null;
 }
 
 export interface CreateBotIngressUserBindingInput {
-  id: string;
+  id?: string;
   userId: string;
   platform: string;
   externalUserId: string;
@@ -203,21 +201,20 @@ export interface CreateBotIngressUserBindingInput {
   status?: string;
   supersededByBindingId?: string | null;
   revokedReason?: string | null;
-  metadata?: BotIngressRepositoryJson | null;
-  endedAt?: Date | null;
+  metadata?: unknown;
 }
 
 export interface CreateBotIngressChannelInput {
-  id: string;
+  id?: string;
   type: string;
   name?: string | null;
   status?: string;
-  metadata?: BotIngressRepositoryJson | null;
+  metadata?: unknown;
   createdByUserId?: string | null;
 }
 
 export interface CreateBotIngressChannelBindingInput {
-  id: string;
+  id?: string;
   channelId: string;
   platform: string;
   externalChannelId: string;
@@ -230,7 +227,7 @@ export interface CreateBotIngressChannelBindingInput {
   status?: string;
   supersededByBindingId?: string | null;
   revokedReason?: string | null;
-  metadata?: BotIngressRepositoryJson | null;
+  metadata?: unknown;
   endedAt?: Date | null;
 }
 
@@ -255,7 +252,7 @@ export interface CreateBotIngressClaimSessionInput {
   resolvedUserId?: string | null;
   resolvedChannelId?: string | null;
   resolution?: string | null;
-  metadata?: BotIngressRepositoryJson | null;
+  metadata?: unknown;
   resolvedAt?: Date | null;
 }
 
@@ -270,7 +267,7 @@ export interface CreateBotIngressSubscriptionInput {
   topicKey: string;
   eventTypes: string[];
   status?: string;
-  filterExpr?: BotIngressRepositoryJson | null;
+  filterExpr?: unknown;
   createdByUserId?: string | null;
 }
 

@@ -2,82 +2,107 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { NotFoundError } from "@/api/domain/error";
 import { createOutboxEventFromCtx } from "@/api/domain/infra";
-import { requireAuth } from "@/api/server/middleware/auth.ts";
+import { requireAuth, requireAdmin } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import { cronSchema } from "@repo/utils/schema/cron";
 import { uniqueId } from "@repo/utils/id";
 import { TASK_RUN_REQUESTED } from "./type.js";
+import {taskDefinitionSchema, taskRunSchema, createTaskSchema, updateTaskSchema, runTaskSchema, PaginationQuerySchema} from "./schema.ts";
+import { PageBasedPaginationResultSchema } from "@repo/utils/schema/paging";
 
 const app = new Hono();
-
-const taskDefinitionSchema = z.object({
-  id: z.string(),
-  ownerUserId: z.string().nullable(),
-  kind: z.string(),
-  enabled: z.boolean(),
-  schedule: z.string(),
-  payload: z.record(z.string(), z.any()),
-  lastTriggeredAt: z.string().nullable(),
-  lastRunAt: z.string().nullable(),
-  lastRunStatus: z.string().nullable(),
-  lastError: z.string().nullable(),
-});
-
-const createTaskSchema = z.object({
-  kind: z.string().min(1),
-  enabled: z.boolean().optional(),
-  schedule: cronSchema,
-  payload: z.record(z.string(), z.any()),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-
-const updateTaskSchema = z.object({
-  enabled: z.boolean().optional(),
-  schedule: cronSchema.optional(),
-  payload: z.record(z.string(), z.any()).optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-
-const runTaskSchema = z.object({
-  reason: z.string().optional(),
-});
 
 app.use("*", requireAuth());
 
 app.get(
-  "/tasks",
+  "/",
+  requireAdmin(),
   describeRoute({
     tags: ["Tasks"],
     summary: "List task definitions",
+    request: {
+      query: PaginationQuerySchema,
+    },
     response: {
       description: "Task definitions",
-      body: z.object({ items: z.array(taskDefinitionSchema) }),
+      body: PageBasedPaginationResultSchema(taskDefinitionSchema),
     },
   }),
   async (c) => {
     const ctx = c.get("serviceContext");
-    const userId = ctx.userId;
-    const rows = await ctx.repositories.task.listTaskDefinitionsByOwner(userId ?? "");
+    const page = c.req.valid('query')
+    const items = await ctx
+      .repositories
+      .task
+      .listTaskDefinitionsByOwner(ctx.userId!, page);
+    return c.json(items);
+  },
+);
 
-    return c.json({
-      items: rows.map((row: (typeof rows)[number]) => ({
-        id: row.id,
-        ownerUserId: row.ownerUserId ?? null,
-        kind: row.kind,
-        enabled: row.enabled === 1,
-        schedule: row.schedule,
-        payload: row.payload as Record<string, unknown>,
-        lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
-        lastRunAt: row.lastRunAt?.toISOString() ?? null,
-        lastRunStatus: row.lastRunStatus ?? null,
-        lastError: row.lastError ?? null,
-      })),
-    });
+app.get(
+  "/:id",
+  requireAdmin(),
+  describeRoute({
+    tags: ["Tasks"],
+    summary: "Get task definition",
+    response: {
+      description: "Task definition",
+      body: taskDefinitionSchema,
+    },
+  }),
+  async (c) => {
+    const ctx = c.get("serviceContext");
+    const taskDefinitionId = c.req.param("id");
+
+    if (!taskDefinitionId) {
+      throw new NotFoundError("task definition not found");
+    }
+
+    const task = await ctx.repositories.task.getTaskDefinitionById(taskDefinitionId);
+
+    if (!task) {
+      throw new NotFoundError("task definition not found");
+    }
+
+    return c.json(task);
+  },
+);
+
+app.get(
+  "/:id/runs",
+  requireAdmin(),
+  describeRoute({
+    tags: ["Tasks"],
+    summary: "List task runs",
+    request: {
+      query: PaginationQuerySchema,
+    },
+    response: {
+      description: "Task runs",
+      body: PageBasedPaginationResultSchema(taskRunSchema),
+    },
+  }),
+  async (c) => {
+    const ctx = c.get("serviceContext");
+    const taskDefinitionId = c.req.param("id");
+    const { page, pageSize } = c.req.valid('query')
+    if (!taskDefinitionId) {
+      throw new NotFoundError("task definition not found");
+    }
+
+    const runs = await ctx
+      .repositories
+      .task
+      .getTaskRunByTaskDefinitionId(
+        taskDefinitionId,
+        {page, pageSize}
+      );
+
+    return c.json(runs);
   },
 );
 
 app.post(
-  "/tasks",
+  "/",
   describeRoute({
     tags: ["Tasks"],
     summary: "Create task definition",
@@ -89,99 +114,76 @@ app.post(
   }),
   async (c) => {
     const body = c.req.valid("json");
-    const ctx = c.get("serviceContext");
-    const row = await ctx.repositories.task.createTaskDefinition({
-      id: uniqueId(),
-      ownerUserId: ctx.userId ?? null,
-      kind: body.kind,
-      enabled: body.enabled === false ? 0 : 1,
-      schedule: body.schedule,
-      payload: body.payload,
-      metadata: body.metadata ?? null,
+    const result = await c.get("serviceContext").repositories.task.createTaskDefinition({
+      ownerUserId: c.get("serviceContext").userId ?? null,
+      ...body,
     });
 
-    return c.json({
-      id: row.id,
-      ownerUserId: row.ownerUserId ?? null,
-      kind: row.kind,
-      enabled: row.enabled === 1,
-      schedule: row.schedule,
-      payload: row.payload as Record<string, unknown>,
-      lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
-      lastRunAt: row.lastRunAt?.toISOString() ?? null,
-      lastRunStatus: row.lastRunStatus ?? null,
-      lastError: row.lastError ?? null,
-    });
+    return c.json(result, 201);
   },
 );
 
 app.patch(
-  "/tasks/:id",
+  "/:id",
   describeRoute({
     tags: ["Tasks"],
     summary: "Update task definition",
-    request: { body: updateTaskSchema, param: z.object({ id: z.string() }) },
+    request: { param: z.object({ id: z.string() }), body: updateTaskSchema },
     response: {
       description: "Updated task definition",
       body: taskDefinitionSchema,
     },
   }),
   async (c) => {
+    const { id } = c.req.valid("param");
     const body = c.req.valid("json");
-    const param = c.req.valid("param");
-    const row = await c.get("serviceContext").repositories.task.updateTaskDefinition(param.id, {
-      enabled: body.enabled == null ? undefined : body.enabled ? 1 : 0,
-      schedule: body.schedule,
-      payload: body.payload,
-      metadata: body.metadata,
-    });
-    if (!row) throw new NotFoundError("task definition not found");
+    const result = await c.get("serviceContext").repositories.task.updateTaskDefinition(id, body);
 
-    return c.json({
-      id: row.id,
-      ownerUserId: row.ownerUserId ?? null,
-      kind: row.kind,
-      enabled: row.enabled === 1,
-      schedule: row.schedule,
-      payload: row.payload as Record<string, unknown>,
-      lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
-      lastRunAt: row.lastRunAt?.toISOString() ?? null,
-      lastRunStatus: row.lastRunStatus ?? null,
-      lastError: row.lastError ?? null,
-    });
+    if (!result) {
+      throw new NotFoundError("task definition not found");
+    }
+
+    return c.json(result);
   },
 );
 
 app.post(
-  "/tasks/:id/run",
+  "/:id/run",
   describeRoute({
     tags: ["Tasks"],
-    summary: "Enqueue one task run",
-    request: { body: runTaskSchema, param: z.object({ id: z.string() }) },
+    summary: "Trigger task run",
+    request: { param: z.object({ id: z.string() }), body: runTaskSchema },
     response: {
-      description: "Queued task run",
-      body: z.object({ taskRunId: z.string(), outboxEventId: z.string() }),
+      description: "Run requested",
+      body: z.object({
+        taskRunId: z.string(),
+        outboxEventId: z.string(),
+      }),
     },
   }),
   async (c) => {
-    const param = c.req.valid("param");
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
+    const ctx = c.get("serviceContext");
+    const task = await ctx.repositories.task.getTaskDefinitionById(id);
+    if (!task) {
+      throw new NotFoundError("task definition not found");
+    }
+
     const taskRunId = uniqueId();
-    const outboxEvent = createOutboxEventFromCtx(c.get("serviceContext"), {
+
+    const outboxEvent = createOutboxEventFromCtx(ctx, {
       type: TASK_RUN_REQUESTED,
-      subject: `taskrun:${taskRunId}`,
+      subject: `task:${task.id}`,
       payload: {
         taskRunId,
+        taskDefinitionId: task.id,
+        kind: task.kind,
+        reason: body.reason ?? "manual-trigger",
+        payload: task.payload,
       },
     });
 
-    const ctx = c.get("serviceContext");
-    await ctx.repositories.task.createTaskRun({
-      id: taskRunId,
-      taskDefinitionId: param.id,
-      kind: "manual",
-      status: "QUEUED",
-      scheduledFor: new Date(),
-    });
     await ctx.sendEvent(outboxEvent);
 
     return c.json({

@@ -107,10 +107,11 @@ export async function resolveOrCreateContext(
   if (!userBinding) {
     created = true;
     const anonymousUserId = uniqueId();
+
     anonymousUser = await repository.createAnonymousUser({
       id: anonymousUserId,
       name: anonymousDisplayName,
-      email: `anonymous+${anonymousUserId}@gamer-bot.invalid`,
+      email: `anonymous+${anonymousUserId}@tori.local`,
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -145,7 +146,6 @@ export async function resolveOrCreateContext(
   if (!channelBinding) {
     created = true;
     const channel = await repository.createChannel({
-      id: uniqueId(),
       type: messageContext.channelType,
       name: channelName,
       metadata: {
@@ -157,7 +157,6 @@ export async function resolveOrCreateContext(
     });
 
     channelBinding = await repository.createChannelBinding({
-      id: uniqueId(),
       channelId: channel.id,
       platform: messageContext.platform,
       externalChannelId: messageContext.observedChannelId,

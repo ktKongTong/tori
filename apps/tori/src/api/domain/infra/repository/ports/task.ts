@@ -2,8 +2,7 @@ export type {
   CreateTaskDefinitionInput,
   CreateTaskRunInput,
   ITaskRepository,
-  JsonRecord,
-  TaskDefinitionRow,
-  TaskRunRow,
+  TaskDefinition,
+  TaskRun,
   UpdateTaskDefinitionInput,
 } from "@repo/task/repository";

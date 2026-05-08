@@ -16,7 +16,7 @@ const issueBindingTokenSchema = z.object({
   codeExpiresAt: z.string().datetime().optional(),
   tokenExpiresAt: z.string().datetime().optional(),
   maxUses: z.number().int().positive().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const consumeAnonymousClaimSchema = z.object({
@@ -24,6 +24,60 @@ const consumeAnonymousClaimSchema = z.object({
 });
 
 app.use("*", requireAuth());
+
+app.get(
+  "/user-bindings",
+  describeRoute({
+    tags: ["Binding"],
+    summary: "List user bindings",
+    response: {
+      description: "User bindings",
+      body: z.object({
+        items: z.array(z.unknown()),
+      }),
+    },
+  }),
+  async (c) => {
+    const items = await c.get("serviceContext").repositories.binding.listUserBindings();
+    return c.json({ items });
+  },
+);
+
+app.get(
+  "/channel-bindings",
+  describeRoute({
+    tags: ["Binding"],
+    summary: "List channel bindings",
+    response: {
+      description: "Channel bindings",
+      body: z.object({
+        items: z.array(z.unknown()),
+      }),
+    },
+  }),
+  async (c) => {
+    const items = await c.get("serviceContext").repositories.binding.listChannelBindings();
+    return c.json({ items });
+  },
+);
+
+app.get(
+  "/claim-sessions",
+  describeRoute({
+    tags: ["Binding"],
+    summary: "List claim sessions",
+    response: {
+      description: "Claim sessions",
+      body: z.object({
+        items: z.array(z.unknown()),
+      }),
+    },
+  }),
+  async (c) => {
+    const items = await c.get("serviceContext").repositories.binding.listClaimSessions();
+    return c.json(items);
+  },
+);
 
 app.post(
   "/tokens",

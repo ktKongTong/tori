@@ -5,15 +5,15 @@ export const createBotInstanceSchema = z.object({
   namespace: z.string().min(1),
   instanceKey: z.string().min(1),
   displayName: z.string().nullable().optional(),
-  capabilities: z.record(z.string(), z.any()).optional(),
+  capabilities: z.record(z.string(), z.unknown()).optional(),
   deliveryEndpoint: z
     .object({
       kind: z.string().min(1),
       target: z.string().min(1),
       displayName: z.string().nullable().optional(),
       secret: z.string().nullable().optional(),
-      config: z.record(z.string(), z.any()).optional(),
-      metadata: z.record(z.string(), z.any()).optional(),
+      config: z.record(z.string(), z.unknown()).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
     })
     .optional(),
   autoCreateInternalEndpoint: z.boolean().optional(),
@@ -21,7 +21,7 @@ export const createBotInstanceSchema = z.object({
 
 export const updateBotInstanceSchema = z.object({
   displayName: z.string().nullable().optional(),
-  capabilities: z.record(z.string(), z.any()).optional(),
+  capabilities: z.record(z.string(), z.unknown()).optional(),
   status: z.string().optional(),
 });
 

@@ -7,6 +7,10 @@ import { NotifyPgRepository, NotifySqliteRepository } from "./notify";
 import { OutboxPgRepository, OutboxSqliteRepository } from "./outbox";
 import { SubscriptionPgRepository, SubscriptionSqliteRepository } from "./subscription";
 import { TaskPgRepository, TaskSqliteRepository } from "./task";
+import {
+  BindingPgRepository,
+  BindingSqliteRepository,
+} from "@/api/modules/platform/binding/repository";
 
 export function createRepositoryContainer<T extends DBType>(
   tx: DB<T>,
@@ -24,6 +28,7 @@ function createPgRepositoryContainer(tx: PGDB): PlatformRepositoryContainer {
     outbox: new OutboxPgRepository(tx),
     inbox: new InboxPgRepository(tx),
     integration: new IntegrationPgRepository(tx),
+    binding: new BindingPgRepository(tx),
     notify: new NotifyPgRepository(tx),
     task: new TaskPgRepository(tx),
     subscription: new SubscriptionPgRepository(tx),
@@ -36,6 +41,7 @@ function createSqliteRepositoryContainer(tx: SqliteDB): PlatformRepositoryContai
     outbox: new OutboxSqliteRepository(tx),
     inbox: new InboxSqliteRepository(tx),
     integration: new IntegrationSqliteRepository(tx),
+    binding: new BindingSqliteRepository(tx),
     notify: new NotifySqliteRepository(tx),
     task: new TaskSqliteRepository(tx),
     subscription: new SubscriptionSqliteRepository(tx),

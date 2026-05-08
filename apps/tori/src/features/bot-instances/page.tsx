@@ -6,14 +6,14 @@ import { botInstanceColumns } from "./columns";
 import { CreateBotInstanceDialog } from "./dialogs";
 import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
-import { useDashboardBotInstancesQuery } from "@/features/bot-instances/query";
+import { useBotInstancesQuery } from "@/features/bot-instances/query";
 
 export function BotInstancesPage() {
   const modal = useModal();
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
-  const botInstancesQuery = useDashboardBotInstancesQuery();
+  const botInstancesQuery = useBotInstancesQuery();
   const botInstancesData = botInstancesQuery.data;
 
   if (!isAdmin) {
@@ -30,7 +30,7 @@ export function BotInstancesPage() {
       </DashboardActionBar>
       <DashboardTable
         columns={botInstanceColumns}
-        data={botInstancesData?.instances ?? []}
+        data={botInstancesData?.items ?? []}
         empty="No bot instances available."
       />
     </div>

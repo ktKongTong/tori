@@ -4,31 +4,27 @@ import { toast } from "sonner";
 
 import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
 import { SubscriptionDialog } from "./create-subscription-form";
-import {
-  updateSubscriptionStatus as updateSubscriptionStatusRequest,
-  type DashboardNotifySubscriptionsData,
-} from "@/features/notify/api";
+import { updateSubscriptionStatus as updateSubscriptionStatusRequest } from "@/features/notify/api";
 import { useModal } from "@/lib/modal";
 import { useSession } from "@/lib/auth-client";
-import { useDashboardBindingQuery } from "@/features/binding/query";
-import { useDashboardIntegrationQuery } from "@/features/integration/query";
 import { useToastError } from "@/lib/toast-error";
+import type { NotifySubscriptionView as OriginalNotifySubscriptionView } from "@/features/notify/api";
 
-export type NotifySubscriptionRow = DashboardNotifySubscriptionsData["subscriptions"][number];
+export type NotifySubscriptionView = OriginalNotifySubscriptionView;
 
 export function createNotifySubscriptionColumns(input: {
-  onOpenDetails: (subscription: NotifySubscriptionRow) => void;
-}): ColumnDef<NotifySubscriptionRow>[] {
+  onOpenDetails: (subscription: NotifySubscriptionView) => void;
+}): ColumnDef<NotifySubscriptionView>[] {
   return [
     {
-      accessorKey: "channelLabel",
+      accessorKey: "channel",
       header: "Channel Binding",
-      cell: ({ row }) => row.original.channelLabel,
+      cell: ({ row }) => row.original.channel?.name ?? row.original.channelId,
     },
     {
-      accessorKey: "botPluginInstanceLabel",
+      accessorKey: "botInstance",
       header: "Bot Runtime",
-      cell: ({ row }) => row.original.botPluginInstanceLabel,
+      cell: ({ row }) => row.original.botInstance?.displayName ?? row.original.botPluginInstanceId,
     },
     {
       accessorKey: "topic",
@@ -57,22 +53,17 @@ function NotifySubscriptionActions({
   onOpenDetails,
   subscription,
 }: {
-  onOpenDetails: (subscription: NotifySubscriptionRow) => void;
-  subscription: NotifySubscriptionRow;
+  onOpenDetails: (subscription: NotifySubscriptionView) => void;
+  subscription: NotifySubscriptionView;
 }) {
   const modal = useModal();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-  const bindingQuery = useDashboardBindingQuery();
-  const integrationQuery = useDashboardIntegrationQuery();
-  const availableChannelBindings = bindingQuery.data?.channelBindings ?? [];
-  const availableConnections =
-    integrationQuery.data?.connections.filter((connection) => connection.status === "active") ?? [];
   const updateSubscriptionStatus = useMutation({
     mutationFn: async (input: { id: string; status: "active" | "disabled" }) =>
       updateSubscriptionStatusRequest(input),
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "notify", "subscriptions"] });
+      await queryClient.invalidateQueries({ queryKey: ["notify", "subscriptions"] });
       toast.success("Subscription updated", {
         description: `Subscription ${data.id} is now ${data.status}.`,
       });
@@ -81,9 +72,11 @@ function NotifySubscriptionActions({
 
   useToastError(updateSubscriptionStatus.error, { title: "Failed to update subscription" });
 
+  const channelName = subscription.channel?.name ?? subscription.channelId;
+
   return (
     <DashboardTableActions
-      label={`Open actions for ${subscription.channelLabel}`}
+      label={`Open actions for ${channelName}`}
       items={[
         {
           label: "Details",
@@ -96,8 +89,6 @@ function NotifySubscriptionActions({
             if (!session?.user?.id) return;
             modal.open(
               <SubscriptionDialog
-                availableChannelBindings={availableChannelBindings}
-                availableConnections={availableConnections}
                 defaultValues={{
                   channelId: subscription.channelId,
                   connectionId: subscription.connectionId,

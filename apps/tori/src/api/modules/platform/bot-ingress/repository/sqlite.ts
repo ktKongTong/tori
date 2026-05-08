@@ -1,4 +1,5 @@
 import { and, desc, eq, ne } from "drizzle-orm";
+import { uniqueId } from "@repo/utils/id";
 import {
   bindingGrants,
   botPluginInstances,
@@ -91,16 +92,29 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
   async createAnonymousUser(input: CreateBotIngressUserInput) {
     const [row] = await this.db
       .insert(user)
-      .values(input as typeof user.$inferInsert)
+      .values({
+        id: input.id ?? uniqueId(),
+        name: input.name,
+        email: input.email,
+        emailVerified: input.emailVerified,
+        image: input.image ?? null,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt,
+        isAnonymous: input.isAnonymous ?? null,
+        role: input.role ?? null,
+        banned: input.banned ?? null,
+        banReason: input.banReason ?? null,
+        banExpires: input.banExpires ?? null,
+        status: input.status ?? "active",
+        claimedAt: input.claimedAt ?? null,
+        mergedIntoUserId: input.mergedIntoUserId ?? null,
+      })
       .returning();
     return row;
   }
 
   async createUserBinding(input: CreateBotIngressUserBindingInput) {
-    const [binding] = await this.db
-      .insert(userBindings)
-      .values(input as typeof userBindings.$inferInsert)
-      .returning();
+    const [binding] = await this.db.insert(userBindings).values(input).returning();
     return binding;
   }
 
@@ -123,17 +137,30 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
   }
 
   async createChannel(input: CreateBotIngressChannelInput) {
-    const [channel] = await this.db
-      .insert(channels)
-      .values(input as typeof channels.$inferInsert)
-      .returning();
+    const [channel] = await this.db.insert(channels).values(input).returning();
     return channel;
   }
 
   async createChannelBinding(input: CreateBotIngressChannelBindingInput) {
     const [binding] = await this.db
       .insert(channelBindings)
-      .values(input as typeof channelBindings.$inferInsert)
+      .values({
+        id: input.id ?? uniqueId(),
+        channelId: input.channelId,
+        platform: input.platform,
+        externalChannelId: input.externalChannelId,
+        externalChannelName: input.externalChannelName ?? null,
+        namespace: input.namespace ?? null,
+        botPluginInstanceId: input.botPluginInstanceId ?? null,
+        source: input.source,
+        assurance: input.assurance,
+        establishedByGrantId: input.establishedByGrantId ?? null,
+        status: input.status ?? "active",
+        supersededByBindingId: input.supersededByBindingId ?? null,
+        revokedReason: input.revokedReason ?? null,
+        metadata: input.metadata ?? null,
+        endedAt: input.endedAt ?? null,
+      })
       .returning();
     return binding;
   }
@@ -200,7 +227,30 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
   async createClaimSession(input: CreateBotIngressClaimSessionInput) {
     const [claimSession] = await this.db
       .insert(claimSessions)
-      .values(input as typeof claimSessions.$inferInsert)
+      .values({
+        id: input.id,
+        initiatedFrom: input.initiatedFrom,
+        purpose: input.purpose,
+        subjectType: input.subjectType,
+        subjectId: input.subjectId ?? null,
+        anonymousUserId: input.anonymousUserId ?? null,
+        anonymousUserName: input.anonymousUserName ?? null,
+        observedUserPlatform: input.observedUserPlatform ?? null,
+        observedUserId: input.observedUserId ?? null,
+        observedUserName: input.observedUserName ?? null,
+        observedUserNamespace: input.observedUserNamespace ?? null,
+        observedChannelPlatform: input.observedChannelPlatform ?? null,
+        observedChannelId: input.observedChannelId ?? null,
+        observedChannelName: input.observedChannelName ?? null,
+        observedChannelNamespace: input.observedChannelNamespace ?? null,
+        grantId: input.grantId ?? null,
+        status: input.status,
+        resolvedUserId: input.resolvedUserId ?? null,
+        resolvedChannelId: input.resolvedChannelId ?? null,
+        resolution: input.resolution ?? null,
+        metadata: input.metadata ?? null,
+        resolvedAt: input.resolvedAt ?? null,
+      })
       .returning();
     return claimSession;
   }
@@ -372,10 +422,7 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
   }
 
   async createSubscription(input: CreateBotIngressSubscriptionInput) {
-    const [subscription] = await this.db
-      .insert(subscriptions)
-      .values(input as typeof subscriptions.$inferInsert)
-      .returning();
+    const [subscription] = await this.db.insert(subscriptions).values(input).returning();
     return subscription;
   }
 

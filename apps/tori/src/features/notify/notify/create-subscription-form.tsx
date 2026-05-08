@@ -20,10 +20,12 @@ import { z } from "zod";
 
 import {
   createSubscription as createSubscriptionRequest,
-  type CreateSubscriptionInput,
 } from "@/features/notify/api";
+import { useChannelBindingsQuery } from "@/features/binding/query";
+import { useConnectionsQuery } from "@/features/integration/query";
 import { useModal } from "@/lib/modal";
 import { useToastError } from "@/lib/toast-error";
+import type {CreateSubscriptionInput} from "@/api/modules/platform/notify";
 
 const subscriptionFormSchema = z.object({
   channelId: z.string().trim().min(1, "Target chat is required"),
@@ -56,35 +58,26 @@ const subscriptionDefaultValues: z.input<typeof subscriptionFormSchema> = {
 };
 
 type SubscriptionDialogProps = {
-  availableChannelBindings: Array<{
-    channelId: string;
-    channelName: string;
-    externalChannelName: string;
-    id: string;
-  }>;
-  availableConnections: Array<{
-    accountLabel: string;
-    id: string;
-    provider: string;
-  }>;
   defaultValues?: Partial<z.input<typeof subscriptionFormSchema>>;
   userId: string;
 };
 
-export function SubscriptionDialog({
-  availableChannelBindings,
-  availableConnections,
-  defaultValues,
-  userId,
-}: SubscriptionDialogProps) {
+export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialogProps) {
   const modal = useModal();
   const queryClient = useQueryClient();
+
+  const bindingQuery = useChannelBindingsQuery();
+  const integrationQuery = useConnectionsQuery();
+  const availableChannelBindings = bindingQuery.data?.items ?? [];
+  const availableConnections =
+    integrationQuery.data?.items.filter((item) => item.connection.status === "active") ?? [];
+
   const createSubscription = useMutation({
     mutationFn: async (input: CreateSubscriptionInput) => createSubscriptionRequest(input),
     onSuccess: async (data) => {
       modal.close();
       await queryClient.invalidateQueries({
-        queryKey: ["dashboard", "notify", "subscriptions"],
+        queryKey: ["notify", "subscriptions"],
       });
       toast.success("Subscription created", {
         description: `Subscription ${data.id} now watches ${data.topicType}. Refresh task: ${data.refreshTaskId ?? "none"} (${data.refreshTaskCreated ? "created" : "reused"}).`,
@@ -149,8 +142,9 @@ export function SubscriptionDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {availableChannelBindings.map((binding) => (
-                        <SelectItem key={binding.id} value={binding.channelId}>
-                          {binding.channelName} · {binding.externalChannelName}
+                        <SelectItem key={binding.binding.id} value={binding.binding.channelId}>
+                          {binding.channel?.name ?? binding.binding.channelId} ·{" "}
+                          {binding.binding.externalChannelName ?? binding.binding.externalChannelId}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -177,8 +171,10 @@ export function SubscriptionDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {availableConnections.map((connection) => (
-                        <SelectItem key={connection.id} value={connection.id}>
-                          {connection.accountLabel} · {connection.provider}
+                        <SelectItem key={connection.connection.id} value={connection.connection.id}>
+                          {connection.connection.providerAccountName ??
+                            connection.connection.providerAccountId}{" "}
+                          · {connection.connection.provider}
                         </SelectItem>
                       ))}
                     </SelectContent>

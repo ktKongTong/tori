@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
-import { connections, proxyInstances } from "@/api/db/schema/pg";
+import { and, eq, desc } from "drizzle-orm";
+import { proxyInstances, connections } from "@/api/db/schema/pg";
+import { accountProfiles } from "@/api/modules/steam/core/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
   CreateConnectionInput,
@@ -11,6 +12,22 @@ import type {
 } from "@/api/domain/platform/repository/ports/integration.ts";
 
 export class IntegrationPgRepository implements IIntegrationRepository {
+  async listProxyInstances() {
+    return this.db.select().from(proxyInstances).orderBy(desc(proxyInstances.createdAt)).limit(100);
+  }
+
+  async listConnections() {
+    return this.db.select().from(connections).orderBy(desc(connections.createdAt)).limit(100);
+  }
+
+  async listAccountProfiles() {
+    return this.db
+      .select()
+      .from(accountProfiles)
+      .orderBy(desc(accountProfiles.updatedAt))
+      .limit(100);
+  }
+
   constructor(private readonly db: PGDB) {}
 
   async findProxyInstanceByOwnerAndBaseUrl(input: { ownerUserId: string; baseUrl: string }) {
@@ -28,19 +45,14 @@ export class IntegrationPgRepository implements IIntegrationRepository {
   }
 
   async updateProxyInstanceRegistration(input: UpdateProxyInstanceRegistrationInput) {
-    const [existing] = await this.db
-      .select()
-      .from(proxyInstances)
-      .where(eq(proxyInstances.id, input.id))
-      .limit(1);
     const [updated] = await this.db
       .update(proxyInstances)
       .set({
         credentialRef: input.credentialRef,
-        name: input.name ?? existing?.name ?? null,
+        name: input.name,
         healthStatus: input.healthStatus,
         capabilities: input.capabilities,
-        metadata: Object.assign({}, existing?.metadata, input.metadata),
+        metadata: input.metadata,
         updatedAt: new Date(),
       })
       .where(eq(proxyInstances.id, input.id))
@@ -49,11 +61,21 @@ export class IntegrationPgRepository implements IIntegrationRepository {
   }
 
   async createProxyInstance(input: CreateProxyInstanceInput) {
-    const [proxyInstance] = await this.db
-      .insert(proxyInstances)
-      .values(input as typeof proxyInstances.$inferInsert)
-      .returning();
-    return proxyInstance;
+    const values: typeof proxyInstances.$inferInsert = {
+      id: input.id,
+      ownerUserId: input.ownerUserId,
+      provider: input.provider,
+      baseUrl: input.baseUrl,
+      credentialRef: input.credentialRef,
+      name: input.name ?? null,
+      status: input.status ?? "active",
+      healthStatus: input.healthStatus ?? "healthy",
+      capabilities: input.capabilities ?? null,
+      metadata: input.metadata ?? null,
+      lastSeenAt: input.lastSeenAt ?? undefined,
+    };
+    const [row] = await this.db.insert(proxyInstances).values(values).returning();
+    return row;
   }
 
   async findProxyInstanceForOwner(input: { id: string; ownerUserId: string }) {
@@ -84,10 +106,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
   async updateProxyInstanceStatus(input: UpdateProxyInstanceStatusInput) {
     const [updated] = await this.db
       .update(proxyInstances)
-      .set({
-        status: input.status,
-        updatedAt: new Date(),
-      })
+      .set({ status: input.status, updatedAt: new Date() })
       .where(
         and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
       )
@@ -115,11 +134,23 @@ export class IntegrationPgRepository implements IIntegrationRepository {
   }
 
   async createConnection(input: CreateConnectionInput) {
-    const [connection] = await this.db
-      .insert(connections)
-      .values(input as typeof connections.$inferInsert)
-      .returning();
-    return connection;
+    const values: typeof connections.$inferInsert = {
+      id: input.id,
+      ownerUserId: input.ownerUserId,
+      provider: input.provider,
+      providerAccountId: input.providerAccountId,
+      providerAccountName: input.providerAccountName ?? null,
+      providerAccountAvatar: input.providerAccountAvatar ?? null,
+      accessMode: input.accessMode,
+      proxyInstanceId: input.proxyInstanceId ?? null,
+      isDefault: input.isDefault ?? false,
+      status: input.status ?? "active",
+      metadata: input.metadata ?? null,
+      connectedAt: input.connectedAt ?? new Date(),
+      lastSyncedAt: input.lastSyncedAt ?? undefined,
+    };
+    const [row] = await this.db.insert(connections).values(values).returning();
+    return row;
   }
 
   async findConnectionById(id: string) {

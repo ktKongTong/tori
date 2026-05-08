@@ -6,7 +6,7 @@ import { integrationProxyColumns } from "./columns";
 import { TokenProxyDialog } from "./proxy-dialogs";
 import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
-import { useDashboardIntegrationQuery } from "@/features/integration/query";
+import { useProxyInstancesQuery } from "@/features/integration/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function IntegrationProxiesPage() {
@@ -14,7 +14,7 @@ export function IntegrationProxiesPage() {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
-  const integrationQuery = useDashboardIntegrationQuery();
+  const integrationQuery = useProxyInstancesQuery();
   const integrationData = integrationQuery.data;
   useToastError(integrationQuery.error, { title: "Failed to load token proxies" });
 
@@ -32,7 +32,7 @@ export function IntegrationProxiesPage() {
       </DashboardActionBar>
       <DashboardTable
         columns={integrationProxyColumns}
-        data={integrationData?.proxyInstances ?? []}
+        data={integrationData?.items ?? []}
         empty="No token proxies registered."
       />
     </div>

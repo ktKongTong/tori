@@ -16,7 +16,7 @@ import type {
   TokenProxySteamFamilyLibraryResponse,
   TokenProxySteamFamilyResponse,
   TokenProxySteamItemsResponse,
-} from "@/api/modules/steam/core/family/types";
+} from "./types";
 import {
   buildSteamAvatarUrl,
   TOKEN_PROXY_ITEM_BATCH_SIZE,
@@ -116,28 +116,25 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
     id: familyPayload.familyId,
     ownerConnectionId: access.connection.id,
     name: familyPayload.name ?? null,
-    metadata: { source: "token-proxy-steam-family" },
     lastSyncedAt: syncedAt,
   });
 
   const members = await familyRepository.replaceFamilyMembers({
     familyId: family.id,
-    items: familyPayload.members.map(
-      (member: TokenProxySteamFamilyResponse["members"][number]) => ({
-        steamId: member.steamId,
-        role: member.role ?? null,
-        metadata: {
-          personaName: member.personaName ?? null,
-          avatarHash: member.avatarHash ?? null,
-          avatarUrl: buildSteamAvatarUrl(member.avatarHash ?? null),
-        },
-        lastSyncedAt: syncedAt,
-      }),
-    ),
+    items: familyPayload.members.map((member) => ({
+      steamId: member.steamId,
+      role: member.role ?? null,
+      metadata: {
+        personaName: member.personaName ?? null,
+        avatarHash: member.avatarHash ?? null,
+        avatarUrl: buildSteamAvatarUrl(member.avatarHash ?? null),
+      },
+      lastSyncedAt: syncedAt,
+    })),
   });
 
   await catalogRepository.upsertAppCatalogEntries({
-    items: visibleApps.map((app: TokenProxySteamFamilyLibraryResponse["apps"][number]) => {
+    items: visibleApps.map((app) => {
       const catalogItem = itemCatalog.get(app.appId);
       return {
         appId: app.appId,

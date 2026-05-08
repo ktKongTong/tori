@@ -59,18 +59,6 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
       metadata: body.deliveryEndpoint.metadata ?? { source: "bot-instance-create" },
     });
     endpointId = endpoint.id;
-  } else if (!existing && body.autoCreateInternalEndpoint === true) {
-    const target = `internal://bot-plugin-instance/${body.platform}/${body.namespace}/${body.instanceKey}`;
-    const endpoint = await repository.createInternalDeliveryEndpoint({
-      id: uniqueId(),
-      ownerUserId: userId,
-      platform: body.platform,
-      kind: "internal",
-      target,
-      displayName: body.displayName ?? null,
-      metadata: { source: "bot-instance-create" },
-    });
-    endpointId = endpoint.id;
   }
 
   if (existing) {

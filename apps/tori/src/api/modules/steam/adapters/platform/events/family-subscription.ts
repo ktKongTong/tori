@@ -41,7 +41,7 @@ async function ensureSteamFamilyRefreshTask(
     id: uniqueId(),
     ownerUserId,
     kind: "steam.family.refresh_connection",
-    enabled: 1,
+    enabled: true,
     schedule: "*/30 * * * *",
     payload: {
       connectionId: payload.connectionId,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import {
   FeatureGateError,
   RateLimitError,
@@ -30,7 +31,7 @@ describe("domain error common", () => {
   });
 
   it("keeps validation issues on ZodValidatorError", () => {
-    const issues = [{ message: "invalid", path: ["a"] }] as any;
+    const issues = [{ message: "invalid", path: ["a"] }] as StandardSchemaV1.Issue[];
     const err = new ZodValidatorError(issues);
     expect(err.errorCode).toBe(ErrorCode.VALIDATION_FAILED);
     expect(err.httpStatus).toBe(400);

@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DashboardStatusPill } from "@/components/dashboard-ui";
-import type { DashboardBindingData } from "@/features/binding/api";
+import type { ClaimSessionRow } from "@/features/binding/api";
 
-export type BindingClaimRow = DashboardBindingData["claimSessions"][number];
+export type BindingClaimRow = ClaimSessionRow;
 
 export const bindingClaimColumns: ColumnDef<BindingClaimRow>[] = [
   {
@@ -14,7 +14,7 @@ export const bindingClaimColumns: ColumnDef<BindingClaimRow>[] = [
   {
     accessorKey: "platform",
     header: "Platform",
-    cell: ({ row }) => row.original.platform,
+    cell: ({ row }) => row.original.observedUserPlatform ?? row.original.observedChannelPlatform,
   },
   {
     accessorKey: "observedUserName",

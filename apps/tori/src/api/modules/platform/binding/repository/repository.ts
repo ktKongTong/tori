@@ -1,8 +1,45 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
+import type {User} from "@/api/domain/infra";
 
-export type BindingRepositoryJson = unknown;
+export interface UserBinding {
+  id: string;
+  userId: string;
+  platform: string;
+  externalUserId: string;
+  externalUserName: string | null;
+  namespace: string | null;
+  source: string;
+  assurance: string;
+  establishedByGrantId: string | null;
+  status: string;
+  supersededByBindingId: string | null;
+  revokedReason: string | null;
+  metadata: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+  endedAt: Date | null;
+}
 
-export interface BindingGrantRow {
+export interface ChannelBinding {
+  id: string;
+  channelId: string;
+  platform: string;
+  externalChannelId: string;
+  externalChannelName: string | null;
+  namespace: string | null;
+  botPluginInstanceId: string | null;
+  source: string;
+  assurance: string;
+  establishedByGrantId: string | null;
+  status: string;
+  supersededByBindingId: string | null;
+  revokedReason: string | null;
+  metadata: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+  endedAt: Date | null;
+}
+
+export interface BindingGrant {
   id: string;
   code: string;
   tokenHash: string;
@@ -18,12 +55,12 @@ export interface BindingGrantRow {
   consumedAt: Date | null;
   maxUses: number;
   usedCount: number;
-  metadata: BindingRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ClaimSessionRow {
+export interface ClaimSession {
   id: string;
   initiatedFrom: string;
   purpose: string;
@@ -44,51 +81,14 @@ export interface ClaimSessionRow {
   resolvedUserId: string | null;
   resolvedChannelId: string | null;
   resolution: string | null;
-  metadata: BindingRepositoryJson | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
   resolvedAt: Date | null;
 }
 
-export interface UserRow {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  image: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  isAnonymous: boolean | null;
-  role: string | null;
-  banned: boolean | null;
-  banReason: string | null;
-  banExpires: Date | null;
-  status: string;
-  claimedAt: Date | null;
-  mergedIntoUserId: string | null;
-}
-
-export interface UserBindingRow {
-  id: string;
-  userId: string;
-  platform: string;
-  externalUserId: string;
-  externalUserName: string | null;
-  namespace: string | null;
-  source: string;
-  assurance: string;
-  establishedByGrantId: string | null;
-  status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
-  metadata: BindingRepositoryJson | null;
-  createdAt: Date;
-  updatedAt: Date;
-  endedAt: Date | null;
-}
-
 export interface CreateBindingGrantInput {
-  id: string;
+  id?: string;
   code: string;
   tokenHash: string;
   purpose: string;
@@ -97,27 +97,27 @@ export interface CreateBindingGrantInput {
   issuedByUserId?: string | null;
   issuedFrom: string;
   issuedToSurface: string;
-  status?: string;
   codeExpiresAt: Date;
   tokenExpiresAt: Date;
-  consumedAt?: Date | null;
   maxUses?: number;
-  usedCount?: number;
-  metadata?: BindingRepositoryJson | null;
+  metadata?: unknown;
 }
 
 export interface IBindingRepository {
-  createBindingGrant(input: CreateBindingGrantInput): Promise<BindingGrantRow>;
-  findPendingBindingGrantByTokenHash(tokenHash: string): Promise<BindingGrantRow | null>;
-  findClaimSessionByGrantId(grantId: string): Promise<ClaimSessionRow | null>;
-  findUserById(userId: string): Promise<UserRow | null>;
+  listUserBindings(): Promise<UserBinding[]>;
+  listChannelBindings(): Promise<ChannelBinding[]>;
+  listClaimSessions(): Promise<ClaimSession[]>;
+  createBindingGrant(input: CreateBindingGrantInput): Promise<BindingGrant>;
+  findPendingBindingGrantByTokenHash(tokenHash: string): Promise<BindingGrant | null>;
+  findClaimSessionByGrantId(grantId: string): Promise<ClaimSession | null>;
+  findUserById(userId: string): Promise<User | null>;
   resolveAnonymousClaim(input: {
     grantId: string;
     claimSessionId: string;
     anonymousUserId: string;
     authenticatedUserId: string;
     resolution: string;
-  }): Promise<ClaimSessionRow>;
-  findUserBindingById(bindingId: string): Promise<UserBindingRow | null>;
-  revokeUserBinding(bindingId: string): Promise<UserBindingRow>;
+  }): Promise<void>;
+  findUserBindingById(bindingId: string): Promise<UserBinding | null>;
+  revokeUserBinding(bindingId: string): Promise<UserBinding | null>;
 }

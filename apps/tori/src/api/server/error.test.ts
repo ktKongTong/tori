@@ -11,13 +11,14 @@ vi.mock("@repo/observability/logging", () => ({
 import { EnvError, StatusConflictError } from "../domain/error/common.js";
 import { pinoLogger } from "@repo/observability/logging";
 import { errorHandler } from "./error.js";
+import type { Context } from "hono";
 
 function createMockContext() {
   return {
     get: vi.fn().mockReturnValue(undefined),
     header: vi.fn(),
     json: vi.fn().mockImplementation((body, status) => ({ body, status })),
-  } as any;
+  } as unknown as Context & { json: ReturnType<typeof vi.fn> };
 }
 
 describe("errorHandler logging level policy", () => {

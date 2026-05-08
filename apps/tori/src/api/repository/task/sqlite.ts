@@ -1,17 +1,52 @@
 /* oxlint-disable typescript-eslint/no-redundant-type-constituents */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc, count } from "drizzle-orm";
 import { taskDefinitions, taskRuns } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import type {
   CreateTaskDefinitionInput,
   CreateTaskRunInput,
   ITaskRepository,
-  JsonRecord,
   UpdateTaskDefinitionInput,
 } from "@/api/domain/infra/repository/ports/task.ts";
 
 export class TaskSqliteRepository implements ITaskRepository {
+  async listTasks() {
+    return this.db
+      .select()
+      .from(taskDefinitions)
+      .orderBy(desc(taskDefinitions.createdAt))
+      .limit(100);
+  }
+
+  async getTaskDetail(taskDefinitionId: string, input: { limit: number; offset: number }) {
+    const [task] = await this.db
+      .select()
+      .from(taskDefinitions)
+      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .limit(1);
+    if (!task) return null;
+
+    const runs = await this.db
+      .select()
+      .from(taskRuns)
+      .where(eq(taskRuns.taskDefinitionId, taskDefinitionId))
+      .orderBy(desc(taskRuns.createdAt))
+      .limit(input.limit)
+      .offset(input.offset);
+
+    const [{ value: totalRuns }] = await this.db
+      .select({ value: count() })
+      .from(taskRuns)
+      .where(eq(taskRuns.taskDefinitionId, taskDefinitionId));
+
+    return {
+      task,
+      runs,
+      totalRuns,
+    };
+  }
+
   constructor(private db: SqliteDB) {}
 
   async getTaskDefinitionsByKind(kind: string, userId?: string | null) {
@@ -34,7 +69,7 @@ export class TaskSqliteRepository implements ITaskRepository {
   }
 
   async listEnabledTaskDefinitions() {
-    return await this.db.select().from(taskDefinitions).where(eq(taskDefinitions.enabled, 1));
+    return await this.db.select().from(taskDefinitions).where(eq(taskDefinitions.enabled, true));
   }
 
   async getTaskRunById(taskRunId: string) {
@@ -62,10 +97,7 @@ export class TaskSqliteRepository implements ITaskRepository {
       .where(eq(taskRuns.id, taskRunId));
   }
 
-  async markTaskRunDone(
-    taskRunId: string,
-    input: { summary?: JsonRecord | null; finishedAt: Date },
-  ) {
+  async markTaskRunDone(taskRunId: string, input: { summary?: unknown; finishedAt: Date }) {
     await this.db
       .update(taskRuns)
       .set({
@@ -117,10 +149,16 @@ export class TaskSqliteRepository implements ITaskRepository {
   }
 
   async createTaskDefinition(input: CreateTaskDefinitionInput) {
-    const [taskDefinition] = await this.db
-      .insert(taskDefinitions)
-      .values(input as typeof taskDefinitions.$inferInsert)
-      .returning();
+    const values: typeof taskDefinitions.$inferInsert = {
+      id: input.id,
+      ownerUserId: input.ownerUserId ?? null,
+      kind: input.kind,
+      enabled: input.enabled ?? true,
+      schedule: input.schedule,
+      payload: input.payload,
+      metadata: input.metadata ?? null,
+    };
+    const [taskDefinition] = await this.db.insert(taskDefinitions).values(values).returning();
     return taskDefinition;
   }
 
@@ -134,10 +172,14 @@ export class TaskSqliteRepository implements ITaskRepository {
   }
 
   async createTaskRun(input: CreateTaskRunInput) {
-    const [taskRun] = await this.db
-      .insert(taskRuns)
-      .values(input as typeof taskRuns.$inferInsert)
-      .returning();
+    const values = {
+      id: input.id,
+      taskDefinitionId: input.taskDefinitionId,
+      kind: input.kind,
+      status: input.status ?? "PENDING",
+      scheduledFor: input.scheduledFor ?? null,
+    };
+    const [taskRun] = await this.db.insert(taskRuns).values(values).returning();
     return taskRun;
   }
 

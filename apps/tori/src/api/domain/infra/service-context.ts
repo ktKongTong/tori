@@ -21,6 +21,7 @@ import type { EventEnvelope } from "./eventing/message.ts";
 import type { IKV } from "./kv.ts";
 import { type AppLogger, createNoopLoggerFactory, type LoggerFactory } from "./logger.js";
 import type { InfraRepositoryContainer, RepositoryFactory } from "./repository";
+import type { PlatformRepositoryContainer } from "@/api/domain/platform/repository/container.ts";
 
 type InfraComponents<T extends DBType = DefaultDBType> = {
   tx: DB<T>;
@@ -33,7 +34,7 @@ type InfraComponents<T extends DBType = DefaultDBType> = {
 };
 
 export type ServiceContextOption<
-  TRepositories extends InfraRepositoryContainer = any,
+  TRepositories extends InfraRepositoryContainer = InfraRepositoryContainer,
   T extends DBType = DefaultDBType,
 > = {
   traceId?: string;
@@ -51,7 +52,7 @@ export type ServiceContextOption<
 // context don't know about the db type
 
 export class ServiceContext<
-  TRepositories extends InfraRepositoryContainer = any,
+  TRepositories extends InfraRepositoryContainer = PlatformRepositoryContainer,
   T extends DBType = DefaultDBType,
 > {
   readonly traceId: string;

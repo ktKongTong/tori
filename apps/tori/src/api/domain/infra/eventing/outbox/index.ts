@@ -52,7 +52,7 @@ type CtxEventOption = {
 };
 
 export const createOutboxEventFromCtx = <
-  TRepositories extends InfraRepositoryContainer = any,
+  TRepositories extends InfraRepositoryContainer = InfraRepositoryContainer,
   T extends DBType = DefaultDBType,
 >(
   ctx: ServiceContext<TRepositories, T>,
