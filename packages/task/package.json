@@ -10,7 +10,6 @@
     "./envelope": "./dist/envelope.mjs",
     "./eventing": "./dist/eventing.mjs",
     "./registry": "./dist/registry.mjs",
-    "./repository": "./dist/repository.mjs",
     "./retry": "./dist/retry.mjs",
     "./runtime": "./dist/runtime.mjs",
     "./schema": "./dist/schema.mjs",
@@ -25,7 +24,6 @@
   },
   "dependencies": {
     "cron-parser": "^5.5.0",
-    "@repo/utils": "workspace:",
     "zod": "catalog:"
   },
   "devDependencies": {

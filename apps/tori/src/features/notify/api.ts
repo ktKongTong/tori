@@ -1,13 +1,14 @@
 import { createRequestClient } from "@repo/request";
-import { z } from "zod";
-import {notifyEventsSchema} from "@/api/modules/platform/notify/schema/notification.ts";
-import { deliveryEndpointSchema } from "@/api/modules/platform/notify/schema/endpoint.ts";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
+import { deliveryEndpointDtoSchema } from "@/api/modules/platform/notify/contract";
 import {
-  createSubscriptionResponseSchema,
-  subscriptionViewSchema,
-} from "@/api/modules/platform/notify/subscription/schema.ts";
-import type {CreateSubscriptionInput} from "@/api/modules/platform/notify";
-import {PageBasedPaginationResultSchema} from "@repo/utils/schema/paging";
+  createSubscriptionResponseDtoSchema,
+  subscriptionNotificationEventPageDtoSchema,
+  subscriptionStatusResponseDtoSchema,
+  subscriptionPageDtoSchema,
+  subscriptionViewDtoSchema,
+  type CreateSubscriptionDto,
+} from "@/api/modules/platform/subscription/contract";
 
 const notifyRequest = createRequestClient({
   credentials: "include",
@@ -18,39 +19,41 @@ const notifyRequest = createRequestClient({
   },
 });
 
-
 export const listDeliveryEndpoints = () =>
   notifyRequest.get("/api/notify/delivery-endpoints", {
-    schema: deliveryEndpointSchema,
+    schema: deliveryEndpointDtoSchema,
   });
 
-export const listNotifySubscriptions = () =>
-  notifyRequest.get("/api/notification/subscription", {
-    schema: PageBasedPaginationResultSchema(subscriptionViewSchema),
-  });
-
-
-export const getSubscriptionDetail = (
-  id: string,
+export const listNotifySubscriptions = (
+  pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
 ) =>
+  notifyRequest.get("/api/notification/subscription", {
+    query: pagination,
+    schema: subscriptionPageDtoSchema,
+  });
+
+export const getSubscriptionDetail = (id: string) =>
   notifyRequest.get(`/api/notification/subscription/${id}`, {
-    schema: subscriptionViewSchema,
+    schema: subscriptionViewDtoSchema,
   });
 
-export const listNotifyEvents = (subscriptionId: string) =>
+export const listNotifyEvents = (
+  subscriptionId: string,
+  pagination: PageBasedPaginationParam = { page: 1, pageSize: 10 },
+) =>
   notifyRequest.get(`/api/notification/subscription/${subscriptionId}/event`, {
-    schema: PageBasedPaginationResultSchema(notifyEventsSchema),
+    query: pagination,
+    schema: subscriptionNotificationEventPageDtoSchema,
   });
 
-
-export const createSubscription = (input: CreateSubscriptionInput) =>
+export const createSubscription = (input: CreateSubscriptionDto) =>
   notifyRequest.post("/api/notification/subscription", input, {
-    schema: createSubscriptionResponseSchema,
+    schema: createSubscriptionResponseDtoSchema,
   });
 
 export const updateSubscriptionStatus = (input: { id: string; status: "active" | "disabled" }) =>
   notifyRequest.patch(
     `/api/notification/subscription/${input.id}`,
     { status: input.status },
-    { schema: z.unknown() },
+    { schema: subscriptionStatusResponseDtoSchema },
   );

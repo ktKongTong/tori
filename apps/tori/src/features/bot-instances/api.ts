@@ -1,5 +1,14 @@
 import { createRequestClient } from "@repo/request";
-import { z } from "zod";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
+import {
+  attachBotInstanceEndpointResponseDtoSchema,
+  botInstanceListDtoSchema,
+  botInstanceStatusResponseDtoSchema,
+  createBotInstanceResponseDtoSchema,
+  rotateBotInstanceCredentialResponseDtoSchema,
+  type AttachEndpointDto,
+  type CreateBotInstanceDto,
+} from "@/api/modules/platform/bot-plugin/contract";
 
 const botInstancesRequest = createRequestClient({
   credentials: "include",
@@ -10,82 +19,26 @@ const botInstancesRequest = createRequestClient({
   },
 });
 
-export const botInstancesSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      ownerUserId: z.string(),
-      platform: z.string(),
-      namespace: z.string(),
-      instanceKey: z.string(),
-      displayName: z.string().nullable(),
-      callbackMode: z.string(),
-      deliveryEndpointId: z.string().nullable(),
-      status: z.string(),
-      lastSeenAt: z.string().nullable(),
-    }),
-  ),
-});
+export const botInstancesSchema = botInstanceListDtoSchema;
 
-const statusResponseSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-});
-
-const createBotInstanceResponseSchema = z.object({
-  id: z.string(),
-  plaintextCredential: z.string(),
-  deliveryEndpointId: z.string().nullable(),
-  created: z.boolean(),
-});
-
-const rotateBotInstanceCredentialResponseSchema = z.object({
-  id: z.string(),
-  plaintextCredential: z.string(),
-});
-
-const attachBotInstanceEndpointResponseSchema = z.object({
-  id: z.string(),
-  deliveryEndpointId: z.string().nullable(),
-});
-
-export type BotInstanceRow = z.infer<typeof botInstancesSchema>["items"][number];
-
-export type CreateBotInstanceInput = {
-  platform: string;
-  namespace: string;
-  instanceKey: string;
-  displayName: string;
-  capabilities?: unknown;
-  deliveryEndpoint?: {
-    kind: string;
-    target: string;
-    displayName?: string | null;
-    secret?: string | null;
-    config?: unknown;
-    metadata?: unknown;
-  };
-};
-
-export type AttachBotInstanceEndpointInput = {
-  deliveryEndpointId: string;
-};
-
-export const listBotInstances = () =>
+export const listBotInstances = (
+  pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
+) =>
   botInstancesRequest.get("/api/bot-plugin/instances", {
-    schema: botInstancesSchema,
+    query: pagination,
+    schema: botInstanceListDtoSchema,
   });
 
-export const createBotInstance = (input: CreateBotInstanceInput) =>
+export const createBotInstance = (input: CreateBotInstanceDto) =>
   botInstancesRequest.post("/api/bot-plugin/instances", input, {
-    schema: createBotInstanceResponseSchema,
+    schema: createBotInstanceResponseDtoSchema,
   });
 
 export const rotateBotInstanceCredential = (id: string) =>
   botInstancesRequest.post(
     `/api/bot-plugin/instances/${encodeURIComponent(id)}/rotate-credential`,
     undefined,
-    { schema: rotateBotInstanceCredentialResponseSchema },
+    { schema: rotateBotInstanceCredentialResponseDtoSchema },
   );
 
 export const revokeBotInstance = (id: string) =>
@@ -93,13 +46,13 @@ export const revokeBotInstance = (id: string) =>
     `/api/bot-plugin/instances/${encodeURIComponent(id)}/revoke`,
     undefined,
     {
-      schema: statusResponseSchema,
+      schema: botInstanceStatusResponseDtoSchema,
     },
   );
 
-export const attachBotInstanceEndpoint = (id: string, input: AttachBotInstanceEndpointInput) =>
+export const attachBotInstanceEndpoint = (id: string, input: AttachEndpointDto) =>
   botInstancesRequest.post(
     `/api/bot-plugin/instances/${encodeURIComponent(id)}/attach-endpoint`,
     input,
-    { schema: attachBotInstanceEndpointResponseSchema },
+    { schema: attachBotInstanceEndpointResponseDtoSchema },
   );

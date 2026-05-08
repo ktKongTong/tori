@@ -1,34 +1,8 @@
-import { z } from "zod";
-
-export const createBotInstanceSchema = z.object({
-  platform: z.string().min(1),
-  namespace: z.string().min(1),
-  instanceKey: z.string().min(1),
-  displayName: z.string().nullable().optional(),
-  capabilities: z.record(z.string(), z.unknown()).optional(),
-  deliveryEndpoint: z
-    .object({
-      kind: z.string().min(1),
-      target: z.string().min(1),
-      displayName: z.string().nullable().optional(),
-      secret: z.string().nullable().optional(),
-      config: z.record(z.string(), z.unknown()).optional(),
-      metadata: z.record(z.string(), z.unknown()).optional(),
-    })
-    .optional(),
-  autoCreateInternalEndpoint: z.boolean().optional(),
-});
-
-export const updateBotInstanceSchema = z.object({
-  displayName: z.string().nullable().optional(),
-  capabilities: z.record(z.string(), z.unknown()).optional(),
-  status: z.string().optional(),
-});
-
-export const attachEndpointSchema = z.object({
-  deliveryEndpointId: z.string().nullable(),
-});
-
-export type CreateBotInstanceInput = z.infer<typeof createBotInstanceSchema>;
-export type UpdateBotInstanceInput = z.infer<typeof updateBotInstanceSchema>;
-export type AttachEndpointInput = z.infer<typeof attachEndpointSchema>;
+export {
+  attachEndpointDtoSchema as attachEndpointSchema,
+  createBotInstanceDtoSchema as createBotInstanceSchema,
+  updateBotInstanceDtoSchema as updateBotInstanceSchema,
+  type AttachEndpointDto as AttachEndpointInput,
+  type CreateBotInstanceDto as CreateBotInstanceInput,
+  type UpdateBotInstanceDto as UpdateBotInstanceInput,
+} from "@/api/modules/platform/bot-plugin/contract";

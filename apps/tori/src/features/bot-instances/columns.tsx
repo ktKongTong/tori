@@ -4,16 +4,11 @@ import { toast } from "sonner";
 
 import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
 import { BotCredentialDialog } from "./dialogs";
-import {
-  revokeBotInstance,
-  rotateBotInstanceCredential,
-  type BotInstanceRow as OriginalBotInstanceRow,
-} from "@/features/bot-instances/api";
+import { revokeBotInstance, rotateBotInstanceCredential } from "@/features/bot-instances/api";
 import { useModal } from "@/lib/modal";
+import type { BotInstanceDto } from "@/api/modules/platform/bot-plugin/contract";
 
-export type BotInstanceRow = OriginalBotInstanceRow;
-
-export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
+export const botInstanceColumns: ColumnDef<BotInstanceDto>[] = [
   {
     accessorKey: "displayName",
     header: "Name",
@@ -51,7 +46,7 @@ export const botInstanceColumns: ColumnDef<BotInstanceRow>[] = [
   },
 ];
 
-function BotInstanceActions({ instance }: { instance: BotInstanceRow }) {
+function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
   const modal = useModal();
   const queryClient = useQueryClient();
   const rotateCredential = useMutation({

@@ -6,8 +6,17 @@ import { requireAuth, requireAdmin } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
 import { uniqueId } from "@repo/utils/id";
 import { TASK_RUN_REQUESTED } from "./type.js";
-import {taskDefinitionSchema, taskRunSchema, createTaskSchema, updateTaskSchema, runTaskSchema, PaginationQuerySchema} from "./schema.ts";
-import { PageBasedPaginationResultSchema } from "@repo/utils/schema/paging";
+import {
+  createTaskDtoSchema,
+  runTaskDtoSchema,
+  taskDefinitionDtoSchema,
+  taskDefinitionPageDtoSchema,
+  taskPaginationQuerySchema,
+  taskRunPageDtoSchema,
+  taskRunRequestedDtoSchema,
+  updateTaskDtoSchema,
+} from "@/api/modules/platform/task/contract";
+import { mapTaskDefinitionPage, mapTaskRunPage, toTaskDefinitionDto } from "./mapper.ts";
 
 const app = new Hono();
 
@@ -20,21 +29,18 @@ app.get(
     tags: ["Tasks"],
     summary: "List task definitions",
     request: {
-      query: PaginationQuerySchema,
+      query: taskPaginationQuerySchema,
     },
     response: {
       description: "Task definitions",
-      body: PageBasedPaginationResultSchema(taskDefinitionSchema),
+      body: taskDefinitionPageDtoSchema,
     },
   }),
   async (c) => {
     const ctx = c.get("serviceContext");
-    const page = c.req.valid('query')
-    const items = await ctx
-      .repositories
-      .task
-      .listTaskDefinitionsByOwner(ctx.userId!, page);
-    return c.json(items);
+    const page = c.req.valid("query");
+    const items = await ctx.repositories.task.listTaskDefinitionsByOwner(ctx.userId!, page);
+    return c.json(mapTaskDefinitionPage(items));
   },
 );
 
@@ -46,7 +52,7 @@ app.get(
     summary: "Get task definition",
     response: {
       description: "Task definition",
-      body: taskDefinitionSchema,
+      body: taskDefinitionDtoSchema,
     },
   }),
   async (c) => {
@@ -63,7 +69,7 @@ app.get(
       throw new NotFoundError("task definition not found");
     }
 
-    return c.json(task);
+    return c.json(toTaskDefinitionDto(task));
   },
 );
 
@@ -74,30 +80,27 @@ app.get(
     tags: ["Tasks"],
     summary: "List task runs",
     request: {
-      query: PaginationQuerySchema,
+      query: taskPaginationQuerySchema,
     },
     response: {
       description: "Task runs",
-      body: PageBasedPaginationResultSchema(taskRunSchema),
+      body: taskRunPageDtoSchema,
     },
   }),
   async (c) => {
     const ctx = c.get("serviceContext");
     const taskDefinitionId = c.req.param("id");
-    const { page, pageSize } = c.req.valid('query')
+    const { page, pageSize } = c.req.valid("query");
     if (!taskDefinitionId) {
       throw new NotFoundError("task definition not found");
     }
 
-    const runs = await ctx
-      .repositories
-      .task
-      .getTaskRunByTaskDefinitionId(
-        taskDefinitionId,
-        {page, pageSize}
-      );
+    const runs = await ctx.repositories.task.getTaskRunByTaskDefinitionId(taskDefinitionId, {
+      page,
+      pageSize,
+    });
 
-    return c.json(runs);
+    return c.json(mapTaskRunPage(runs));
   },
 );
 
@@ -106,10 +109,10 @@ app.post(
   describeRoute({
     tags: ["Tasks"],
     summary: "Create task definition",
-    request: { body: createTaskSchema },
+    request: { body: createTaskDtoSchema },
     response: {
       description: "Created task definition",
-      body: taskDefinitionSchema,
+      body: taskDefinitionDtoSchema,
     },
   }),
   async (c) => {
@@ -119,7 +122,7 @@ app.post(
       ...body,
     });
 
-    return c.json(result, 201);
+    return c.json(toTaskDefinitionDto(result), 201);
   },
 );
 
@@ -128,10 +131,10 @@ app.patch(
   describeRoute({
     tags: ["Tasks"],
     summary: "Update task definition",
-    request: { param: z.object({ id: z.string() }), body: updateTaskSchema },
+    request: { param: z.object({ id: z.string() }), body: updateTaskDtoSchema },
     response: {
       description: "Updated task definition",
-      body: taskDefinitionSchema,
+      body: taskDefinitionDtoSchema,
     },
   }),
   async (c) => {
@@ -143,7 +146,7 @@ app.patch(
       throw new NotFoundError("task definition not found");
     }
 
-    return c.json(result);
+    return c.json(toTaskDefinitionDto(result));
   },
 );
 
@@ -152,13 +155,10 @@ app.post(
   describeRoute({
     tags: ["Tasks"],
     summary: "Trigger task run",
-    request: { param: z.object({ id: z.string() }), body: runTaskSchema },
+    request: { param: z.object({ id: z.string() }), body: runTaskDtoSchema },
     response: {
       description: "Run requested",
-      body: z.object({
-        taskRunId: z.string(),
-        outboxEventId: z.string(),
-      }),
+      body: taskRunRequestedDtoSchema,
     },
   }),
   async (c) => {

@@ -2,7 +2,7 @@ import type { DBType, DefaultDBType } from "@/api/domain/infra/db.ts";
 import type { InfraRepositoryContainer } from "@/api/domain/infra/repository.ts";
 import { ServiceContext, type ServiceContextOption } from "@/api/domain/infra/service-context.ts";
 import type { PlatformRepositoryContainer } from "@/api/domain/platform/repository/container.ts";
-import { createRepositoryContainer } from "@/api/repository/index.ts";
+import { createRepositoryContainer } from "@/api/support/repository-container.ts";
 
 export type CreateServiceContextInput<
   TRepositories extends InfraRepositoryContainer = PlatformRepositoryContainer,

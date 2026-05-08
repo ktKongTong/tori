@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { uniqueId } from "@repo/utils/id";
 import { botPluginInstances, deliveryEndpoints } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra/db";
@@ -7,15 +7,28 @@ import type {
   CreateManagedBotInstanceInput,
   IBotPluginRepository,
 } from "./repository";
+import { toPageResult } from "@repo/db/utils";
+import { withPagination } from "@repo/db/utils/sqlite";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
 export class BotPluginSqliteRepository implements IBotPluginRepository {
   constructor(private readonly db: SqliteDB) {}
 
-  async listManagedBotInstances(ownerUserId: string) {
-    return this.db
-      .select()
-      .from(botPluginInstances)
-      .where(eq(botPluginInstances.ownerUserId, ownerUserId));
+  async listManagedBotInstances(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = eq(botPluginInstances.ownerUserId, ownerUserId);
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(botPluginInstances)
+          .where(where)
+          .orderBy(desc(botPluginInstances.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(botPluginInstances).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
   }
 
   async findActiveMockBotInstance() {

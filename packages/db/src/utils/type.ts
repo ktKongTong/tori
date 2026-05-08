@@ -1,4 +1,4 @@
-export type SortDirection = 'asc' | 'desc';
+export type SortDirection = "asc" | "desc";
 
 export type PageBasedPaginationParam = {
   page: number;
@@ -16,8 +16,6 @@ export type DynamicQuery<T extends string> = {
   }[];
   page?: PageBasedPaginationParam;
 };
-
-
 
 export type PageResult<T> = {
   data: T[];

@@ -1,9 +1,18 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DashboardStatusPill } from "@/components/dashboard-ui";
+import type { NotificationEventDto } from "@/api/modules/platform/notify/contract";
+import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
 
+type NotificationEventListItemDto = {
+  event: NotificationEventDto;
+  subscription: SubscriptionViewDto | null;
+  channel: { id: string; name: string | null } | null;
+  botInstance: { id: string; displayName: string | null } | null;
+  endpoint: { id: string; displayName: string | null } | null;
+};
 
-const deliveryResultColumn: ColumnDef<NotifyEventRow> = {
+const deliveryResultColumn: ColumnDef<NotificationEventListItemDto> = {
   accessorKey: "status",
   header: "Result",
   cell: ({ row }) => (
@@ -20,7 +29,7 @@ const deliveryResultColumn: ColumnDef<NotifyEventRow> = {
   ),
 };
 
-const deliveryStateColumn: ColumnDef<NotifyEventRow> = {
+const deliveryStateColumn: ColumnDef<NotificationEventListItemDto> = {
   id: "deliveryState",
   header: "Delivery",
   cell: ({ row }) => (
@@ -39,7 +48,7 @@ const deliveryStateColumn: ColumnDef<NotifyEventRow> = {
   ),
 };
 
-export const notifyEventColumns: ColumnDef<NotifyEventRow>[] = [
+export const notifyEventColumns: ColumnDef<NotificationEventListItemDto>[] = [
   {
     accessorKey: "subscription",
     header: "Subscription",
@@ -74,7 +83,7 @@ export const notifyEventColumns: ColumnDef<NotifyEventRow>[] = [
   },
 ];
 
-export const subscriptionDeliveryEventColumns: ColumnDef<NotifyEventRecord>[] = [
+export const subscriptionDeliveryEventColumns: ColumnDef<NotificationEventDto>[] = [
   {
     accessorKey: "title",
     header: "Event",

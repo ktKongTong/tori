@@ -1,7 +1,9 @@
 import { createRequestClient } from "@repo/request";
-import { z } from "zod";
-import { taskRunSchema, taskDefinitionSchema } from "@/api/modules/platform/task/schema.ts";
-import {PageBasedPaginationResultSchema} from "@repo/utils/schema/paging";
+import {
+  taskDefinitionDtoSchema,
+  taskDefinitionPageDtoSchema,
+  taskRunPageDtoSchema,
+} from "@/api/modules/platform/task/contract";
 
 const tasksRequest = createRequestClient({
   credentials: "include",
@@ -12,22 +14,16 @@ const tasksRequest = createRequestClient({
   },
 });
 
-export type TaskDef =  z.infer<typeof taskDefinitionSchema>
-
-export type TaskRun =  z.infer<typeof taskRunSchema>
 export const getTasks = () =>
   tasksRequest.get("/api/tasks", {
-    schema: PageBasedPaginationResultSchema(taskDefinitionSchema),
+    schema: taskDefinitionPageDtoSchema,
   });
 
-export const getTaskDetail = async (
-  taskId: string,
-) => {
+export const getTaskDetail = async (taskId: string) => {
   return tasksRequest.get(`/api/tasks/${encodeURIComponent(taskId)}`, {
-    schema: taskDefinitionSchema,
+    schema: taskDefinitionDtoSchema,
   });
-}
-
+};
 
 export const getTaskRuns = async (
   taskId: string,
@@ -35,7 +31,6 @@ export const getTaskRuns = async (
 ) => {
   return tasksRequest.get(`/api/tasks/${encodeURIComponent(taskId)}/runs`, {
     query: input,
-    schema: PageBasedPaginationResultSchema(taskRunSchema),
+    schema: taskRunPageDtoSchema,
   });
-}
-
+};

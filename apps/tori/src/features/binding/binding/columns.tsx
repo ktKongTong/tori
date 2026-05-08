@@ -2,12 +2,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DashboardTableActions } from "@/components/dashboard-ui";
-import { revokeUserBinding, type UserBindingRow } from "@/features/binding/api";
+import { revokeUserBinding, type UserBindingListItem } from "@/features/binding/api";
 import { useToastError } from "@/lib/toast-error";
 
-export type BindingRow = UserBindingRow;
-
-export const bindingColumns: ColumnDef<BindingRow>[] = [
+export const bindingColumns: ColumnDef<UserBindingListItem>[] = [
   {
     accessorKey: "userName",
     header: "User Name",
@@ -35,7 +33,7 @@ export const bindingColumns: ColumnDef<BindingRow>[] = [
   },
 ];
 
-function BindingActions({ binding }: { binding: BindingRow }) {
+function BindingActions({ binding }: { binding: UserBindingListItem }) {
   const queryClient = useQueryClient();
   const removeBinding = useMutation({
     mutationFn: async (bindingId: string) => revokeUserBinding(bindingId),

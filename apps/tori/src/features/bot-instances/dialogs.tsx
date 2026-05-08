@@ -20,8 +20,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { createBotInstance, type CreateBotInstanceInput } from "@/features/bot-instances/api";
+import { createBotInstance } from "@/features/bot-instances/api";
 import { useModal } from "@/lib/modal";
+import type { CreateBotInstanceDto } from "@/api/modules/platform/bot-plugin/contract";
 
 const createBotInstanceFormSchema = z
   .object({
@@ -92,7 +93,7 @@ export function CreateBotInstanceDialog() {
   const modal = useModal();
   const queryClient = useQueryClient();
   const createInstance = useMutation({
-    mutationFn: async (input: CreateBotInstanceInput) => createBotInstance(input),
+    mutationFn: async (input: CreateBotInstanceDto) => createBotInstance(input),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "bot-instances"] });
       modal.open(

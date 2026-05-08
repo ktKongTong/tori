@@ -1,0 +1,113 @@
+import { and, count, eq } from "drizzle-orm";
+import { channelBindings, notificationEvents, subscriptions } from "@/api/db/schema/d1";
+import type { SqliteDB } from "@/api/domain/infra";
+import { NotFoundError } from "@/api/domain/error";
+import type {
+  CreateSubscriptionInput,
+  ISubscriptionRepository,
+} from "@/api/modules/platform/subscription/repository/repository.ts";
+import { toPageResult } from "@repo/db/utils";
+import { withPagination } from "@repo/db/utils/sqlite";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
+
+export class SubscriptionSqliteRepository implements ISubscriptionRepository {
+  constructor(private readonly db: SqliteDB) {}
+
+  async listSubscriptions(page: PageBasedPaginationParam) {
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(this.db.select().from(subscriptions).$dynamic(), page),
+      this.db.select({ value: count() }).from(subscriptions),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async findSubscriptionById(id: string) {
+    const [subscription] = await this.db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id))
+      .limit(1);
+    if (!subscription) throw new NotFoundError(`Subscription ${id} not found`);
+    return subscription;
+  }
+
+  async listSubscriptionsByConnectionId(connectionId: string, page: PageBasedPaginationParam) {
+    const where = eq(subscriptions.connectionId, connectionId);
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(this.db.select().from(subscriptions).where(where).$dynamic(), page),
+      this.db.select({ value: count() }).from(subscriptions).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listActiveSubscriptionsByChannelId(channelId: string, page: PageBasedPaginationParam) {
+    const where = and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active"));
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(this.db.select().from(subscriptions).where(where).$dynamic(), page),
+      this.db.select({ value: count() }).from(subscriptions).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listNotificationEventBySubscriptionId(
+    subscriptionId: string,
+    page: PageBasedPaginationParam,
+  ) {
+    const where = eq(notificationEvents.subscriptionId, subscriptionId);
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(this.db.select().from(notificationEvents).where(where).$dynamic(), page),
+      this.db.select({ value: count() }).from(notificationEvents).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listSubscriptionsByConnectionIdLegacy(connectionId: string) {
+    return this.db.select().from(subscriptions).where(eq(subscriptions.connectionId, connectionId));
+  }
+
+  async findActiveChannelBindingByChannelId(channelId: string) {
+    const [channelBinding] = await this.db
+      .select()
+      .from(channelBindings)
+      .where(and(eq(channelBindings.channelId, channelId), eq(channelBindings.status, "active")))
+      .limit(1);
+    return channelBinding ?? null;
+  }
+
+  async findSubscriptionIdentity(input: {
+    channelId: string;
+    connectionId: string;
+    botPluginInstanceId: string;
+    topicType: string;
+    topicKey: string;
+  }) {
+    const [subscription] = await this.db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.channelId, input.channelId),
+          eq(subscriptions.connectionId, input.connectionId),
+          eq(subscriptions.botPluginInstanceId, input.botPluginInstanceId),
+          eq(subscriptions.topicType, input.topicType),
+          eq(subscriptions.topicKey, input.topicKey),
+        ),
+      )
+      .limit(1);
+    return subscription ?? null;
+  }
+
+  async createSubscription(input: CreateSubscriptionInput) {
+    const [subscription] = await this.db.insert(subscriptions).values(input).returning();
+    return subscription;
+  }
+
+  async updateSubscriptionStatus(id: string, status: string) {
+    const [updated] = await this.db
+      .update(subscriptions)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updated ?? null;
+  }
+}

@@ -8,13 +8,11 @@ import { updateSubscriptionStatus as updateSubscriptionStatusRequest } from "@/f
 import { useModal } from "@/lib/modal";
 import { useSession } from "@/lib/auth-client";
 import { useToastError } from "@/lib/toast-error";
-import type { NotifySubscriptionView as OriginalNotifySubscriptionView } from "@/features/notify/api";
-
-export type NotifySubscriptionView = OriginalNotifySubscriptionView;
+import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
 
 export function createNotifySubscriptionColumns(input: {
-  onOpenDetails: (subscription: NotifySubscriptionView) => void;
-}): ColumnDef<NotifySubscriptionView>[] {
+  onOpenDetails: (subscription: SubscriptionViewDto) => void;
+}): ColumnDef<SubscriptionViewDto>[] {
   return [
     {
       accessorKey: "channel",
@@ -53,8 +51,8 @@ function NotifySubscriptionActions({
   onOpenDetails,
   subscription,
 }: {
-  onOpenDetails: (subscription: NotifySubscriptionView) => void;
-  subscription: NotifySubscriptionView;
+  onOpenDetails: (subscription: SubscriptionViewDto) => void;
+  subscription: SubscriptionViewDto;
 }) {
   const modal = useModal();
   const queryClient = useQueryClient();

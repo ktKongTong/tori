@@ -1,5 +1,5 @@
 import type { IMQ } from "../dispatcher";
-import type { IOutboxRepository } from "../../repository/ports/eventing.ts";
+import type { IOutboxRepository } from "../repository/repository.ts";
 
 const DEFAULT_OUTBOX_BATCH_SIZE = 10;
 const DEFAULT_OUTBOX_PROCESSING_TTL_MS = 2 * 60 * 1000;

@@ -12,6 +12,14 @@ import {
   updateManagedBotInstance,
 } from "./instance.js";
 import { attachEndpointSchema, createBotInstanceSchema, updateBotInstanceSchema } from "./type.js";
+import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
+import {
+  attachBotInstanceEndpointResponseDtoSchema,
+  botInstanceListDtoSchema,
+  botInstanceStatusResponseDtoSchema,
+  createBotInstanceResponseDtoSchema,
+  rotateBotInstanceCredentialResponseDtoSchema,
+} from "@/api/modules/platform/bot-plugin/contract";
 
 const app = new Hono();
 
@@ -23,30 +31,18 @@ app.get(
   describeRoute({
     tags: ["BotPlugin"],
     summary: "List managed bot instances",
+    request: { query: PageBasedPaginationParamSchema },
     response: {
       description: "Bot instances",
-      body: z.object({
-        items: z.array(
-          z.object({
-            id: z.string(),
-            ownerUserId: z.string(),
-            platform: z.string(),
-            namespace: z.string(),
-            instanceKey: z.string(),
-            displayName: z.string().nullable(),
-            callbackMode: z.string(),
-            deliveryEndpointId: z.string().nullable(),
-            status: z.string(),
-            lastSeenAt: z.string().nullable(),
-          }),
-        ),
-      }),
+      body: botInstanceListDtoSchema,
     },
   }),
   async (c) => {
-    const items = await listManagedBotInstances(c.get("serviceContext"));
+    const page = c.req.valid("query");
+    const items = await listManagedBotInstances(c.get("serviceContext"), page);
     return c.json({
-      items: items.map((row) => ({
+      ...items,
+      data: items.data.map((row) => ({
         id: row.id,
         ownerUserId: row.ownerUserId,
         platform: row.platform,
@@ -71,15 +67,7 @@ app.post(
     request: { body: createBotInstanceSchema },
     response: {
       description: "Bot instance created",
-      body: z.object({
-        id: z.string(),
-        platform: z.string(),
-        namespace: z.string(),
-        instanceKey: z.string(),
-        deliveryEndpointId: z.string().nullable(),
-        plaintextCredential: z.string(),
-        created: z.boolean(),
-      }),
+      body: createBotInstanceResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -108,7 +96,7 @@ app.patch(
     request: { param: z.object({ id: z.string() }), body: updateBotInstanceSchema },
     response: {
       description: "Updated bot instance",
-      body: z.object({ id: z.string(), status: z.string() }),
+      body: botInstanceStatusResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -130,7 +118,7 @@ app.post(
     request: { param: z.object({ id: z.string() }) },
     response: {
       description: "Rotated credential",
-      body: z.object({ id: z.string(), plaintextCredential: z.string() }),
+      body: rotateBotInstanceCredentialResponseDtoSchema,
     },
   }),
   async (c) =>
@@ -148,7 +136,7 @@ app.post(
     request: { param: z.object({ id: z.string() }) },
     response: {
       description: "Revoked bot instance",
-      body: z.object({ id: z.string(), status: z.string() }),
+      body: botInstanceStatusResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -169,7 +157,7 @@ app.post(
     request: { param: z.object({ id: z.string() }), body: attachEndpointSchema },
     response: {
       description: "Updated bot instance",
-      body: z.object({ id: z.string(), deliveryEndpointId: z.string().nullable() }),
+      body: attachBotInstanceEndpointResponseDtoSchema,
     },
   }),
   async (c) => {

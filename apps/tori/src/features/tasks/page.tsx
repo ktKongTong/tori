@@ -1,18 +1,19 @@
 import { Button } from "@repo/ui/components/button";
 import { Link, Navigate, Outlet, useLocation } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   DashboardActionBar,
   DashboardNotice,
   DashboardPanel,
+  DashboardPagination,
   DashboardStatusPill,
   DashboardTable,
 } from "@/components/dashboard-ui";
 import { taskColumns } from "./columns";
 import { useSession } from "@/lib/auth-client";
-import type { TaskRun } from "@/features/tasks/api";
-import {useTaskDetailQuery, useTaskRuns, useTasksQuery} from "@/features/tasks/query";
+import { useTaskDetailQuery, useTaskRuns, useTasksQuery } from "@/features/tasks/query";
+import type { TaskRunDto } from "@/api/modules/platform/task/contract";
 
 export function TasksPage() {
   const { data: session } = useSession();
@@ -55,7 +56,7 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
   const taskQuery = useTaskDetailQuery(taskId);
-  const {data: taskRuns} = useTaskRuns(taskId, { page: historyPage, pageSize });
+  const { data: taskRuns } = useTaskRuns(taskId, { page: historyPage, pageSize });
 
   // useEffect(() => {
   //   setHistoryPage(1);
@@ -139,12 +140,16 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             title="Run History"
             description="Recent task runs ordered by creation time."
           >
-            <DashboardTable columns={taskRunColumns} data={taskRuns?.data ?? []} empty="No runs yet." />
-            <RunHistoryPagination
+            <DashboardTable
+              columns={taskRunColumns}
+              data={taskRuns?.data ?? []}
+              empty="No runs yet."
+            />
+            <DashboardPagination
               page={taskRuns?.page?.page ?? 1}
               pageSize={taskRuns?.page?.pageSize ?? 10}
               total={taskRuns?.page?.total ?? 0}
-              totalPages={ taskRuns?.page?.totalPages ?? 0 }
+              totalPages={taskRuns?.page?.totalPages ?? 0}
               onPageChange={setHistoryPage}
             />
           </DashboardPanel>
@@ -156,8 +161,7 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   );
 }
 
-
-const taskRunColumns: ColumnDef<TaskRun>[] = [
+const taskRunColumns: ColumnDef<TaskRunDto>[] = [
   {
     accessorKey: "createdAt",
     header: "Created",
@@ -207,52 +211,6 @@ const taskRunColumns: ColumnDef<TaskRun>[] = [
     },
   },
 ];
-
-function RunHistoryPagination({
-  page,
-  pageSize,
-  total,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  const firstItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const lastItem = Math.min(page * pageSize, total);
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-x border-b border-border/70 px-4 py-3">
-      <p className="text-sm text-muted-foreground">
-        {firstItem}-{lastItem} of {total}
-      </p>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
-          Previous
-        </Button>
-        <span className="min-w-24 text-center text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-          {page} / {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function TaskMeta({ label, children }: { label: string; children: ReactNode }) {
   return (

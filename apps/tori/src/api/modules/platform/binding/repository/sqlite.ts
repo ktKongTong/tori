@@ -1,4 +1,4 @@
-import { and, eq, desc } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import {
   bindingGrants,
   claimSessions,
@@ -10,30 +10,56 @@ import {
 import type { SqliteDB } from "@/api/domain/infra/db";
 import type { CreateBindingGrantInput, IBindingRepository } from "./repository";
 import { uniqueId } from "@repo/utils/id";
+import { toPageResult } from "@repo/db/utils";
+import { withPagination } from "@repo/db/utils/sqlite";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
 export class BindingSqliteRepository implements IBindingRepository {
   constructor(private readonly db: SqliteDB) {}
 
-  async listUserBindings() {
-    return this.db
-      .select()
-      .from(userBindings)
-      .where(eq(userBindings.status, "active"))
-      .orderBy(desc(userBindings.createdAt))
-      .limit(100);
+  async listUserBindings(page: PageBasedPaginationParam) {
+    const where = eq(userBindings.status, "active");
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(userBindings)
+          .where(where)
+          .orderBy(desc(userBindings.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(userBindings).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
   }
 
-  async listChannelBindings() {
-    return this.db
-      .select()
-      .from(channelBindings)
-      .where(eq(channelBindings.status, "active"))
-      .orderBy(desc(channelBindings.createdAt))
-      .limit(100);
+  async listChannelBindings(page: PageBasedPaginationParam) {
+    const where = eq(channelBindings.status, "active");
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(channelBindings)
+          .where(where)
+          .orderBy(desc(channelBindings.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(channelBindings).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
   }
 
-  async listClaimSessions() {
-    return this.db.select().from(claimSessions).orderBy(desc(claimSessions.createdAt)).limit(100);
+  async listClaimSessions(page: PageBasedPaginationParam) {
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db.select().from(claimSessions).orderBy(desc(claimSessions.createdAt)).$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(claimSessions),
+    ]);
+    return toPageResult(data, total ?? 0, page);
   }
 
   async createBindingGrant(input: CreateBindingGrantInput) {

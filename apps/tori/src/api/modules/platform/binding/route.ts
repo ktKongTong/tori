@@ -1,27 +1,22 @@
 import { Hono } from "hono";
-import { z } from "zod";
 
 import { ParameterError } from "@/api/domain/error/index.ts";
 import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
 import { consumeAnonymousClaim, issueBindingToken, revokeUserBinding } from "./index.js";
+import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
+import {
+  bindingStatusResponseDtoSchema,
+  bindingTokenResponseDtoSchema,
+  channelBindingListDtoSchema,
+  claimSessionListDtoSchema,
+  consumeAnonymousClaimDtoSchema,
+  consumeAnonymousClaimResponseDtoSchema,
+  issueBindingTokenDtoSchema,
+  userBindingListDtoSchema,
+} from "@/api/modules/platform/binding/contract";
 
 const app = new Hono();
-
-const issueBindingTokenSchema = z.object({
-  purpose: z.literal("bind-user"),
-  subjectType: z.literal("user"),
-  subjectId: z.string().min(1),
-  issuedToSurface: z.literal("bot"),
-  codeExpiresAt: z.string().datetime().optional(),
-  tokenExpiresAt: z.string().datetime().optional(),
-  maxUses: z.number().int().positive().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const consumeAnonymousClaimSchema = z.object({
-  token: z.string().min(1),
-});
 
 app.use("*", requireAuth());
 
@@ -30,16 +25,15 @@ app.get(
   describeRoute({
     tags: ["Binding"],
     summary: "List user bindings",
+    request: { query: PageBasedPaginationParamSchema },
     response: {
       description: "User bindings",
-      body: z.object({
-        items: z.array(z.unknown()),
-      }),
+      body: userBindingListDtoSchema,
     },
   }),
   async (c) => {
-    const items = await c.get("serviceContext").repositories.binding.listUserBindings();
-    return c.json({ items });
+    const page = c.req.valid("query");
+    return c.json(await c.get("serviceContext").repositories.binding.listUserBindings(page));
   },
 );
 
@@ -48,16 +42,15 @@ app.get(
   describeRoute({
     tags: ["Binding"],
     summary: "List channel bindings",
+    request: { query: PageBasedPaginationParamSchema },
     response: {
       description: "Channel bindings",
-      body: z.object({
-        items: z.array(z.unknown()),
-      }),
+      body: channelBindingListDtoSchema,
     },
   }),
   async (c) => {
-    const items = await c.get("serviceContext").repositories.binding.listChannelBindings();
-    return c.json({ items });
+    const page = c.req.valid("query");
+    return c.json(await c.get("serviceContext").repositories.binding.listChannelBindings(page));
   },
 );
 
@@ -66,16 +59,15 @@ app.get(
   describeRoute({
     tags: ["Binding"],
     summary: "List claim sessions",
+    request: { query: PageBasedPaginationParamSchema },
     response: {
       description: "Claim sessions",
-      body: z.object({
-        items: z.array(z.unknown()),
-      }),
+      body: claimSessionListDtoSchema,
     },
   }),
   async (c) => {
-    const items = await c.get("serviceContext").repositories.binding.listClaimSessions();
-    return c.json(items);
+    const page = c.req.valid("query");
+    return c.json(await c.get("serviceContext").repositories.binding.listClaimSessions(page));
   },
 );
 
@@ -84,19 +76,10 @@ app.post(
   describeRoute({
     tags: ["Binding"],
     summary: "Issue binding token",
-    request: { body: issueBindingTokenSchema },
+    request: { body: issueBindingTokenDtoSchema },
     response: {
       description: "Binding token",
-      body: z.object({
-        grantId: z.string(),
-        code: z.string(),
-        token: z.string(),
-        purpose: z.string(),
-        subjectType: z.string(),
-        subjectId: z.string(),
-        codeExpiresAt: z.string(),
-        tokenExpiresAt: z.string(),
-      }),
+      body: bindingTokenResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -124,15 +107,10 @@ app.post(
   describeRoute({
     tags: ["Binding"],
     summary: "Consume anonymous claim token",
-    request: { body: consumeAnonymousClaimSchema },
+    request: { body: consumeAnonymousClaimDtoSchema },
     response: {
       description: "Claim result",
-      body: z.object({
-        claimSessionId: z.string(),
-        anonymousUserId: z.string(),
-        authenticatedUserId: z.string(),
-        resolution: z.enum(["claimed", "merged"]),
-      }),
+      body: consumeAnonymousClaimResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -155,10 +133,7 @@ app.post(
     summary: "Revoke user binding",
     response: {
       description: "Revoked binding",
-      body: z.object({
-        id: z.string(),
-        status: z.string(),
-      }),
+      body: bindingStatusResponseDtoSchema,
     },
   }),
   async (c) => {

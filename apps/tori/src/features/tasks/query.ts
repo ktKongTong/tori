@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import {getTasks, getTaskDetail, getTaskRuns} from "./api";
+import { getTasks, getTaskDetail, getTaskRuns } from "./api";
 
 export const tasksQueryKeys = {
   tasks: () => ["tasks"] as const,
@@ -16,15 +16,6 @@ export function useTasksQuery() {
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-}
-
-function getTaskConnectionId(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return null;
-  }
-
-  const value = (payload as Record<string, unknown>).connectionId;
-  return typeof value === "string" ? value : null;
 }
 
 export function useTaskDetailQuery(taskId: string) {

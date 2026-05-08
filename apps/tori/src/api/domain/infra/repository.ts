@@ -1,7 +1,7 @@
 import type { PGDB, SqliteDB } from "./db";
 import type { ServiceContext } from "./service-context";
 import type { IInboxRepository, IOutboxRepository } from "./eventing/repo.ts";
-import type { ITaskRepository } from "./repository/ports/task.ts";
+import type { ITaskRepository } from "@/api/modules/platform/task/repository/repository";
 
 export type InfraRepositoryContainer = {
   outbox: IOutboxRepository;

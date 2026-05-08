@@ -4,7 +4,7 @@ import { backendEnvSchema, type ENV } from "@/api/domain/infra";
 import { processOutbox } from "@/api/domain/infra/eventing/index.ts";
 import { getAuth } from "@/api/support/auth/index.ts";
 import { cronRegistry } from "@/api/index.ts";
-import { OutboxPgRepository } from "@/api/repository/outbox/pg";
+import { OutboxPgRepository } from "@/api/domain/infra/eventing/repository/outbox/pg";
 import { pinoLogger } from "@repo/observability/logging";
 import { CloudflareKV } from "@repo/storage/cloudflare-kv";
 import { CloudflareMQ } from "./queue.ts";

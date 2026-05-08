@@ -15,9 +15,7 @@ const botRequest = createRequestClient({
   },
 });
 
-export type BotIngressRequestInput = CommandRequestInput;
-
-export const sendBotIngressRequest = (input: BotIngressRequestInput): Promise<BotCommandResponse> =>
+export const sendBotIngressRequest = (input: CommandRequestInput): Promise<BotCommandResponse> =>
   botRequest.post("/api/bot-ingress/request", input, {
     schema: botCommandResponseSchema,
   });

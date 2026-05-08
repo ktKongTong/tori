@@ -13,17 +13,14 @@ export function DashboardOverviewPage() {
   const binding = bindingQuery.data;
   const integration = integrationQuery.data;
   const notifySubscriptions = notifySubscriptionsQuery.data;
-  const notifyEvents = [];
 
   const activeUserBindings = binding?.items.length ?? 0;
   const activeConnections =
     integration?.items.filter((item) => item.connection.status === "active").length ?? 0;
   const activeSubscriptions =
-    notifySubscriptions?.items.filter((item) => item.status === "active").length ?? 0;
-  // const failedNotifications =
-  //   notifyEvents?.items.filter((item) => item.event.status === "failed").length ?? 0;
-  const latestSubscription = notifySubscriptions?.items[0] ?? null;
-  // const latestEvent = notifyEvents?.items[0] ?? null;
+    notifySubscriptions?.data.filter((item) => item.status === "active").length ?? 0;
+  const failedNotifications = 0;
+  const latestSubscription = notifySubscriptions?.data[0] ?? null;
   const latestConnection = integration?.items[0] ?? null;
   const latestBinding = binding?.items[0] ?? null;
 
@@ -140,9 +137,7 @@ export function DashboardOverviewPage() {
             },
             {
               label: "Latest notification event",
-              detail: latestEvent
-                ? `${latestEvent.subscription?.topicType ?? "Notification"} was last recorded for ${latestEvent.channel?.name ?? latestEvent.event.channelId} at ${latestEvent.event.createdAt}.`
-                : "No notification event has been recorded yet.",
+              detail: "No notification event has been recorded yet.",
               to: "/notify",
             },
           ].map((item) => (

@@ -2,7 +2,6 @@ import { NotFoundError, ParameterError, UnauthorizedError } from "@/api/domain/e
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import { randomCode } from "@repo/utils/random";
 import { sha256Hash } from "@repo/utils/encoding/hash";
-import { uniqueId } from "@repo/utils/id";
 
 import { getBindingRepository } from "./repository/index.js";
 import type {

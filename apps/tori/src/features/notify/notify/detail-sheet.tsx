@@ -6,10 +6,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@repo/ui/components/sheet";
+import { useState } from "react";
 
-import { DashboardTable } from "@/components/dashboard-ui";
+import { DashboardPagination, DashboardTable } from "@/components/dashboard-ui";
 import { subscriptionDeliveryEventColumns } from "@/features/notify/events/columns";
-import {useNotifyEventsQuery, useNotifySubscriptionDetailQuery} from "@/features/notify/query";
+import { useNotifyEventsQuery, useNotifySubscriptionDetailQuery } from "@/features/notify/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function SubscriptionDetailSheet({
@@ -19,15 +20,12 @@ export function SubscriptionDetailSheet({
   subscriptionId: string;
   onClose: () => void;
 }) {
-  const historyPage = 1;
   const pageSize = 10;
+  const [historyPage, setHistoryPage] = useState(1);
 
-  const detailQuery = useNotifySubscriptionDetailQuery(subscriptionId, {
-    page: historyPage,
-    pageSize,
-  });
+  const detailQuery = useNotifySubscriptionDetailQuery(subscriptionId);
 
-  const eventsQuery = useNotifyEventsQuery(subscriptionId);
+  const eventsQuery = useNotifyEventsQuery(subscriptionId, { page: historyPage, pageSize });
   const detailData = detailQuery.data;
 
   useToastError(detailQuery.error, { title: "Failed to load subscription details" });
@@ -74,9 +72,7 @@ export function SubscriptionDetailSheet({
                 <SubscriptionDetailItem
                   label="Owner"
                   value={
-                    detailData.owner?.name ??
-                    detailData.ownerChannel?.name ??
-                    detailData.ownerId
+                    detailData.owner?.name ?? detailData.ownerChannel?.name ?? detailData.ownerId
                   }
                 />
                 <SubscriptionDetailItem
@@ -105,6 +101,13 @@ export function SubscriptionDetailSheet({
                   columns={subscriptionDeliveryEventColumns}
                   data={deliveryEvents}
                   empty="No delivery events for this subscription."
+                />
+                <DashboardPagination
+                  page={eventsQuery.data?.page.page ?? 1}
+                  pageSize={eventsQuery.data?.page.pageSize ?? pageSize}
+                  total={eventsQuery.data?.page.total ?? 0}
+                  totalPages={eventsQuery.data?.page.totalPages ?? 0}
+                  onPageChange={setHistoryPage}
                 />
               </div>
             </div>

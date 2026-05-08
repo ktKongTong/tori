@@ -1,11 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DashboardStatusPill } from "@/components/dashboard-ui";
-import type { ClaimSessionRow } from "@/features/binding/api";
+import type { ClaimSessionDto } from "@/api/modules/platform/binding/contract";
 
-export type BindingClaimRow = ClaimSessionRow;
-
-export const bindingClaimColumns: ColumnDef<BindingClaimRow>[] = [
+export const bindingClaimColumns: ColumnDef<ClaimSessionDto>[] = [
   {
     accessorKey: "anonymousUserName",
     header: "Anonymous User Name",

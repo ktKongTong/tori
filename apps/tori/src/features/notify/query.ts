@@ -1,35 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
-import {
-  getSubscriptionDetail,
-  listDeliveryEndpoints,
-  listNotifyEvents,
-  listNotifySubscriptions,
-} from "./api";
+import { getSubscriptionDetail, listNotifyEvents, listNotifySubscriptions } from "./api";
 
 export const notifyQueryKeys = {
-  subscriptions: () => ["notify", "subscriptions"] as const,
-  subscriptionDetail: (id: string, pagination: { page: number; pageSize: number }) =>
-    ["notify", "subscriptions", id, pagination] as const,
-  events: () => ["notify", "events"] as const,
+  subscriptions: (pagination: PageBasedPaginationParam) =>
+    ["notify", "subscriptions", pagination] as const,
+  subscriptionDetail: (id: string) => ["notify", "subscriptions", id] as const,
+  events: (subscriptionId: string, pagination: PageBasedPaginationParam) =>
+    ["notify", "events", subscriptionId, pagination] as const,
   deliveryEndpoints: () => ["notify", "delivery-endpoints"] as const,
 };
 
-export function useNotificationSubscriptionsQuery() {
+export function useNotificationSubscriptionsQuery(
+  pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
+) {
   return useQuery({
-    queryKey: notifyQueryKeys.subscriptions(),
-    queryFn: listNotifySubscriptions,
+    queryKey: notifyQueryKeys.subscriptions(pagination),
+    queryFn: () => listNotifySubscriptions(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
 }
 
-export function useNotifySubscriptionDetailQuery(
-  id: string,
-  pagination: { page: number; pageSize: number },
-) {
+export function useNotifySubscriptionDetailQuery(id: string) {
   return useQuery({
-    queryKey: notifyQueryKeys.subscriptionDetail(id, pagination),
+    queryKey: notifyQueryKeys.subscriptionDetail(id),
     queryFn: () => getSubscriptionDetail(id),
     staleTime: 0,
     refetchOnWindowFocus: true,
@@ -37,10 +33,13 @@ export function useNotifySubscriptionDetailQuery(
   });
 }
 
-export function useNotifyEventsQuery(subscriptionId: string) {
+export function useNotifyEventsQuery(
+  subscriptionId: string,
+  pagination: PageBasedPaginationParam = { page: 1, pageSize: 10 },
+) {
   return useQuery({
-    queryKey: notifyQueryKeys.events(),
-    queryFn: () => listNotifyEvents(subscriptionId),
+    queryKey: notifyQueryKeys.events(subscriptionId, pagination),
+    queryFn: () => listNotifyEvents(subscriptionId, pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });

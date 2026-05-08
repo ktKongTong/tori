@@ -1,0 +1,80 @@
+import type {
+  PageBasedPaginationParam,
+  PageBasedPaginationResult,
+} from "@repo/utils/schema/paging";
+import type { AccountProfileRow } from "@/api/modules/steam/core/account/repository";
+
+export interface Connection {
+  id: string;
+  ownerUserId: string;
+  proxyInstanceId: string | null;
+  provider: string;
+  providerAccountId: string;
+  providerAccountName: string | null;
+  providerAccountAvatar: string | null;
+  accessMode: string;
+  status: string;
+  isDefault: boolean;
+  metadata: unknown;
+  connectedAt: Date;
+  lastSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProxyInstance {
+  id: string;
+  ownerUserId: string;
+  provider: string;
+  name: string | null;
+  baseUrl: string;
+  credentialRef: string;
+  status: string;
+  healthStatus: string;
+  capabilities: unknown;
+  metadata: unknown;
+  lastSeenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateConnectionInput {
+  id: string;
+  ownerUserId: string;
+  provider: string;
+  providerAccountId: string;
+  providerAccountName?: string | null;
+  providerAccountAvatar?: string | null;
+  accessMode: string;
+  proxyInstanceId?: string | null;
+  isDefault?: boolean;
+  status?: string;
+  metadata?: unknown;
+  connectedAt?: Date;
+  lastSyncedAt?: Date | null;
+}
+
+export interface IConnectionRepository {
+  listConnections(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<Connection>>;
+  listAccountProfiles(
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<AccountProfileRow>>;
+  findConnectionByOwnerAndProviderAccount(input: {
+    ownerUserId: string;
+    provider: string;
+    providerAccountId: string;
+  }): Promise<Connection | null>;
+  createConnection(input: CreateConnectionInput): Promise<Connection>;
+  findConnectionById(id: string): Promise<Connection | null>;
+  findActiveConnectionById(connectionId: string): Promise<Connection | null>;
+  findActiveConnectionForOwner(input: {
+    connectionId: string;
+    ownerUserId?: string | null;
+  }): Promise<Connection | null>;
+  findDefaultActiveConnectionForOwner(input: {
+    ownerUserId: string;
+    provider: string;
+    excludeAccessMode?: string | null;
+  }): Promise<Connection | null>;
+  findProxyInstanceById(proxyInstanceId: string): Promise<ProxyInstance | null>;
+}

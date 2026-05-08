@@ -5,7 +5,7 @@ import {
   SUBSCRIPTION_ACTIVATED,
   SUBSCRIPTION_CREATED,
   type SubscriptionLifecyclePayload,
-} from "@/api/modules/platform/notify/type";
+} from "@/api/modules/platform/subscription/type";
 import { uniqueId } from "@repo/utils/id";
 
 function isSteamFamilySubscription(
@@ -22,9 +22,10 @@ async function ensureSteamFamilyRefreshTask(
   const existingTasks = await ctx.repositories.task.getTaskDefinitionsByKind(
     "steam.family.refresh_connection",
     ownerUserId,
+    { page: 1, pageSize: 100 },
   );
   const existingTask =
-    existingTasks.find((taskDefinition: (typeof existingTasks)[number]) => {
+    existingTasks.data.find((taskDefinition) => {
       const taskPayload =
         taskDefinition.payload &&
         typeof taskDefinition.payload === "object" &&

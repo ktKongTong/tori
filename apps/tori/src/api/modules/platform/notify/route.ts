@@ -3,16 +3,16 @@ import { z } from "zod";
 
 import { requireAdmin, requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import {
-  registerDeliveryEndpoint,
-  updateDeliveryEndpointStatus,
-} from "./command";
+import { registerDeliveryEndpoint, updateDeliveryEndpointStatus } from "./command";
 import { createNotificationStreamResponse } from "./route-stream";
 
-import {updateDeliveryEndpointSchema} from "@/api/modules/platform/notify/schema/endpoint.ts";
+import {
+  registerDeliveryEndpointDtoSchema,
+  statusUpdateResponseDtoSchema,
+  updateDeliveryEndpointDtoSchema,
+} from "@/api/modules/platform/notify/contract";
 
 const app = new Hono();
-
 
 app.use("*", requireAuth());
 
@@ -45,14 +45,13 @@ app.get(
 //   },
 // );
 
-
 app.post(
   "/delivery-endpoints",
   requireAdmin(),
   describeRoute({
     tags: ["Notify"],
     summary: "Register delivery endpoint",
-    request: { body: z.unknown() },
+    request: { body: registerDeliveryEndpointDtoSchema },
     response: {
       description: "Delivery endpoint",
       body: z.object({
@@ -87,10 +86,10 @@ app.patch(
   describeRoute({
     tags: ["Notify"],
     summary: "Update delivery endpoint status",
-    request: { param: z.object({ id: z.string() }), body: updateDeliveryEndpointSchema },
+    request: { param: z.object({ id: z.string() }), body: updateDeliveryEndpointDtoSchema },
     response: {
       description: "Updated delivery endpoint",
-      body: z.object({ id: z.string(), status: z.string() }),
+      body: statusUpdateResponseDtoSchema,
     },
   }),
   async (c) => {
@@ -100,9 +99,5 @@ app.patch(
     return c.json({ id: updated.id, status: updated.status });
   },
 );
-
-import subscriptionRoute from './subscription/route.ts'
-
-app.route('/', subscriptionRoute)
 
 export default app;

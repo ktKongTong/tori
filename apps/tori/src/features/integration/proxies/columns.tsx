@@ -7,13 +7,11 @@ import { InspectTokenProxyDialog } from "./proxy-dialogs";
 import {
   probeProxyInstance,
   updateProxyStatus as updateProxyInstanceStatus,
-  type ProxyInstanceRow,
 } from "@/features/integration/api";
 import { useModal } from "@/lib/modal";
+import type { ProxyInstanceDto } from "@/api/modules/platform/integration/contract";
 
-export type IntegrationProxyRow = ProxyInstanceRow;
-
-export const integrationProxyColumns: ColumnDef<IntegrationProxyRow>[] = [
+export const integrationProxyColumns: ColumnDef<ProxyInstanceDto>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -48,7 +46,7 @@ export const integrationProxyColumns: ColumnDef<IntegrationProxyRow>[] = [
   },
 ];
 
-function IntegrationProxyActions({ proxy }: { proxy: IntegrationProxyRow }) {
+function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
   const modal = useModal();
   const queryClient = useQueryClient();
   const probeProxy = useMutation({

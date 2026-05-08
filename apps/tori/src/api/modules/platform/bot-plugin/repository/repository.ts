@@ -1,4 +1,7 @@
-/* oxlint-disable typescript-eslint/no-redundant-type-constituents */
+import type {
+  PageBasedPaginationParam,
+  PageBasedPaginationResult,
+} from "@repo/utils/schema/paging";
 
 export type BotPluginRepositoryJson = unknown;
 
@@ -64,7 +67,10 @@ export interface CreateManagedBotInstanceInput {
 }
 
 export interface IBotPluginRepository {
-  listManagedBotInstances(ownerUserId: string): Promise<ManagedBotPluginInstance[]>;
+  listManagedBotInstances(
+    ownerUserId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ManagedBotPluginInstance>>;
   findActiveMockBotInstance(): Promise<ManagedBotPluginInstance | null>;
   findManagedBotInstanceIdentity(input: {
     ownerUserId: string;

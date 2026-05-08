@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
-import type { TaskDef } from "@/features/tasks/api";
+import type { TaskDefinitionDto } from "@/api/modules/platform/task/contract";
 
-export const taskColumns: ColumnDef<TaskDef>[] = [
+export const taskColumns: ColumnDef<TaskDefinitionDto>[] = [
   {
     accessorKey: "kind",
     header: "Task",
@@ -17,9 +17,7 @@ export const taskColumns: ColumnDef<TaskDef>[] = [
   {
     accessorKey: "enabled",
     header: "Enabled",
-    cell: ({ row }) => (
-      <DashboardStatusPill text={row.original.enabled ? "enabled" : "disabled"} />
-    ),
+    cell: ({ row }) => <DashboardStatusPill text={row.original.enabled ? "enabled" : "disabled"} />,
   },
   {
     accessorKey: "lastRunStatus",

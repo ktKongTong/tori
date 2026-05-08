@@ -1,4 +1,8 @@
-import type {User} from "@/api/domain/infra";
+import type { User } from "@/api/domain/infra";
+import type {
+  PageBasedPaginationParam,
+  PageBasedPaginationResult,
+} from "@repo/utils/schema/paging";
 
 export interface UserBinding {
   id: string;
@@ -104,9 +108,13 @@ export interface CreateBindingGrantInput {
 }
 
 export interface IBindingRepository {
-  listUserBindings(): Promise<UserBinding[]>;
-  listChannelBindings(): Promise<ChannelBinding[]>;
-  listClaimSessions(): Promise<ClaimSession[]>;
+  listUserBindings(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<UserBinding>>;
+  listChannelBindings(
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ChannelBinding>>;
+  listClaimSessions(
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ClaimSession>>;
   createBindingGrant(input: CreateBindingGrantInput): Promise<BindingGrant>;
   findPendingBindingGrantByTokenHash(tokenHash: string): Promise<BindingGrant | null>;
   findClaimSessionByGrantId(grantId: string): Promise<ClaimSession | null>;

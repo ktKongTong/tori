@@ -1,10 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import type { ChannelBindingRow } from "@/features/binding/api";
+import type { ChannelBindingListItem } from "@/features/binding/api";
 
-export type BindingChannelRow = ChannelBindingRow;
-
-export const bindingChannelColumns: ColumnDef<BindingChannelRow>[] = [
+export const bindingChannelColumns: ColumnDef<ChannelBindingListItem>[] = [
   {
     accessorKey: "channelName",
     header: "Channel Name",

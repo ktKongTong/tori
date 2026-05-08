@@ -8,7 +8,7 @@ import { eventRouter } from "@/api/server/event-router.ts";
 import { pinoLogger } from "@repo/observability/logging";
 import { CloudflareKV } from "@repo/storage/cloudflare-kv";
 import { CloudflareQueuePublisher } from "@repo/task/cloudflare-queue";
-import { OutboxPgRepository } from "@/api/repository/outbox/pg";
+import { OutboxPgRepository } from "@/api/domain/infra/eventing/repository/outbox/pg";
 import type { CloudflareWorkerBinding } from "./type.ts";
 
 export class CloudflareMQ

@@ -18,14 +18,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  createSubscription as createSubscriptionRequest,
-} from "@/features/notify/api";
+import { createSubscription as createSubscriptionRequest } from "@/features/notify/api";
 import { useChannelBindingsQuery } from "@/features/binding/query";
 import { useConnectionsQuery } from "@/features/integration/query";
 import { useModal } from "@/lib/modal";
 import { useToastError } from "@/lib/toast-error";
-import type {CreateSubscriptionInput} from "@/api/modules/platform/notify";
+import type { CreateSubscriptionDto } from "@/api/modules/platform/subscription/contract";
 
 const subscriptionFormSchema = z.object({
   channelId: z.string().trim().min(1, "Target chat is required"),
@@ -73,14 +71,14 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
     integrationQuery.data?.items.filter((item) => item.connection.status === "active") ?? [];
 
   const createSubscription = useMutation({
-    mutationFn: async (input: CreateSubscriptionInput) => createSubscriptionRequest(input),
+    mutationFn: async (input: CreateSubscriptionDto) => createSubscriptionRequest(input),
     onSuccess: async (data) => {
       modal.close();
       await queryClient.invalidateQueries({
         queryKey: ["notify", "subscriptions"],
       });
       toast.success("Subscription created", {
-        description: `Subscription ${data.id} now watches ${data.topicType}. Refresh task: ${data.refreshTaskId ?? "none"} (${data.refreshTaskCreated ? "created" : "reused"}).`,
+        description: `Subscription ${data.id} now watches ${data.topicType}.`,
       });
     },
   });

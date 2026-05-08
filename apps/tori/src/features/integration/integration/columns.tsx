@@ -5,12 +5,12 @@ import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboa
 import {
   fetchIntegrationAccountProfile,
   refreshIntegrationFamily,
-  type ConnectionRow,
-  type IntegrationConnectionRow,
+  type IntegrationConnectionListItem,
 } from "@/features/integration/api";
 import { useToastError } from "@/lib/toast-error";
+import type { ConnectionDto } from "@/api/modules/platform/connection/contract";
 
-export const integrationConnectionColumns: ColumnDef<IntegrationConnectionRow>[] = [
+export const integrationConnectionColumns: ColumnDef<IntegrationConnectionListItem>[] = [
   {
     accessorKey: "accountLabel",
     header: "Account",
@@ -60,7 +60,7 @@ export const integrationConnectionColumns: ColumnDef<IntegrationConnectionRow>[]
   },
 ];
 
-function IntegrationConnectionActions({ connection }: { connection: ConnectionRow }) {
+function IntegrationConnectionActions({ connection }: { connection: ConnectionDto }) {
   const queryClient = useQueryClient();
   const fetchProfile = useMutation({
     mutationFn: async (connectionId: string) => fetchIntegrationAccountProfile(connectionId),

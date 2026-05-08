@@ -13,7 +13,6 @@ export const PageBasedPaginationParamSchema = z.object({
 
 export type PageBasedPaginationParam = z.output<typeof PageBasedPaginationParamSchema>;
 
-
 const paginationResultSchema = z.object({
   page: z.coerce.number().int().min(1).prefault(1),
   pageSize: z.coerce.number().int().min(1),
@@ -21,15 +20,13 @@ const paginationResultSchema = z.object({
   totalPages: z.number(),
   hasNextPage: z.boolean(),
   hasPreviousPage: z.boolean(),
-})
+});
 
 export const PageBasedPaginationResultSchema = <T extends ZodType>(schema: T) =>
   z.object({
     page: paginationResultSchema,
     data: schema.array(),
   });
-
-
 
 export type PageResult<T> = {
   data: T[];

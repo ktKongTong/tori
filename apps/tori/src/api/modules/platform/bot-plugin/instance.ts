@@ -3,6 +3,7 @@ import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import { sha256Hash } from "@repo/utils/encoding/hash";
 import { uniqueId } from "@repo/utils/id";
 import { randomCode } from "@repo/utils/random";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
 import { getBotPluginRepository, type ManagedBotPluginInstance } from "./repository/index.js";
 import type {
@@ -21,9 +22,9 @@ async function hashCredential(value: string) {
 
 export type { ManagedBotPluginInstance };
 
-export async function listManagedBotInstances(ctx: ServiceContext) {
+export async function listManagedBotInstances(ctx: ServiceContext, page: PageBasedPaginationParam) {
   const userId = ctx.userId!;
-  return getBotPluginRepository(ctx).listManagedBotInstances(userId);
+  return getBotPluginRepository(ctx).listManagedBotInstances(userId, page);
 }
 
 export async function createManagedBotInstance(ctx: ServiceContext, body: CreateBotInstanceInput) {

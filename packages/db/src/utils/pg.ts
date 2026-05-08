@@ -1,27 +1,22 @@
-import {type AnyPgTable, type PgSelect, PgTable} from "drizzle-orm/pg-core";
-import type {AnySQLiteTable} from "drizzle-orm/sqlite-core";
-import {asc, desc, getColumns, type InferSelectModel, type SQL} from "drizzle-orm";
-import type {DynamicQuery, PageBasedPaginationParam, PageResult} from "./type.ts";
-import type {NodePgDatabase} from "drizzle-orm/node-postgres";
-import {normalizePage, toPageResult} from "./index.ts";
-export type TableKey<T extends AnyPgTable | AnySQLiteTable> =
-  Extract<keyof InferSelectModel<T>, string>;
+import { type AnyPgTable, type PgSelect, PgTable } from "drizzle-orm/pg-core";
+import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
+import { asc, desc, getColumns, type InferSelectModel, type SQL } from "drizzle-orm";
+import type { DynamicQuery, PageResult } from "./type.ts";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { toPageResult } from "./index.ts";
+export type TableKey<T extends AnyPgTable | AnySQLiteTable> = Extract<
+  keyof InferSelectModel<T>,
+  string
+>;
 
-export const dynamicQuery = <
-
-  TQuery extends PgSelect,
-  TTable extends AnyPgTable,
->(
+export const dynamicQuery = <TQuery extends PgSelect, TTable extends AnyPgTable>(
   qb: TQuery,
   table: TTable,
   condition: DynamicQuery<TableKey<TTable>>,
 ): TQuery => {
   const columns = getColumns(table);
 
-  const orderBy =
-    condition.orderBy?.length
-      ? condition.orderBy
-      : condition.defaultOrderBy;
+  const orderBy = condition.orderBy?.length ? condition.orderBy : condition.defaultOrderBy;
 
   let nextQb = qb;
 
@@ -33,9 +28,7 @@ export const dynamicQuery = <
         throw new Error(`Unknown order column: ${String(column)}`);
       }
 
-      return direction === 'desc'
-        ? desc(targetColumn)
-        : asc(targetColumn);
+      return direction === "desc" ? desc(targetColumn) : asc(targetColumn);
     });
 
     nextQb = nextQb.orderBy(...orderByExpressions) as TQuery;
@@ -53,17 +46,20 @@ export const dynamicQuery = <
 };
 
 export function withPagination<T extends PgSelect>(
-  qb: T, page: {
-    page: number,
-    pageSize: number,
-  }
+  qb: T,
+  page: {
+    page: number;
+    pageSize: number;
+  },
 ) {
   return qb.limit(page.pageSize).offset((page.page - 1) * page.pageSize);
 }
 
-
-
-export async function list<TSchema extends Record<string, unknown>,DB extends NodePgDatabase<TSchema>, TTable extends AnyPgTable>(
+export async function list<
+  TSchema extends Record<string, unknown>,
+  DB extends NodePgDatabase<TSchema>,
+  TTable extends AnyPgTable,
+>(
   db: DB,
   table: TTable,
   condition: DynamicQuery<TableKey<TTable>> & {
@@ -72,15 +68,16 @@ export async function list<TSchema extends Record<string, unknown>,DB extends No
 ): Promise<PageResult<InferSelectModel<TTable>>> {
   const [data, total] = await Promise.all([
     dynamicQuery(
-      db.select().from(table as PgTable).where(condition?.where).$dynamic(),
+      db
+        .select()
+        .from(table as PgTable)
+        .where(condition?.where)
+        .$dynamic(),
       table,
-      condition),
-    db.$count(table, condition?.where)
+      condition,
+    ),
+    db.$count(table, condition?.where),
   ]);
 
-  return toPageResult(
-    data as InferSelectModel<TTable>[],
-    total,
-    condition.page!,
-  );
+  return toPageResult(data as InferSelectModel<TTable>[], total, condition.page!);
 }

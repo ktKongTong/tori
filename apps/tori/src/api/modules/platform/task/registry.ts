@@ -1,6 +1,6 @@
 import { NotFoundError, ParameterError } from "@/api/domain/error";
 import type { ServiceContext } from "@/api/domain/infra/service-context";
-import type { TaskDefinition, TaskRunRow } from "@/api/domain/infra/repository/ports/task.ts";
+import type { TaskDefinition, TaskRun } from "@/api/modules/platform/task/repository/repository.ts";
 
 export interface TaskHandlerResult {
   summary?: Record<string, unknown> | null;
@@ -9,7 +9,7 @@ export interface TaskHandlerResult {
 export type TaskHandler = (
   ctx: ServiceContext,
   taskDefinition: TaskDefinition,
-  taskRun: TaskRunRow,
+  taskRun: TaskRun,
 ) => Promise<TaskHandlerResult | void>;
 export interface TaskHandlerDefinition {
   id: string;

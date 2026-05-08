@@ -1,1 +1,1 @@
-export type * from "../repository/ports/eventing.ts";
+export type * from "./repository/repository.ts";

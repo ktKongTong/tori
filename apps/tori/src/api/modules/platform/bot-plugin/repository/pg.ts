@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { botPluginInstances, deliveryEndpoints } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra/db";
 import type {
@@ -7,15 +7,28 @@ import type {
   IBotPluginRepository,
 } from "./repository";
 import { uniqueId } from "@repo/utils/id";
+import { toPageResult } from "@repo/db/utils";
+import { withPagination } from "@repo/db/utils/pg";
+import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
 export class BotPluginPgRepository implements IBotPluginRepository {
   constructor(private readonly db: PGDB) {}
 
-  async listManagedBotInstances(ownerUserId: string) {
-    return this.db
-      .select()
-      .from(botPluginInstances)
-      .where(eq(botPluginInstances.ownerUserId, ownerUserId));
+  async listManagedBotInstances(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = eq(botPluginInstances.ownerUserId, ownerUserId);
+    const [data, total] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(botPluginInstances)
+          .where(where)
+          .orderBy(desc(botPluginInstances.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.$count(botPluginInstances, where),
+    ]);
+    return toPageResult(data, total, page);
   }
 
   async findActiveMockBotInstance() {

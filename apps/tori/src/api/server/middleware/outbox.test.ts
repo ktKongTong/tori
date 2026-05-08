@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { EventEnvelope } from "../../domain/infra/eventing/message.ts";
 import { processOutbox } from "../../domain/infra/eventing/outbox/processor.ts";
-import type { IOutboxRepository } from "../../domain/infra/repository/ports/eventing.ts";
+import type { IOutboxRepository } from "../../domain/infra/eventing/repository/repository.ts";
 import type { IMQ } from "../../domain/infra/index.ts";
 
 type PublishBatchCall = {

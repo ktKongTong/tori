@@ -208,6 +208,52 @@ export function DashboardTable<TData>({
   );
 }
 
+export function DashboardPagination({
+  page,
+  pageSize,
+  total,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const firstItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastItem = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-x border-b border-border/70 px-4 py-3">
+      <p className="text-sm text-muted-foreground">
+        {firstItem}-{lastItem} of {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Previous
+        </Button>
+        <span className="min-w-24 text-center text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          {page} / {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 type DashboardTableActionItem = {
   key?: string;
   label: string;

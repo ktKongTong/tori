@@ -2,18 +2,19 @@ import { useMemo, useState } from "react";
 import { Button } from "@repo/ui/components/button";
 
 import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
-import { createNotifySubscriptionColumns, type NotifySubscriptionView } from "./columns";
+import { createNotifySubscriptionColumns } from "./columns";
 import { SubscriptionDialog } from "./create-subscription-form";
 import { SubscriptionDetailSheet } from "./detail-sheet";
 import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
 import { useNotificationSubscriptionsQuery } from "@/features/notify/query";
 import { useToastError } from "@/lib/toast-error";
+import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
 
 export function NotifySubscriptionPage() {
   const modal = useModal();
   const { data: session } = useSession();
-  const [selectedSubscription, setSelectedSubscription] = useState<NotifySubscriptionView | null>(
+  const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionViewDto | null>(
     null,
   );
   const notifyQuery = useNotificationSubscriptionsQuery();
@@ -50,10 +51,12 @@ export function NotifySubscriptionPage() {
         empty="No subscriptions available."
       />
 
-      <SubscriptionDetailSheet
-        subscriptionId={selectedSubscription?.id ?? null}
-        onClose={() => setSelectedSubscription(null)}
-      />
+      {selectedSubscription ? (
+        <SubscriptionDetailSheet
+          subscriptionId={selectedSubscription.id}
+          onClose={() => setSelectedSubscription(null)}
+        />
+      ) : null}
     </div>
   );
 }

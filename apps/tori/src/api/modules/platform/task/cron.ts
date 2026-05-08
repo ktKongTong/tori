@@ -8,10 +8,13 @@ export const scanDueTaskCron = createCronHandler("platform.task.scan-due", async
   ctx.logger.debug("handling due task");
   const now = normalizeCronDate(new Date());
 
-  const definitions = await ctx.repositories.task.listEnabledTaskDefinitions();
+  const definitions = await ctx.repositories.task.listEnabledTaskDefinitions({
+    page: 1,
+    pageSize: 100,
+  });
 
-  ctx.logger.debug(`handling definitions: ${definitions.length}`);
-  for (const taskDefinition of definitions) {
+  ctx.logger.debug(`handling definitions: ${definitions.data.length}`);
+  for (const taskDefinition of definitions.data) {
     const due = isCronDueAt(taskDefinition.schedule, now);
     const alreadyTriggeredAt =
       taskDefinition.lastTriggeredAt &&

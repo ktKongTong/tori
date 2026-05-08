@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createConnection } from "@/api/modules/platform/integration/command.ts";
+import { createConnection } from "@/api/modules/platform/connection/command.ts";
 
 import { defineBotCommand } from "../registry.js";
 import { getBotIngressRepository } from "../repository/index.js";

@@ -1,8 +1,5 @@
-import type {PageBasedPaginationParam, PageResult} from "./type.ts";
+import type { PageBasedPaginationParam, PageResult } from "./type.ts";
 export * from "./type.ts";
-
-
-
 
 export const normalizePage = (
   page?: PageBasedPaginationParam,
@@ -17,10 +14,7 @@ export const normalizePage = (
   const maxPageSize = options?.maxPageSize ?? 100;
 
   const normalizedPage = Math.max(1, page?.page ?? defaultPage);
-  const normalizedPageSize = Math.min(
-    maxPageSize,
-    Math.max(1, page?.pageSize ?? defaultPageSize),
-  );
+  const normalizedPageSize = Math.min(maxPageSize, Math.max(1, page?.pageSize ?? defaultPageSize));
 
   return {
     page: normalizedPage,
