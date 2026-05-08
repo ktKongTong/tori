@@ -13,21 +13,12 @@ import {
 } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import type {
-  CreateDeliveryEndpointInput,
   CreateNotificationCandidatesInput,
   CreateNotificationEventInput,
   INotifyRepository,
 } from "@/api/modules/platform/notify/repository/repository.ts";
 
 export class NotifySqliteRepository implements INotifyRepository {
-  async listDeliveryEndpoints() {
-    return this.db
-      .select()
-      .from(deliveryEndpoints)
-      .orderBy(desc(deliveryEndpoints.createdAt))
-      .limit(100);
-  }
-
   async listSubscriptions() {
     return this.db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(100);
   }
@@ -250,15 +241,6 @@ export class NotifySqliteRepository implements INotifyRepository {
 
   constructor(private readonly db: SqliteDB) {}
 
-  async findDeliveryEndpointByTarget(target: string) {
-    const [deliveryEndpoint] = await this.db
-      .select()
-      .from(deliveryEndpoints)
-      .where(eq(deliveryEndpoints.target, target))
-      .limit(1);
-    return deliveryEndpoint ?? null;
-  }
-
   async findChannelById(id: string) {
     const [channel] = await this.db.select().from(channels).where(eq(channels.id, id)).limit(1);
     return channel ?? null;
@@ -278,15 +260,6 @@ export class NotifySqliteRepository implements INotifyRepository {
     return instance ?? null;
   }
 
-  async findDeliveryEndpointById(id: string) {
-    const [deliveryEndpoint] = await this.db
-      .select()
-      .from(deliveryEndpoints)
-      .where(eq(deliveryEndpoints.id, id))
-      .limit(1);
-    return deliveryEndpoint ?? null;
-  }
-
   async findActiveDeliveryEndpointById(id: string) {
     const [deliveryEndpoint] = await this.db
       .select()
@@ -294,20 +267,6 @@ export class NotifySqliteRepository implements INotifyRepository {
       .where(and(eq(deliveryEndpoints.id, id), eq(deliveryEndpoints.status, "active")))
       .limit(1);
     return deliveryEndpoint ?? null;
-  }
-
-  async updateDeliveryEndpointStatus(id: string, status: string) {
-    const [updated] = await this.db
-      .update(deliveryEndpoints)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(deliveryEndpoints.id, id))
-      .returning();
-    return updated ?? null;
-  }
-
-  async createDeliveryEndpoint(input: CreateDeliveryEndpointInput) {
-    const [deliveryEndpoint] = await this.db.insert(deliveryEndpoints).values(input).returning();
-    return deliveryEndpoint;
   }
 
   async createNotificationEvent(input: CreateNotificationEventInput) {

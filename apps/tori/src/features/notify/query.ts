@@ -9,7 +9,6 @@ export const notifyQueryKeys = {
   subscriptionDetail: (id: string) => ["notify", "subscriptions", id] as const,
   events: (subscriptionId: string, pagination: PageBasedPaginationParam) =>
     ["notify", "events", subscriptionId, pagination] as const,
-  deliveryEndpoints: () => ["notify", "delivery-endpoints"] as const,
 };
 
 export function useNotificationSubscriptionsQuery(

@@ -1,6 +1,5 @@
 import { createRequestClient } from "@repo/request";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
-import { deliveryEndpointDtoSchema } from "@/api/modules/platform/notify/contract";
 import {
   createSubscriptionResponseDtoSchema,
   subscriptionNotificationEventPageDtoSchema,
@@ -18,11 +17,6 @@ const notifyRequest = createRequestClient({
     accept: "application/json",
   },
 });
-
-export const listDeliveryEndpoints = () =>
-  notifyRequest.get("/api/notify/delivery-endpoints", {
-    schema: deliveryEndpointDtoSchema,
-  });
 
 export const listNotifySubscriptions = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },

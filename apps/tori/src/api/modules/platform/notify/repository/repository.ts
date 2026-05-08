@@ -63,19 +63,6 @@ export type CreateNotificationCandidatesInput = {
   payload: unknown;
 };
 
-export interface CreateDeliveryEndpointInput {
-  id?: string;
-  ownerUserId?: string | null;
-  platform: string;
-  kind: string;
-  target: string;
-  displayName?: string | null;
-  secret?: string | null;
-  status?: string;
-  config?: unknown;
-  metadata?: unknown;
-}
-
 export interface CreateNotificationEventInput {
   id?: string;
   subscriptionId?: string | null;
@@ -99,11 +86,7 @@ export interface INotifyRepository {
   findChannelById(id: string): Promise<Channel | null>;
   findUserById(id: string): Promise<User | null>;
   findBotPluginInstanceById(id: string): Promise<ManagedBotPluginInstance | null>;
-  findDeliveryEndpointById(id: string): Promise<DeliveryEndpoint | null>;
-  findDeliveryEndpointByTarget(target: string): Promise<DeliveryEndpoint | null>;
   findActiveDeliveryEndpointById(id: string): Promise<DeliveryEndpoint | null>;
-  createDeliveryEndpoint(input: CreateDeliveryEndpointInput): Promise<DeliveryEndpoint>;
-  updateDeliveryEndpointStatus(id: string, status: string): Promise<DeliveryEndpoint | null>;
   createNotificationEvent(input: CreateNotificationEventInput): Promise<NotificationEvent>;
   markNotificationFailed(id: string, errorMessage: string): Promise<void>;
   markNotificationSent(id: string): Promise<void>;
