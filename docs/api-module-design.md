@@ -1,17 +1,17 @@
-# API Module Design
+# API 模块设计
 
-This document describes the current API and code-organization model for Tori.
-The target architecture is a vertical-slice modular monolith: each capability owns its contract, route, command logic, repository port, repository implementations, mapper, and local types.
+本文档描述 Tori 当前的 API 设计和代码组织方式。
+目标架构是垂直切片式的模块化单体：每个能力自己拥有 contract、route、command、repository port、repository implementation、mapper 和模块本地类型。
 
-## Module Classes
+## 模块分类
 
-Tori backend modules are grouped into three classes.
+Tori 后端模块分为三类。
 
 ### Infra
 
-Infra modules provide technical primitives. They do not express product/business capabilities.
+Infra 模块提供技术基础能力。它们不表达产品能力或业务能力。
 
-Examples:
+示例：
 
 - `api/domain/infra/db.ts`
 - `api/domain/infra/eventing`
@@ -19,38 +19,41 @@ Examples:
 - `api/domain/infra/service-context.ts`
 - `api/support/repository-container.ts`
 
-Infra may be used by platform modules and business modules. Infra must not import platform or business modules, except for the repository composition root, which is explicitly an application wiring file.
+Infra 可以被 platform module 和 business module 使用。Infra 不应该导入 platform module 或 business module。
+例外是 repository composition root，因为它明确是应用层装配文件。
 
 ### Platform
 
-Platform modules provide reusable product capabilities. They may depend on infra and may be consumed by top-level business modules.
+Platform module 提供可复用的产品平台能力。它们可以依赖 infra，也可以被上层 business module 消费。
 
-Current platform capabilities:
+当前 platform 能力：
 
-- `platform/binding`: identity and channel binding.
-- `platform/bot-plugin`: managed bot runtime instances.
-- `platform/bot-ingress`: bot command ingress and context.
-- `platform/connection`: provider account connections and account profile/family refresh entrypoints.
-- `platform/integration`: external proxy/provider registry and proxy instance management.
-- `platform/notify`: notification body, endpoint, event, delivery, and stream primitives.
-- `platform/subscription`: topic subscription lifecycle and subscription event history.
-- `platform/task`: scheduled task definitions and task run history.
+- `platform/binding`：身份与渠道绑定。
+- `platform/bot-plugin`：托管 bot runtime instance。
+- `platform/bot-ingress`：bot command ingress 和上下文。
+- `platform/connection`：provider account connection，以及 account profile / family refresh 入口。
+- `platform/integration`：外部 proxy / provider registry，以及 proxy instance 管理。
+- `platform/notify`：notification body、endpoint、event、delivery、stream 等通知投递基础能力。
+- `platform/subscription`：topic subscription 生命周期和 subscription event history。
+- `platform/task`：scheduled task definition 和 task run history。
 
-Platform modules may depend on other platform modules only when the dependency is explicit and directional. For example, `subscription` can create lifecycle outbox events and use binding/channel concepts, but `notify` must not own subscription persistence.
+Platform module 之间可以有依赖，但依赖必须是显式且有方向的。
+例如，`subscription` 可以创建 lifecycle outbox event，也可以使用 binding/channel 概念；但 `notify` 不应该拥有 subscription persistence。
 
-### Business Modules
+### Business Module
 
-Business modules are top-level independent product domains. They may depend on infra and platform, but not on each other.
+Business module 是顶层独立业务域。它们可以依赖 infra 和 platform，但不能互相依赖。
 
-Current example:
+当前示例：
 
 - `api/modules/steam`
 
-Business modules should keep their own domain-specific repository, adapters, schema, command logic, and route definitions inside the module. Shared platform capabilities should be consumed through platform public APIs or `ctx.repositories`, not by importing another business module.
+Business module 应该把自己的领域 repository、adapter、schema、command logic、route definition 放在模块内部。
+共享 platform 能力应该通过 platform public API 或 `ctx.repositories` 消费，而不是通过导入另一个 business module 消费。
 
-## Standard Module Shape
+## 标准模块形态
 
-A standard platform or business module should look like this:
+一个标准 platform module 或 business module 应该长这样：
 
 ```txt
 api/modules/<class>/<module>/
@@ -67,21 +70,22 @@ api/modules/<class>/<module>/
   *.test.ts
 ```
 
-Not every module needs every file. For example, modules without external HTTP contracts may not need `contract.ts`; modules without persistence may not need `repository`.
+不是每个模块都必须有所有文件。
+例如，没有外部 HTTP contract 的模块可以没有 `contract.ts`；没有持久化的模块可以没有 `repository`。
 
 ### `contract.ts`
 
-`contract.ts` defines the HTTP/API boundary.
+`contract.ts` 定义 HTTP/API 边界。
 
-It owns:
+它负责：
 
-- request schemas
-- response schemas
-- DTO schemas
-- DTO types inferred from schemas
-- page response schemas for list endpoints
+- request schema
+- response schema
+- DTO schema
+- 由 schema 推导出来的 DTO type
+- list endpoint 的分页 response schema
 
-Example names:
+命名示例：
 
 ```ts
 export const subscriptionDtoSchema = z.object(...);
@@ -89,88 +93,88 @@ export const subscriptionPageDtoSchema = PageBasedPaginationResultSchema(subscri
 export type SubscriptionDto = z.infer<typeof subscriptionDtoSchema>;
 ```
 
-Rules:
+规则：
 
-- Frontend API clients import schemas and DTO types from `contract.ts`.
-- Backend routes use the same schemas for request validation and OpenAPI metadata.
-- Do not duplicate zod schemas in frontend files.
-- Do not create compatibility `schema.ts` re-export files.
-- Do not alias DTOs to fake business names such as `TaskDef = TaskDefinitionDto`.
+- 前端 API client 从 `contract.ts` 导入 schema 和 DTO type。
+- 后端 route 使用同一份 schema 做 request validation 和 OpenAPI metadata。
+- 不要在前端文件里重复定义 zod schema。
+- 不要创建兼容用的 `schema.ts` re-export 文件。
+- 不要把 DTO alias 成假的业务名，例如 `TaskDef = TaskDefinitionDto`。
 
 ### `type.ts`
 
-`type.ts` defines module-local business types that are not HTTP contracts and not repository records.
+`type.ts` 定义模块本地的业务类型。它们不是 HTTP contract，也不是 repository record。
 
-It owns:
+它负责：
 
-- command input types when they differ from DTOs
-- event names and event payloads
-- module-specific unions and state types
+- 和 DTO 不一致的 command input type
+- event name 和 event payload
+- 模块本地 union 和 state type
 
-Example:
+示例：
 
 ```ts
 export const SUBSCRIPTION_CREATED = "SubscriptionCreated";
 export type SubscriptionLifecyclePayload = { ... };
 ```
 
-Rules:
+规则：
 
-- Frontend should not import `type.ts`.
-- Other modules may import event names or public payload types only when that is the intended integration surface.
-- If a type is part of the HTTP boundary, it belongs in `contract.ts`, not `type.ts`.
+- 前端不应该导入 `type.ts`。
+- 其他模块只有在这是明确的集成面时，才可以导入 event name 或 public payload type。
+- 如果某个 type 属于 HTTP 边界，它应该放在 `contract.ts`，而不是 `type.ts`。
 
 ### `command.ts`
 
-`command.ts` contains orchestration and business use cases.
+`command.ts` 包含编排逻辑和业务 use case。
 
-It owns:
+它负责：
 
-- authorization-sensitive orchestration
-- repository calls through `ctx.repositories`
-- outbox event creation
+- 需要权限语义的编排逻辑
+- 通过 `ctx.repositories` 调用 repository
+- 创建 outbox event
 - id generation
-- business errors
-- calls into other platform capability APIs when explicitly allowed
+- business error
+- 在明确允许时调用其他 platform capability API
 
-Rules:
+规则：
 
-- Commands should not import PG/SQLite repository implementations.
-- Commands should use `ServiceContext`.
-- Commands should prefer repository ports through `ctx.repositories`.
-- Commands return business objects, not DTOs, unless the command is explicitly a DTO shaping function. Route/mapper handles DTO shaping.
+- Command 不应该导入 PG/SQLite repository implementation。
+- Command 应该使用 `ServiceContext`。
+- Command 应该优先通过 `ctx.repositories` 使用 repository port。
+- Command 返回 business object，而不是 DTO；除非这个 command 明确就是 DTO shaping function。Route/mapper 负责 DTO shaping。
 
 ### `route.ts`
 
-`route.ts` defines HTTP endpoints.
+`route.ts` 定义 HTTP endpoint。
 
-It owns:
+它负责：
 
-- URL path handlers
+- URL path handler
 - `describeRoute` metadata
-- request validation through contract schemas
-- response shaping through mappers
+- 通过 contract schema 做 request validation
+- 通过 mapper 做 response shaping
 
-Rules:
+规则：
 
-- Routes import schemas from their module `contract.ts`.
-- Routes call commands or repositories, then map to DTOs.
-- Routes should not contain DB logic.
-- Routes should not duplicate DTO schemas inline except for small one-off primitives.
+- Route 从本模块 `contract.ts` 导入 schema。
+- Route 调用 command 或 repository，然后 map 成 DTO。
+- Route 不应该包含 DB logic。
+- Route 不应该重复内联 DTO schema，除了非常小的一次性 primitive。
 
 ### `mapper.ts`
 
-`mapper.ts` converts internal objects into API DTOs.
+`mapper.ts` 把内部对象转换成 API DTO。
 
-It owns:
+它负责：
 
-- BO to DTO conversion
+- BO 到 DTO 的转换
 - page result mapping
-- `Date` to ISO string conversion
+- `Date` 到 ISO string 的转换
 - nullable/default normalization
-- aggregate view shaping when the route returns a joined view
+- route 返回 joined view 时的 aggregate view shaping
 
-Example:
+示例：
 
 ```ts
 export function mapSubscriptionPage(
@@ -180,24 +184,24 @@ export function mapSubscriptionPage(
 }
 ```
 
-Rules:
+规则：
 
-- Mappers import repository/domain BOs and contract DTOs.
-- Mappers are the only normal place where BO and DTO meet.
-- Frontend should never import mappers.
+- Mapper 导入 repository/domain BO 和 contract DTO。
+- Mapper 是 BO 和 DTO 正常相遇的唯一位置。
+- 前端永远不应该导入 mapper。
 
 ### `repository/repository.ts`
 
-This file defines the repository port and BOs owned by the module.
+这个文件定义模块拥有的 repository port 和 BO。
 
-It owns:
+它负责：
 
 - repository interface
-- repository input types
-- repository output business objects
-- list pagination types
+- repository input type
+- repository output business object
+- list pagination type
 
-Example:
+示例：
 
 ```ts
 export interface ISubscriptionRepository {
@@ -207,37 +211,37 @@ export interface ISubscriptionRepository {
 }
 ```
 
-Rules:
+规则：
 
-- Repository ports live with the owning module.
-- Do not define platform repository ports under `api/domain/platform/repository/ports`.
-- Do not put module repository ports in a global `api/repository` folder.
-- Repository BOs may use `Date`, `unknown`, and business-level nullable fields.
-- Repository BOs are not DTOs.
+- Repository port 跟随 owning module 放置。
+- 不要在 `api/domain/platform/repository/ports` 下定义 platform repository port。
+- 不要把 module repository port 放进全局 `api/repository` 目录。
+- Repository BO 可以使用 `Date`、`unknown` 和业务层 nullable field。
+- Repository BO 不是 DTO。
 
-### `repository/pg.ts` and `repository/sqlite.ts`
+### `repository/pg.ts` 和 `repository/sqlite.ts`
 
-These are infrastructure adapters for the module repository port.
+它们是模块 repository port 的基础设施 adapter。
 
-They own:
+它们负责：
 
 - Drizzle table access
-- SQL joins
+- SQL join
 - DB-specific pagination mechanics
-- DB insert/update/select conversion into repository BOs
+- DB insert/update/select 到 repository BO 的转换
 
-Rules:
+规则：
 
-- They may import DB schema and DB utilities.
-- They implement the local `I<Module>Repository`.
-- They should not import route, frontend API files, or DTO schemas.
-- DBO/projection details should stay inside repository implementations unless a projection is part of the repository port.
+- 它们可以导入 DB schema 和 DB util。
+- 它们实现本模块的 `I<Module>Repository`。
+- 它们不应该导入 route、frontend API 文件或 DTO schema。
+- DBO/projection 细节应该留在 repository implementation 内部，除非某个 projection 本身就是 repository port 的一部分。
 
 ### `repository/index.ts`
 
-This is the module repository public export for application wiring.
+这是模块 repository 给应用装配层使用的 public export。
 
-It usually exports:
+通常导出：
 
 ```ts
 export { SubscriptionPgRepository } from "./pg";
@@ -245,21 +249,21 @@ export { SubscriptionSqliteRepository } from "./sqlite";
 export type { ISubscriptionRepository } from "./repository";
 ```
 
-Do not use this file to re-export DTOs or unrelated module internals.
+不要用这个文件 re-export DTO 或无关的模块内部细节。
 
 ## Composition Root
 
-`api/support/repository-container.ts` is the only place that wires concrete repository implementations into `ServiceContext`.
+`api/support/repository-container.ts` 是唯一把具体 repository implementation 装配进 `ServiceContext` 的地方。
 
-It may import:
+它可以导入：
 
-- infra repository implementations
-- platform repository implementations
-- business module repository implementations, when they are part of `ServiceContext`
+- infra repository implementation
+- platform repository implementation
+- 属于 `ServiceContext` 的 business module repository implementation
 
-It should not own repository definitions. It is a wiring file only.
+它不应该拥有 repository definition。它只是 wiring file。
 
-`api/domain/platform/repository/container.ts` defines the repository container type:
+`api/domain/platform/repository/container.ts` 定义 repository container type：
 
 ```ts
 export type PlatformRepositoryContainer = InfraRepositoryContainer & {
@@ -271,78 +275,79 @@ export type PlatformRepositoryContainer = InfraRepositoryContainer & {
 };
 ```
 
-This type is allowed because it is a service-context shape, not repository ownership.
+这个 type 是允许的，因为它表达的是 service-context shape，不是 repository ownership。
 
-## Current Platform Boundaries
+## 当前 Platform 边界
 
 ### `notify`
 
-Owns notification delivery primitives:
+拥有 notification delivery primitive：
 
 - notification body model
-- delivery endpoints
-- notification events
+- delivery endpoint
+- notification event
 - delivery candidate creation
-- delivery status updates
+- delivery status update
 - SSE notification stream
 
-Does not own:
+不拥有：
 
 - subscription creation
 - subscription list/detail
-- subscription status updates
+- subscription status update
 - subscription event-history route
 
-Those belong to `subscription`.
+这些属于 `subscription`。
 
 ### `subscription`
 
-Owns subscription lifecycle:
+拥有 subscription lifecycle：
 
 - create subscription
 - activate/disable subscription
 - list subscriptions
 - subscription detail view
 - notification event history by subscription
-- subscription lifecycle outbox events
+- subscription lifecycle outbox event
 
-It may consume notification event DTOs because subscription history displays notification events, but the ownership remains separate:
+它可以消费 notification event DTO，因为 subscription history 需要展示 notification event；但 ownership 仍然分离：
 
-- event schema: `notify/contract.ts`
-- subscription page/history schema: `subscription/contract.ts`
+- event schema：`notify/contract.ts`
+- subscription page/history schema：`subscription/contract.ts`
 
 ### `integration`
 
-Owns external proxy/provider integration:
+拥有 external proxy/provider integration：
 
 - proxy instance registration
 - proxy health probing
-- proxy status changes
-- provider registry hooks
+- proxy status change
+- provider registry hook
 
-Does not own:
+不拥有：
 
-- provider account connections
-- account profile lists
-- family refresh HTTP endpoints
+- provider account connection
+- account profile list
+- family refresh HTTP endpoint
 
-Those belong to `connection`.
+这些属于 `connection`。
 
 ### `connection`
 
-Owns provider account connections:
+拥有 provider account connection：
 
 - create connection
 - list connections
 - list account profiles
 - resolve connection access
-- account profile/family refresh HTTP entrypoints
+- account profile/family refresh HTTP endpoint
 
-It may call integration provider registry for provider-specific actions. The direction is `connection -> integration/provider-registry`, not `integration repository -> connection repository`.
+它可以调用 integration provider registry 执行 provider-specific action。
+依赖方向是 `connection -> integration/provider-registry`，不是 `integration repository -> connection repository`。
 
-## Frontend Import Rules
+## 前端引用规则
 
-Frontend feature API files should import only public API boundary contracts:
+前端 feature API 文件应该只导入 public API boundary contract：
 
 ```ts
 import {
@@ -355,23 +360,23 @@ import {
 } from "@/api/modules/platform/integration/contract";
 ```
 
-Allowed frontend imports:
+允许的前端 import：
 
 - `*/contract.ts`
-- UI components
-- frontend-local query/API helpers
+- UI component
+- 前端本地 query/API helper
 
-Disallowed frontend imports:
+禁止的前端 import：
 
 - `*/command.ts`
 - `*/repository/*`
-- `*/type.ts`, unless the type is explicitly documented as a frontend-safe public type
-- mappers
+- `*/type.ts`，除非该 type 被明确记录为 frontend-safe public type
+- mapper
 - DB schema
 
-Frontend view models should be real aggregates, not DTO aliases.
+前端 view model 应该是真实 aggregate，而不是 DTO alias。
 
-Allowed:
+允许：
 
 ```ts
 export type IntegrationConnectionListItem = {
@@ -381,7 +386,7 @@ export type IntegrationConnectionListItem = {
 };
 ```
 
-Disallowed:
+禁止：
 
 ```ts
 export type BotInstance = BotInstanceDto;
@@ -389,50 +394,50 @@ export type TaskDef = TaskDefinitionDto;
 export type ClaimSessionRow = ClaimSessionDto;
 ```
 
-## Backend Import Rules
+## 后端引用规则
 
-Routes:
+Route：
 
-- import contract schemas
-- call commands or `ctx.repositories`
-- call mappers for response DTOs
+- 导入 contract schema
+- 调用 command 或 `ctx.repositories`
+- 调用 mapper 生成 response DTO
 
-Commands:
+Command：
 
-- import local `type.ts`
-- use `ctx.repositories`
-- may import event helpers and infra helpers
-- do not import repository implementations
+- 导入本地 `type.ts`
+- 使用 `ctx.repositories`
+- 可以导入 event helper 和 infra helper
+- 不导入 repository implementation
 
-Repositories:
+Repository：
 
-- import local repository port
-- import DB schema
-- import DB utils
-- do not import frontend or route code
-- generally do not import contract schemas
+- 导入本地 repository port
+- 导入 DB schema
+- 导入 DB util
+- 不导入 frontend 或 route code
+- 通常不导入 contract schema
 
-Business modules:
+Business module：
 
-- may import platform commands/types/routes/contracts when the platform module is the intended dependency
-- should not import another business module
+- 当 platform module 是预期依赖时，可以导入 platform command/type/route/contract
+- 不应该导入另一个 business module
 
-## Concept Variants
+## 概念变体
 
-A single product concept can have several valid type variants. The variants must be explicit and named by boundary.
+同一个产品概念可以有几种合法的类型变体。变体必须按边界显式命名。
 
 ### DTO
 
-DTOs are API wire types. They live in `contract.ts`.
+DTO 是 API wire type。它们放在 `contract.ts`。
 
-Properties:
+特征：
 
-- serializable
-- dates are strings
-- validated by zod
-- safe for frontend use
+- 可序列化
+- date 是 string
+- 由 zod 校验
+- 前端可安全使用
 
-Example:
+示例：
 
 ```ts
 SubscriptionDto;
@@ -442,16 +447,16 @@ ProxyInstanceDto;
 
 ### BO
 
-Business objects are internal module/repository output types. They live in `repository/repository.ts` or occasionally `type.ts`.
+Business object 是模块内部或 repository output type。它们放在 `repository/repository.ts`，少数情况下放在 `type.ts`。
 
-Properties:
+特征：
 
-- may contain `Date`
-- may contain internal nullable fields
-- may include joined objects for read views
-- not directly exposed to frontend
+- 可以包含 `Date`
+- 可以包含内部 nullable field
+- read view 可以包含 joined object
+- 不直接暴露给前端
 
-Example:
+示例：
 
 ```ts
 Subscription;
@@ -461,17 +466,17 @@ NotificationEvent;
 
 ### DBO / DB Projection
 
-DBO is a database row or selected projection.
+DBO 是数据库行或选出来的 projection。
 
-Properties:
+特征：
 
-- created by Drizzle schema inference or a repository-local select shape
-- should stay inside `repository/pg.ts` or `repository/sqlite.ts`
-- should not leak into route, command, frontend, or contract
+- 由 Drizzle schema inference 或 repository-local select shape 创建
+- 应该留在 `repository/pg.ts` 或 `repository/sqlite.ts` 内部
+- 不应该泄漏到 route、command、frontend 或 contract
 
-If a projection must cross the repository port, name it by business meaning, not table mechanics.
+如果 projection 必须跨过 repository port，应该按业务含义命名，而不是按表/行机制命名。
 
-Prefer:
+推荐：
 
 ```ts
 Subscription;
@@ -479,7 +484,7 @@ SubscriptionDetail;
 NotificationDeliveryCandidate;
 ```
 
-Avoid:
+避免：
 
 ```ts
 NotifyEventRow;
@@ -489,15 +494,15 @@ ClaimSessionRow;
 
 ### Command Input
 
-Command input is use-case input. It lives in `type.ts` when it differs from API DTO.
+Command input 是 use-case input。当它和 API DTO 不同时，放在 `type.ts`。
 
-Properties:
+特征：
 
-- can be narrower or richer than DTO
-- should reflect business use-case needs
-- may be constructed by routes from DTOs
+- 可以比 DTO 更窄或更丰富
+- 应该反映业务 use case 的需求
+- 可以由 route 从 DTO 构造出来
 
-Example:
+示例：
 
 ```ts
 CreateSubscriptionInput;
@@ -506,15 +511,15 @@ RegisterProxyInstanceInput;
 
 ### Repository Input
 
-Repository input is persistence input. It lives in `repository/repository.ts`.
+Repository input 是 persistence input。它放在 `repository/repository.ts`。
 
-Properties:
+特征：
 
-- close to the storage operation
-- includes generated ids if command generates them
-- not necessarily equal to DTO or command input
+- 接近 storage operation
+- 如果 command 生成 id，它会包含生成后的 id
+- 不一定等于 DTO 或 command input
 
-Example:
+示例：
 
 ```ts
 CreateTaskDefinitionInput;
@@ -524,15 +529,15 @@ CreateNotificationEventInput;
 
 ### View Model / List Item
 
-Frontend view models are UI aggregates. They live in feature API/query/columns files.
+前端 view model 是 UI aggregate。它们放在 feature API/query/columns 文件中。
 
-Properties:
+特征：
 
-- compose multiple DTOs
-- exist only because the UI needs a derived shape
-- should not hide a DTO behind another name
+- 组合多个 DTO
+- 只因为 UI 需要 derived shape 而存在
+- 不应该把 DTO 藏在另一个名字后面
 
-Example:
+示例：
 
 ```ts
 IntegrationConnectionListItem = {
@@ -544,43 +549,44 @@ IntegrationConnectionListItem = {
 
 ## Pagination
 
-List endpoints that can grow must accept page-based pagination.
+可能增长的 list endpoint 必须接受 page-based pagination。
 
-Backend:
+后端：
 
-- route uses `PageBasedPaginationParamSchema`
-- repository port accepts `PageBasedPaginationParam`
-- repository implementation returns `PageBasedPaginationResult<T>`
-- mapper maps `PageBasedPaginationResult<BO>` to `PageBasedPaginationResult<DTO>`
+- route 使用 `PageBasedPaginationParamSchema`
+- repository port 接受 `PageBasedPaginationParam`
+- repository implementation 返回 `PageBasedPaginationResult<T>`
+- mapper 把 `PageBasedPaginationResult<BO>` 映射成 `PageBasedPaginationResult<DTO>`
 
-Frontend:
+前端：
 
-- API client accepts `PageBasedPaginationParam`
-- query key includes pagination params
-- table UI can use `DashboardPagination`
+- API client 接受 `PageBasedPaginationParam`
+- query key 包含 pagination params
+- table UI 可以使用 `DashboardPagination`
 
-Task run history is not the only paginated case. Binding, bot instances, integration proxy instances, connections, account profiles, subscriptions, and subscription notification history are also paginated.
+Task run history 不是唯一需要分页的地方。
+Binding、bot instance、integration proxy instance、connection、account profile、subscription、subscription notification history 都是需要分页的列表。
 
 ## API Route Compatibility
 
-Code ownership and URL paths are separate.
+代码 ownership 和 URL path 是两件事。
 
-Current routes preserve existing public paths:
+当前 route 保持已有 public path：
 
-- `/api/integration/proxy-instances/*` is implemented by `platform/integration`.
-- `/api/integration/connections/*` is implemented by `platform/connection`.
-- `/api/notification/delivery-endpoints/*` and stream are implemented by `platform/notify`.
-- `/api/notification/subscription/*` is implemented by `platform/subscription`.
+- `/api/integration/proxy-instances/*` 由 `platform/integration` 实现。
+- `/api/integration/connections/*` 由 `platform/connection` 实现。
+- `/api/notification/delivery-endpoints/*` 和 stream 由 `platform/notify` 实现。
+- `/api/notification/subscription/*` 由 `platform/subscription` 实现。
 
-This keeps clients stable while allowing code ownership to be correct.
+这样可以在修正代码 ownership 的同时保持 client 稳定。
 
-## Reasonableness Assessment
+## 合理性评估
 
-### What Is Good
+### 好的地方
 
-The current direction is reasonable because module ownership is now visible in the filesystem.
+当前方向是合理的，因为 module ownership 已经能从文件系统中直接看出来。
 
-When changing subscription behavior, the main files are:
+修改 subscription 行为时，主要文件是：
 
 - `platform/subscription/contract.ts`
 - `platform/subscription/command.ts`
@@ -588,54 +594,65 @@ When changing subscription behavior, the main files are:
 - `platform/subscription/mapper.ts`
 - `platform/subscription/repository/*`
 
-When changing connection behavior, the main files are:
+修改 connection 行为时，主要文件是：
 
 - `platform/connection/contract.ts`
 - `platform/connection/command.ts`
 - `platform/connection/route.ts`
 - `platform/connection/repository/*`
 
-This avoids the previous split where a single capability was scattered across shared contracts, domain ports, global repository implementations, and module routes.
+这避免了之前的分裂状态：一个能力被拆散到 shared contracts、domain ports、global repository implementation 和 module routes 里。
 
-### Remaining Tradeoffs
+### 仍然存在的权衡
 
-Routes still preserve legacy public path groups. For example, connection routes are mounted under `/api/integration`. This is acceptable for compatibility, but it means route URL grouping is not identical to code ownership.
+Route 仍然保留 legacy public path group。
+例如，connection route 仍挂在 `/api/integration` 下。
+这对兼容性是可以接受的，但意味着 URL grouping 和代码 ownership 并不完全一致。
 
-Some platform modules still depend on concepts from other platform modules. This is expected, but the direction must remain explicit. Example: `subscription` can use `notify`'s notification event DTO for history output. `notify` should not own subscription writes.
+一些 platform module 仍会依赖其他 platform module 的概念。
+这是正常的，但依赖方向必须显式。
+例如，`subscription` 可以使用 `notify` 的 notification event DTO 来输出 history。
+`notify` 不应该拥有 subscription write。
 
-The repository container is still a central list of repositories. That is acceptable as application composition, but it must stay a wiring layer only.
+Repository container 仍然是一个中心化的 repository 列表。
+这是可接受的 application composition，但它必须只停留在 wiring layer。
 
-### Risks To Watch
+### 需要警惕的风险
 
-Do not reintroduce `shared/contracts` as a dumping ground. If a contract belongs to a module, keep it in that module.
+不要重新引入 `shared/contracts` 作为垃圾桶。
+如果 contract 属于某个模块，就放在那个模块里。
 
-Do not move all repository ports back to a global `domain/repository/ports` folder. It improves alphabetical neatness but destroys feature locality.
+不要把所有 repository port 再搬回全局 `domain/repository/ports` 目录。
+那样看起来字母顺序更整齐，但会破坏 feature locality。
 
-Do not use frontend aliases to rename DTOs. Either consume the DTO directly or define a real aggregate view model.
+不要用前端 alias 重命名 DTO。
+要么直接消费 DTO，要么定义真实 aggregate view model。
 
-Do not let `integration` become a general bucket for every external-system concept. Proxy/provider registry and connection/account ownership are separate capabilities.
+不要让 `integration` 变成所有 external-system concept 的总垃圾桶。
+Proxy/provider registry 和 connection/account ownership 是不同能力。
 
-Do not let `notify` become a general bucket for every message-related concept. Delivery and subscription are separate capabilities.
+不要让 `notify` 变成所有 message-related concept 的总垃圾桶。
+Delivery 和 subscription 是不同能力。
 
-## Adding A New Capability
+## 新增能力的流程
 
-For a new platform capability:
+新增 platform capability：
 
-1. Create `api/modules/platform/<capability>`.
-2. Add `contract.ts` for HTTP schemas and DTOs.
-3. Add `type.ts` for local business/event types.
-4. Add `repository/repository.ts` for BOs, inputs, and repository port.
-5. Add `repository/pg.ts` and `repository/sqlite.ts`.
-6. Add `command.ts` for use cases.
-7. Add `mapper.ts` if route responses expose DTOs from BOs.
-8. Add `route.ts`.
-9. Register route in `api/server/routes.ts`.
-10. Wire repository implementation in `api/support/repository-container.ts`.
-11. Expose frontend calls through the feature API client using only `contract.ts`.
+1. 创建 `api/modules/platform/<capability>`。
+2. 添加 `contract.ts` 定义 HTTP schema 和 DTO。
+3. 添加 `type.ts` 定义本地 business/event type。
+4. 添加 `repository/repository.ts` 定义 BO、input、repository port。
+5. 添加 `repository/pg.ts` 和 `repository/sqlite.ts`。
+6. 添加 `command.ts` 定义 use case。
+7. 如果 route response 从 BO 暴露 DTO，添加 `mapper.ts`。
+8. 添加 `route.ts`。
+9. 在 `api/server/routes.ts` 注册 route。
+10. 在 `api/support/repository-container.ts` 装配 repository implementation。
+11. 前端 feature API client 只通过 `contract.ts` 使用 API contract。
 
-For a new business module:
+新增 business module：
 
-1. Create `api/modules/<business-domain>`.
-2. Keep its repository, route, command, mapper, schema, and adapters inside that module.
-3. Depend on platform capabilities explicitly.
-4. Do not import another business module directly.
+1. 创建 `api/modules/<business-domain>`。
+2. 把它自己的 repository、route、command、mapper、schema、adapter 留在模块内部。
+3. 显式依赖 platform capability。
+4. 不直接导入另一个 business module。
