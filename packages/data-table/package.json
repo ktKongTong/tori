@@ -7,6 +7,7 @@
     ".": "./dist/index.mjs",
     "./components/data-table": "./dist/components/data-table.mjs",
     "./components/data-table-actions": "./dist/components/data-table-actions.mjs",
+    "./components/data-table-code": "./dist/components/data-table-code.mjs",
     "./components/data-table-empty": "./dist/components/data-table-empty.mjs",
     "./components/data-table-health-summary": "./dist/components/data-table-health-summary.mjs",
     "./components/data-table-metadata": "./dist/components/data-table-metadata.mjs",

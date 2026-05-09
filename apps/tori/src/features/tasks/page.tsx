@@ -2,13 +2,14 @@ import { Button } from "@repo/ui/components/button";
 import { Link, Navigate, Outlet, useLocation } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState, type ReactNode } from "react";
+import { DataTable, statusColumn, timeColumn, type DataTableStatusTone } from "@repo/data-table";
+
 import {
   DashboardActionBar,
   DashboardNotice,
   DashboardPanel,
   DashboardPagination,
   DashboardStatusPill,
-  DashboardTable,
 } from "@/components/dashboard-ui";
 import { taskColumns } from "./columns";
 import { useSession } from "@/lib/auth-client";
@@ -40,10 +41,10 @@ export function TasksPage() {
         </Button>
       </DashboardActionBar>
 
-      <DashboardTable
+      <DataTable
         columns={taskColumns}
         data={tasksData?.data ?? []}
-        empty="No tasks available."
+        empty={{ title: "No tasks", description: "No tasks available." }}
       />
     </div>
   );
@@ -57,16 +58,6 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   const isAdmin = role.includes("admin");
   const taskQuery = useTaskDetailQuery(taskId);
   const { data: taskRuns } = useTaskRuns(taskId, { page: historyPage, pageSize });
-
-  // useEffect(() => {
-  //   setHistoryPage(1);
-  // }, [taskId]);
-
-  // useEffect(() => {
-  //   if (taskData && historyPage > taskRuns?.total) {
-  //     setHistoryPage(taskData.totalPages);
-  //   }
-  // }, [historyPage, taskData]);
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -126,7 +117,6 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
                 {formatDateTime(taskQuery.data.lastTriggeredAt)}
               </TaskMeta>
               <TaskMeta label="Last Run">{formatDateTime(taskQuery.data.lastRunAt)}</TaskMeta>
-              {/*<TaskMeta label="Updated">{formatDateTime(taskQuery.data.updatedAt)}</TaskMeta>*/}
               {taskQuery.data.lastError ? (
                 <div className="md:col-span-2 lg:col-span-4">
                   <TaskMeta label="Last Error">{taskQuery.data.lastError}</TaskMeta>
@@ -140,10 +130,10 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             title="Run History"
             description="Recent task runs ordered by creation time."
           >
-            <DashboardTable
+            <DataTable
               columns={taskRunColumns}
               data={taskRuns?.data ?? []}
-              empty="No runs yet."
+              empty={{ title: "No runs", description: "No runs yet." }}
             />
             <DashboardPagination
               page={taskRuns?.page?.page ?? 1}
@@ -162,43 +152,36 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
 }
 
 const taskRunColumns: ColumnDef<TaskRunDto>[] = [
-  {
-    accessorKey: "createdAt",
+  timeColumn({
+    id: "createdAt",
     header: "Created",
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">{formatDateTime(row.original.createdAt)}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
+    value: (row) => row.createdAt,
+  }),
+  statusColumn({
+    id: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <DashboardStatusPill text={row.original.status} tone={statusTone(row.original.status)} />
-    ),
-  },
-  {
-    accessorKey: "scheduledFor",
+    text: (row) => row.status,
+    tone: (row): DataTableStatusTone => statusTone(row.status),
+  }),
+  timeColumn({
+    id: "scheduledFor",
     header: "Scheduled",
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">{formatDateTime(row.original.scheduledFor)}</span>
-    ),
-  },
-  {
-    accessorKey: "startedAt",
+    value: (row) => row.scheduledFor,
+  }),
+  timeColumn({
+    id: "startedAt",
     header: "Started",
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">{formatDateTime(row.original.startedAt)}</span>
-    ),
-  },
-  {
-    accessorKey: "finishedAt",
+    value: (row) => row.startedAt,
+    empty: "—",
+  }),
+  timeColumn({
+    id: "finishedAt",
     header: "Finished",
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">{formatDateTime(row.original.finishedAt)}</span>
-    ),
-  },
+    value: (row) => row.finishedAt,
+    empty: "—",
+  }),
   {
-    accessorKey: "result",
+    id: "result",
     header: "Result",
     cell: ({ row }) => {
       if (row.original.errorMessage) return row.original.errorMessage;

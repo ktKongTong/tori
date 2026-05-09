@@ -1,7 +1,8 @@
 import { Button } from "@repo/ui/components/button";
 import { Navigate } from "@tanstack/react-router";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { botInstanceColumns } from "./columns";
 import { CreateBotInstanceDialog } from "./dialogs";
 import { useSession } from "@/lib/auth-client";
@@ -28,10 +29,10 @@ export function BotInstancesPage() {
           Refresh
         </Button>
       </DashboardActionBar>
-      <DashboardTable
+      <DataTable
         columns={botInstanceColumns}
         data={botInstancesData?.items ?? []}
-        empty="No bot instances available."
+        empty={{ title: "No bot instances", description: "No bot instances available." }}
       />
     </div>
   );

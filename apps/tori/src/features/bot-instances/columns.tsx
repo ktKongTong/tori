@@ -2,47 +2,62 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
+import {
+  DataTableActions,
+  objectColumn,
+  statusColumn,
+  timeColumn,
+  codeColumn,
+} from "@repo/data-table";
+
 import { BotCredentialDialog } from "./dialogs";
 import { revokeBotInstance, rotateBotInstanceCredential } from "@/features/bot-instances/api";
 import { useModal } from "@/lib/modal";
 import type { BotInstanceDto } from "@/api/modules/platform/bot-plugin/contract";
 
 export const botInstanceColumns: ColumnDef<BotInstanceDto>[] = [
-  {
-    accessorKey: "displayName",
+  objectColumn({
+    id: "botName",
     header: "Name",
-    cell: ({ row }) => row.original.displayName,
-  },
+    title: (row) => row.displayName ?? "Unnamed Bot",
+  }),
   {
-    accessorKey: "platform",
+    id: "platform",
     header: "Platform",
     cell: ({ row }) => row.original.platform,
   },
   {
-    accessorKey: "namespace",
+    id: "namespace",
     header: "Namespace",
     cell: ({ row }) => row.original.namespace,
   },
-  {
-    accessorKey: "deliveryEndpointId",
+  codeColumn({
+    id: "endpointId",
     header: "Endpoint ID",
-    cell: ({ row }) => row.original.deliveryEndpointId ?? "—",
-  },
-  {
-    accessorKey: "status",
+    value: (row) => row.deliveryEndpointId,
+    copyable: true,
+    empty: "—",
+  }),
+  statusColumn({
+    id: "status",
     header: "Status",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.status} />,
-  },
-  {
-    accessorKey: "lastSeenAt",
+    text: (row) => row.status,
+    tone: (row) => (row.status === "active" ? "success" : "neutral"),
+  }),
+  timeColumn({
+    id: "lastSeenAt",
     header: "Last Seen",
-    cell: ({ row }) => row.original.lastSeenAt ?? "—",
-  },
+    value: (row) => row.lastSeenAt,
+  }),
   {
     id: "actions",
-    header: "Actions",
+    header: "",
     cell: ({ row }) => <BotInstanceActions instance={row.original} />,
+    meta: {
+      kind: "actions",
+      priority: "secondary",
+      align: "right",
+    },
   },
 ];
 
@@ -73,8 +88,8 @@ function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
   });
 
   return (
-    <DashboardTableActions
-      label={`Open actions for ${instance.displayName}`}
+    <DataTableActions
+      label={`Open actions for ${instance.displayName ?? instance.id}`}
       items={[
         {
           label: "Rotate",

@@ -1,23 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 
 import { Button } from "@repo/ui/components/button";
-import {
-  DashboardActionBar,
-  DashboardNotice,
-  DashboardStatusPill,
-  DashboardTable,
-} from "~/components/dashboard-ui";
+import { DataTable, objectColumn, statusColumn, timeColumn, codeColumn } from "@repo/data-table";
+import { DashboardActionBar, DashboardNotice } from "~/components/dashboard-ui";
 import { apiRequest, connectionsListSchema, requestLogsListSchema } from "~/lib/api";
 
 export const Route = createFileRoute("/dashboard/")({
   component: DashboardOverviewPage,
 });
-
-function formatDate(epochSeconds: number | null | undefined) {
-  if (!epochSeconds) return "—";
-  return new Date(epochSeconds * 1000).toLocaleString();
-}
 
 function DashboardOverviewPage() {
   const connectionsQuery = useQuery({
@@ -38,6 +31,84 @@ function DashboardOverviewPage() {
   const logs = logsQuery.data?.items ?? [];
   const recentConnections = [...connections].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
   const recentLogs = [...logs].sort((a, b) => b.createdAt - a.createdAt).slice(0, 12);
+
+  const connectionColumns = useMemo<ColumnDef<(typeof connections)[0]>[]>(
+    () => [
+      objectColumn({
+        id: "provider",
+        header: "Identity",
+        title: (row) => row.displayName ?? row.provider,
+      }),
+      {
+        id: "rawProvider",
+        header: "Provider",
+        cell: ({ row }) => row.original.provider,
+      },
+      codeColumn({
+        id: "providerUid",
+        header: "Provider UID",
+        value: (row) => row.providerUid,
+      }),
+      statusColumn({
+        id: "status",
+        header: "Status",
+        text: (row) => row.status,
+        tone: (row) =>
+          row.status === "active" ? "success" : row.status === "revoked" ? "danger" : "neutral",
+      }),
+      timeColumn({
+        id: "lastUsedAt",
+        header: "Last Used",
+        value: (row) => (row.lastUsedAt ? new Date(row.lastUsedAt * 1000) : null),
+        empty: "Never",
+      }),
+      timeColumn({
+        id: "createdAt",
+        header: "Created",
+        value: (row) => (row.createdAt ? new Date(row.createdAt * 1000) : null),
+      }),
+    ],
+    [],
+  );
+
+  const logColumns = useMemo<ColumnDef<(typeof logs)[0]>[]>(
+    () => [
+      timeColumn({
+        id: "time",
+        header: "Time",
+        value: (row) => (row.createdAt ? new Date(row.createdAt * 1000) : null),
+      }),
+      codeColumn({
+        id: "connectionId",
+        header: "Connection",
+        value: (row) => row.connectionId,
+        copyable: true,
+      }),
+      objectColumn({
+        id: "route",
+        header: "Route",
+        title: (row) => row.routeGroup,
+      }),
+      {
+        id: "method",
+        header: "Method",
+        cell: ({ row }) => row.original.method,
+      },
+      statusColumn({
+        id: "status",
+        header: "Status",
+        text: (row) => (row.statusCode ? String(row.statusCode) : "Pending"),
+        tone: (row) => {
+          if (!row.statusCode) return "neutral";
+          if (row.statusCode >= 200 && row.statusCode < 300) return "success";
+          if (row.statusCode >= 400 && row.statusCode < 500) return "warning";
+          return "danger";
+        },
+        detail: (row) => row.error ?? null,
+      }),
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -68,20 +139,10 @@ function DashboardOverviewPage() {
         <h2 className="text-sm font-medium tracking-[0.16em] text-muted-foreground uppercase">
           Recent Connections
         </h2>
-        <DashboardTable
-          columns={["Provider", "User", "Status", "Last Used", "Created"]}
-          rows={recentConnections.map((connection) => [
-            <div key={`${connection.id}-provider`} className="space-y-1">
-              <p className="font-medium text-foreground">{connection.provider}</p>
-              <p className="text-xs text-muted-foreground">{connection.providerUid}</p>
-            </div>,
-            connection.displayName,
-            <DashboardStatusPill key={`${connection.id}-status`} text={connection.status} />,
-            formatDate(connection.lastUsedAt),
-            formatDate(connection.createdAt),
-          ])}
-          rowIds={recentConnections.map((connection) => connection.id)}
-          empty="No issued tokens are available yet."
+        <DataTable
+          columns={connectionColumns}
+          data={recentConnections}
+          empty={{ title: "No connections", description: "No issued tokens are available yet." }}
         />
       </section>
 
@@ -89,21 +150,10 @@ function DashboardOverviewPage() {
         <h2 className="text-sm font-medium tracking-[0.16em] text-muted-foreground uppercase">
           Recent Logs
         </h2>
-        <DashboardTable
-          columns={["Time", "Connection", "Route", "Method", "Status", "Error"]}
-          rows={recentLogs.map((log) => [
-            formatDate(log.createdAt),
-            log.connectionId,
-            log.routeGroup,
-            log.method,
-            <DashboardStatusPill
-              key={`${log.id}-status`}
-              text={log.statusCode ? String(log.statusCode) : "Pending"}
-            />,
-            log.error ?? "—",
-          ])}
-          rowIds={recentLogs.map((log) => String(log.id))}
-          empty="No request logs have been recorded yet."
+        <DataTable
+          columns={logColumns}
+          data={recentLogs}
+          empty={{ title: "No logs", description: "No request logs have been recorded yet." }}
         />
       </section>
     </div>

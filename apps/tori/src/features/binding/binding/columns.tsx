@@ -1,35 +1,53 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { DashboardTableActions } from "@/components/dashboard-ui";
+import {
+  DataTableActions,
+  objectColumn,
+  statusColumn,
+  timeColumn,
+  type DataTableStatusTone,
+} from "@repo/data-table";
+
 import { revokeUserBinding, type UserBindingListItem } from "@/features/binding/api";
 import { useToastError } from "@/lib/toast-error";
 
 export const bindingColumns: ColumnDef<UserBindingListItem>[] = [
+  objectColumn({
+    id: "botIdentity",
+    header: "Bot Identity",
+    title: (row) => row.binding.externalUserName ?? row.binding.externalUserId,
+  }),
   {
-    accessorKey: "userName",
-    header: "User Name",
-    cell: ({ row }) => row.original.user?.name ?? row.original.binding.userId,
-  },
-  {
-    accessorKey: "platform",
+    id: "platform",
     header: "Platform",
     cell: ({ row }) => row.original.binding.platform,
   },
+  statusColumn({
+    id: "status",
+    header: "Status",
+    text: (row) => row.binding.status,
+    tone: (row) => (row.binding.status === "active" ? "success" : "neutral"),
+  }),
   {
-    accessorKey: "externalUserName",
-    header: "External User Name",
-    cell: ({ row }) => row.original.binding.externalUserName,
-  },
-  {
-    accessorKey: "assurance",
+    id: "assurance",
     header: "Assurance",
     cell: ({ row }) => row.original.binding.assurance,
   },
+  timeColumn({
+    id: "createdAt",
+    header: "Mapped At",
+    value: (row) => row.binding.createdAt,
+  }),
   {
     id: "actions",
-    header: "Actions",
+    header: "",
     cell: ({ row }) => <BindingActions binding={row.original} />,
+    meta: {
+      kind: "actions",
+      priority: "secondary",
+      align: "right",
+    },
   },
 ];
 
@@ -50,7 +68,7 @@ function BindingActions({ binding }: { binding: UserBindingListItem }) {
   const userName = binding.user?.name ?? bindingRow.userId;
 
   return (
-    <DashboardTableActions
+    <DataTableActions
       label={`Open actions for ${userName}`}
       items={[
         {

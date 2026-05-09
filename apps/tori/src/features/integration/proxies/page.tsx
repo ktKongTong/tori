@@ -1,7 +1,8 @@
 import { Button } from "@repo/ui/components/button";
 import { Navigate } from "@tanstack/react-router";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { integrationProxyColumns } from "./columns";
 import { TokenProxyDialog } from "./proxy-dialogs";
 import { useSession } from "@/lib/auth-client";
@@ -30,10 +31,10 @@ export function IntegrationProxiesPage() {
           Refresh
         </Button>
       </DashboardActionBar>
-      <DashboardTable
+      <DataTable
         columns={integrationProxyColumns}
         data={integrationData?.items ?? []}
-        empty="No token proxies registered."
+        empty={{ title: "No token proxies", description: "No token proxies registered." }}
       />
     </div>
   );

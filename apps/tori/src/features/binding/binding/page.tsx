@@ -1,6 +1,7 @@
 import { Button } from "@repo/ui/components/button";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { useModal } from "@/lib/modal";
 import { bindingColumns } from "./columns";
 import { RedeemTokenDialog } from "./redeem-token-dialog";
@@ -20,10 +21,13 @@ export function BindingPage() {
         <Button onClick={() => modal.open(<RedeemTokenDialog />)}>Redeem Token</Button>
       </DashboardActionBar>
 
-      <DashboardTable
+      <DataTable
         columns={bindingColumns}
         data={data?.items ?? []}
-        empty="No completed user bindings available."
+        empty={{
+          title: "No user bindings available",
+          description: "You have not mapped any bot user identities to Tori accounts yet.",
+        }}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Button } from "@repo/ui/components/button";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { createNotifySubscriptionColumns } from "./columns";
 import { SubscriptionDialog } from "./create-subscription-form";
 import { SubscriptionDetailSheet } from "./detail-sheet";
@@ -45,10 +46,13 @@ export function NotifySubscriptionPage() {
         </Button>
       </DashboardActionBar>
 
-      <DashboardTable
+      <DataTable
         columns={columns}
         data={notifyData?.data ?? []}
-        empty="No subscriptions available."
+        empty={{
+          title: "No subscriptions available",
+          description: "You have not subscribed to any events yet.",
+        }}
       />
 
       {selectedSubscription ? (

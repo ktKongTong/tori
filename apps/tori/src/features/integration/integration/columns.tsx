@@ -1,99 +1,66 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
-import {
-  fetchIntegrationAccountProfile,
-  refreshIntegrationFamily,
-  type IntegrationConnectionListItem,
-} from "@/features/integration/api";
-import { useToastError } from "@/lib/toast-error";
-import type { ConnectionDto } from "@/api/modules/platform/connection/contract";
+import { objectColumn, statusColumn, timeColumn, type DataTableStatusTone } from "@repo/data-table";
 
-export const integrationConnectionColumns: ColumnDef<IntegrationConnectionListItem>[] = [
-  {
-    accessorKey: "accountLabel",
-    header: "Account",
-    cell: ({ row }) =>
-      row.original.connection.providerAccountName ?? row.original.connection.providerAccountId,
-  },
-  {
-    accessorKey: "provider",
-    header: "Provider",
-    cell: ({ row }) => row.original.connection.provider,
-  },
-  {
-    accessorKey: "accessMode",
-    header: "Access",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.connection.accessMode} />,
-  },
-  {
-    accessorKey: "attachedProxy",
-    header: "Attached Proxy",
-    cell: ({ row }) => row.original.proxy?.name ?? "No proxy attached",
-  },
-  {
-    accessorKey: "accountProfile",
-    header: "Profile",
-    cell: ({ row }) => {
-      const profile = row.original.profile;
+import type { IntegrationConnectionListItem } from "@/features/integration/api";
 
-      if (!profile) return "Not fetched";
-
-      return profile.personaName ?? profile.steamId;
+export function createIntegrationConnectionColumns(input: {
+  onOpenDetails: (item: IntegrationConnectionListItem) => void;
+}): ColumnDef<IntegrationConnectionListItem>[] {
+  return [
+    objectColumn({
+      id: "account",
+      header: "Account",
+      title: (row) =>
+        row.profile?.personaName ??
+        row.connection.providerAccountName ??
+        row.connection.providerAccountId,
+      onOpen: input.onOpenDetails,
+    }),
+    {
+      id: "provider",
+      header: "Provider",
+      cell: ({ row }) => row.original.connection.provider,
     },
-  },
-  {
-    accessorKey: "defaultState",
-    header: "Default",
-    cell: ({ row }) => (row.original.connection.isDefault ? "Default" : "—"),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.connection.status} />,
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => <IntegrationConnectionActions connection={row.original.connection} />,
-  },
-];
-
-function IntegrationConnectionActions({ connection }: { connection: ConnectionDto }) {
-  const queryClient = useQueryClient();
-  const fetchProfile = useMutation({
-    mutationFn: async (connectionId: string) => fetchIntegrationAccountProfile(connectionId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
+    {
+      id: "defaultState",
+      header: "Default",
+      cell: ({ row }) => (row.original.connection.isDefault ? "Default" : "—"),
     },
-  });
-  const refreshFamily = useMutation({
-    mutationFn: async (connectionId: string) => refreshIntegrationFamily(connectionId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
-    },
-  });
-
-  useToastError(fetchProfile.error, { title: "Failed to fetch account profile" });
-
-  return (
-    <DashboardTableActions
-      label={`Open actions for ${connection.providerAccountName ?? connection.providerAccountId}`}
-      items={[
-        {
-          label: "Fetch Profile",
-          onSelect: () => fetchProfile.mutate(connection.id),
-        },
-        ...(connection.provider === "steam"
-          ? [
-              {
-                label: "Refresh Family",
-                onSelect: () => refreshFamily.mutate(connection.id),
-              },
-            ]
-          : []),
-      ]}
-    />
-  );
+    statusColumn({
+      id: "health",
+      header: "Health",
+      text: (row) => {
+        if (row.connection.status !== "active") return row.connection.status;
+        if (!row.profile) return "Profile Missing";
+        if (row.proxy && row.proxy.status !== "active") return "Proxy Unhealthy";
+        return "Active";
+      },
+      tone: (row): DataTableStatusTone => {
+        if (row.connection.status !== "active") return "danger";
+        if (!row.profile) return "warning";
+        if (row.proxy && row.proxy.status !== "active") return "danger";
+        return "success";
+      },
+      detail: (row) => {
+        if (row.connection.status !== "active") return "The connection is currently inactive.";
+        if (!row.profile) return "The profile for this connection has not been fetched yet.";
+        if (row.proxy && row.proxy.status !== "active")
+          return `Attached proxy '${row.proxy.name}' is not active.`;
+        return null;
+      },
+    }),
+    statusColumn({
+      id: "accessMode",
+      header: "Access Mode",
+      text: (row) => row.connection.accessMode,
+      tone: () => "neutral",
+    }),
+    timeColumn({
+      id: "lastSyncedAt",
+      header: "Last Synced",
+      value: (row) => row.connection.lastSyncedAt,
+      empty: "Never synced",
+    }),
+  ];
 }

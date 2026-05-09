@@ -7,8 +7,9 @@ import {
   SheetTitle,
 } from "@repo/ui/components/sheet";
 import { useState } from "react";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardPagination, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardPagination } from "@/components/dashboard-ui";
 import { subscriptionDeliveryEventColumns } from "@/features/notify/events/columns";
 import { useNotifyEventsQuery, useNotifySubscriptionDetailQuery } from "@/features/notify/query";
 import { useToastError } from "@/lib/toast-error";
@@ -97,10 +98,13 @@ export function SubscriptionDetailSheet({
                   </Button>
                 </div>
 
-                <DashboardTable
+                <DataTable
                   columns={subscriptionDeliveryEventColumns}
                   data={deliveryEvents}
-                  empty="No delivery events for this subscription."
+                  empty={{
+                    title: "No events",
+                    description: "No delivery events for this subscription.",
+                  }}
                 />
                 <DashboardPagination
                   page={eventsQuery.data?.page.page ?? 1}

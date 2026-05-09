@@ -40,6 +40,7 @@
     "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-router": "catalog:tanstack-start",
     "@tanstack/react-start": "catalog:tanstack-start",
+    "@tanstack/react-table": "catalog:",
     "@tanstack/router-plugin": "catalog:tanstack-start",
     "drizzle-orm": "catalog:",
     "hono": "catalog:hono",

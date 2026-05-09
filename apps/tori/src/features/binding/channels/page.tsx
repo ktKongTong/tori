@@ -1,6 +1,7 @@
 import { Button } from "@repo/ui/components/button";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { bindingChannelColumns } from "./columns";
 import { useChannelBindingsQuery } from "@/features/binding/query";
 import { useToastError } from "@/lib/toast-error";
@@ -18,10 +19,13 @@ export function BindingChannelsPage() {
         </Button>
       </DashboardActionBar>
 
-      <DashboardTable
+      <DataTable
         columns={bindingChannelColumns}
         data={bindingData?.items ?? []}
-        empty="No active channel bindings available."
+        empty={{
+          title: "No channel bindings",
+          description: "No active channel bindings available.",
+        }}
       />
     </div>
   );

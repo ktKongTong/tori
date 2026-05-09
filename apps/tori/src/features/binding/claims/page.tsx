@@ -1,6 +1,7 @@
 import { Button } from "@repo/ui/components/button";
+import { DataTable } from "@repo/data-table";
 
-import { DashboardActionBar, DashboardTable } from "@/components/dashboard-ui";
+import { DashboardActionBar } from "@/components/dashboard-ui";
 import { bindingClaimColumns } from "./columns";
 import { IssueTokenDialog } from "./issue-token-dialog";
 import { useSession } from "@/lib/auth-client";
@@ -31,10 +32,10 @@ export function BindingClaimsPage() {
         </Button>
       </DashboardActionBar>
 
-      <DashboardTable
+      <DataTable
         columns={bindingClaimColumns}
         data={data?.items ?? []}
-        empty="No claim sessions available."
+        empty={{ title: "No claim sessions", description: "No claim sessions available." }}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 export { DataTable } from "./components/data-table";
 export { DataTableActions } from "./components/data-table-actions";
+export { DataTableCode } from "./components/data-table-code";
 export { DataTableEmpty } from "./components/data-table-empty";
 export { DataTableHealthSummary } from "./components/data-table-health-summary";
 export { DataTableMetadata } from "./components/data-table-metadata";
@@ -8,6 +9,7 @@ export { DataTableStatus } from "./components/data-table-status";
 export { DataTableTime } from "./components/data-table-time";
 export {
   actionsColumn,
+  codeColumn,
   metadataColumn,
   objectColumn,
   statusColumn,

@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 
 import { DataTableActions } from "../components/data-table-actions";
+import { DataTableCode } from "../components/data-table-code";
 import { DataTableObjectLink } from "../components/data-table-object-link";
 import { DataTableStatus } from "../components/data-table-status";
 import { DataTableTime } from "../components/data-table-time";
@@ -11,12 +12,39 @@ function renderHeader(header: ReactNode) {
   return () => header;
 }
 
+export function codeColumn<TData>({
+  id,
+  header,
+  value,
+  empty,
+  copyable,
+  meta,
+}: {
+  id: string;
+  header: ReactNode;
+  value: (row: TData) => string | null | undefined;
+  empty?: string;
+  copyable?: boolean;
+  meta?: DataTableColumnMeta;
+}): ColumnDef<TData> {
+  return {
+    id,
+    header: renderHeader(header),
+    cell: ({ row }) => (
+      <DataTableCode value={value(row.original)} empty={empty} copyable={copyable} />
+    ),
+    meta: {
+      kind: "metadata",
+      priority: "diagnostic",
+      ...meta,
+    },
+  };
+}
+
 export function objectColumn<TData>({
   id = "object",
   header,
   title,
-  description,
-  metadata,
   href,
   renderLink,
   onOpen,
@@ -25,8 +53,6 @@ export function objectColumn<TData>({
   id?: string;
   header: ReactNode;
   title: (row: TData) => ReactNode;
-  description?: (row: TData) => ReactNode;
-  metadata?: (row: TData) => ReactNode;
   href?: (row: TData) => string | undefined;
   renderLink?: (row: TData, children: ReactNode) => ReactNode;
   onOpen?: (row: TData) => void;
@@ -38,8 +64,6 @@ export function objectColumn<TData>({
     cell: ({ row }) => (
       <DataTableObjectLink
         title={title(row.original)}
-        description={description?.(row.original)}
-        metadata={metadata?.(row.original)}
         href={href?.(row.original)}
         renderLink={renderLink ? (children) => renderLink(row.original, children) : undefined}
         onOpen={onOpen ? () => onOpen(row.original) : undefined}

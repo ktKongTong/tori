@@ -1,37 +1,55 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { DashboardStatusPill, DashboardTableActions } from "@/components/dashboard-ui";
+import {
+  DataTableActions,
+  objectColumn,
+  statusColumn,
+  type DataTableStatusTone,
+} from "@repo/data-table";
 import type { TaskDefinitionDto } from "@/api/modules/platform/task/contract";
 
 export const taskColumns: ColumnDef<TaskDefinitionDto>[] = [
-  {
-    accessorKey: "kind",
+  objectColumn({
+    id: "kind",
     header: "Task",
-    cell: ({ row }) => row.original.kind,
-  },
+    title: (row) => row.kind,
+  }),
   {
-    accessorKey: "schedule",
+    id: "schedule",
     header: "Schedule",
     cell: ({ row }) => row.original.schedule,
   },
-  {
-    accessorKey: "enabled",
+  statusColumn({
+    id: "enabled",
     header: "Enabled",
-    cell: ({ row }) => <DashboardStatusPill text={row.original.enabled ? "enabled" : "disabled"} />,
-  },
-  {
-    accessorKey: "lastRunStatus",
+    text: (row) => (row.enabled ? "Enabled" : "Disabled"),
+    tone: (row): DataTableStatusTone => (row.enabled ? "success" : "neutral"),
+  }),
+  statusColumn({
+    id: "lastRunStatus",
     header: "Last Run",
-    cell: ({ row }) => row.original.lastRunStatus ?? "—",
-  },
+    text: (row) => row.lastRunStatus ?? "Never",
+    tone: (row): DataTableStatusTone => {
+      const status = row.lastRunStatus?.toLowerCase();
+      if (status === "done" || status === "success") return "success";
+      if (status === "failed" || status === "error") return "danger";
+      if (status === "queued" || status === "processing" || status === "running") return "warning";
+      return "neutral";
+    },
+  }),
   {
     id: "actions",
     header: "",
     cell: ({ row }) => (
-      <DashboardTableActions
+      <DataTableActions
         label="Task actions"
-        items={[{ label: "View history", to: `/tasks/${row.original.id}` }]}
+        items={[{ label: "View history", href: `/tasks/${row.original.id}` }]}
       />
     ),
+    meta: {
+      kind: "actions",
+      priority: "secondary",
+      align: "right",
+    },
   },
 ];

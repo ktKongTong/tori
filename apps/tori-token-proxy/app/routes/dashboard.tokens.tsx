@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 
 import { Button } from "@repo/ui/components/button";
 import {
@@ -13,12 +14,20 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import {
+  DataTable,
+  objectColumn,
+  statusColumn,
+  timeColumn,
+  codeColumn,
+  metadataColumn,
+  actionsColumn,
+} from "@repo/data-table";
+import {
   DashboardActionBar,
   DashboardField,
   DashboardNotice,
   DashboardResult,
   DashboardStatusPill,
-  DashboardTable,
 } from "~/components/dashboard-ui";
 import {
   apiRequest,
@@ -199,6 +208,99 @@ function DashboardTokensPage() {
   const providers = providersQuery.data?.items ?? [];
   const connectView = connectSessionQuery.data ?? startConnectMutation.data ?? null;
 
+  const columns = useMemo<ColumnDef<(typeof rows)[0]>[]>(
+    () => [
+      objectColumn({
+        id: "provider",
+        header: "Identity",
+        title: (row) => row.displayName ?? row.provider,
+      }),
+      {
+        id: "rawProvider",
+        header: "Provider",
+        cell: ({ row }) => row.original.provider,
+      },
+      codeColumn({
+        id: "providerUid",
+        header: "Provider UID",
+        value: (row) => row.providerUid,
+      }),
+      metadataColumn({
+        id: "permissions",
+        header: "Permissions",
+        value: (row) => (
+          <div className="flex flex-wrap gap-1">
+            {(row.permissions ?? []).length ? (
+              (row.permissions ?? []).map((p) => (
+                <span
+                  key={p}
+                  className="rounded bg-muted/40 px-1.5 py-0.5 text-xs text-muted-foreground border border-border/40"
+                >
+                  {p}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-muted-foreground">None</span>
+            )}
+          </div>
+        ),
+      }),
+      statusColumn({
+        id: "status",
+        header: "Status",
+        text: (row) => row.status,
+        tone: (row) =>
+          row.status === "active" ? "success" : row.status === "revoked" ? "danger" : "neutral",
+      }),
+      timeColumn({
+        id: "lastUsedAt",
+        header: "Last Used",
+        value: (row) => (row.lastUsedAt ? new Date(row.lastUsedAt * 1000) : null),
+        empty: "Never",
+      }),
+      codeColumn({
+        id: "token",
+        header: "Preview Token",
+        value: (row) => row.apiKeyPreview ?? row.apiKey.slice(0, 12),
+      }),
+      actionsColumn({
+        id: "actions",
+        items: (row) => [
+          {
+            label: "Edit",
+            onSelect: () =>
+              setEditing({
+                id: row.id,
+                provider: row.provider,
+                displayName: row.displayName ?? "",
+                label: row.label ?? "",
+                permissions: row.permissions ?? permissionOptionsForProvider(row.provider),
+                status: row.status,
+              }),
+          },
+          {
+            label: "Reconnect",
+            onSelect: () => {
+              setReconnecting({
+                connectionId: row.id,
+                provider: row.provider,
+                displayName: row.displayName ?? "",
+                sessionId: null,
+              });
+              startReconnectMutation.mutate(row.id);
+            },
+          },
+          {
+            label: "Revoke",
+            variant: "destructive",
+            onSelect: () => revokeMutation.mutate(row.id),
+          },
+        ],
+      }),
+    ],
+    [startReconnectMutation, revokeMutation],
+  );
+
   useEffect(() => {
     if (connectSessionQuery.data?.status === "completed" && connectSessionQuery.data.connection) {
       void queryClient.invalidateQueries({ queryKey: ["token-proxy", "connections"] });
@@ -246,88 +348,10 @@ function DashboardTokensPage() {
         <DashboardNotice tone="error">{revokeMutation.error.message}</DashboardNotice>
       ) : null}
 
-      <DashboardTable
-        columns={[
-          "Provider",
-          "User",
-          "Label",
-          "Permissions",
-          "Status",
-          "Last Used",
-          "Token",
-          "Actions",
-        ]}
-        rows={rows.map((connection) => [
-          <div key={`${connection.id}-provider`} className="space-y-1">
-            <p className="font-medium text-foreground">{connection.provider}</p>
-            <p className="text-xs text-muted-foreground">{connection.providerUid}</p>
-          </div>,
-          connection.displayName,
-          connection.label ?? "—",
-          <div key={`${connection.id}-permissions`} className="flex flex-wrap gap-2">
-            {(connection.permissions ?? []).length ? (
-              (connection.permissions ?? []).map((permission) => (
-                <DashboardStatusPill key={`${connection.id}-${permission}`} text={permission} />
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">No scopes</span>
-            )}
-          </div>,
-          <DashboardStatusPill
-            key={`${connection.id}-status`}
-            text={connection.status}
-            tone={getConnectionStatusTone(connection.status)}
-          />,
-          formatDate(connection.lastUsedAt),
-          <code
-            key={`${connection.id}-token`}
-            className="text-xs leading-6 break-all text-muted-foreground"
-          >
-            {connection.apiKeyPreview ?? connection.apiKey.slice(0, 12)}
-          </code>,
-          <div key={`${connection.id}-actions`} className="flex flex-wrap gap-2">
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={() =>
-                setEditing({
-                  id: connection.id,
-                  provider: connection.provider,
-                  displayName: connection.displayName,
-                  label: connection.label ?? "",
-                  permissions:
-                    connection.permissions ?? permissionOptionsForProvider(connection.provider),
-                  status: connection.status,
-                })
-              }
-            >
-              Edit
-            </Button>
-            <Button
-              size="xs"
-              onClick={() => {
-                setReconnecting({
-                  connectionId: connection.id,
-                  provider: connection.provider,
-                  displayName: connection.displayName,
-                  sessionId: null,
-                });
-                startReconnectMutation.mutate(connection.id);
-              }}
-            >
-              Reconnect
-            </Button>
-            <Button
-              size="xs"
-              variant="destructive"
-              onClick={() => revokeMutation.mutate(connection.id)}
-            >
-              Revoke
-            </Button>
-          </div>,
-        ])}
-        rowIds={rows.map((connection) => connection.id)}
-        empty="No issued tokens are available yet."
+      <DataTable
+        columns={columns}
+        data={rows}
+        empty={{ title: "No tokens", description: "No issued tokens are available yet." }}
       />
 
       <Dialog open={Boolean(connecting)} onOpenChange={(open) => !open && setConnecting(null)}>
