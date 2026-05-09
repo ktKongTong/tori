@@ -8,6 +8,7 @@ import {
 } from "@repo/ui/components/sheet";
 import { useState } from "react";
 import { DataTable } from "@repo/data-table";
+import { IconArrowRight, IconBolt, IconMapPin, IconSend } from "@tabler/icons-react";
 
 import { DashboardPagination } from "@/components/dashboard-ui";
 import { subscriptionDeliveryEventColumns } from "@/features/notify/events/columns";
@@ -25,7 +26,6 @@ export function SubscriptionDetailSheet({
   const [historyPage, setHistoryPage] = useState(1);
 
   const detailQuery = useNotifySubscriptionDetailQuery(subscriptionId);
-
   const eventsQuery = useNotifyEventsQuery(subscriptionId, { page: historyPage, pageSize });
   const detailData = detailQuery.data;
 
@@ -44,56 +44,67 @@ export function SubscriptionDetailSheet({
     >
       <SheetContent className="w-full sm:max-w-4xl">
         <SheetHeader>
-          <SheetTitle>Subscription Details</SheetTitle>
+          <SheetTitle>Subscription Data Flow</SheetTitle>
           <SheetDescription>
-            {detailData
-              ? `${detailData.channel?.name ?? detailData.channelId} · ${detailData.topicType} / ${detailData.topicKey}`
-              : "Subscription delivery details."}
+            Visualizing how notifications are triggered and delivered.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="min-h-0 overflow-y-auto px-8 pb-8">
+        <div className="min-h-0 overflow-y-auto px-8 pb-8 pt-8">
           {detailData ? (
-            <div className="space-y-6">
-              <div className="grid gap-3 border bg-muted/20 p-4 text-sm sm:grid-cols-2">
-                <SubscriptionDetailItem
-                  label="Channel"
-                  value={detailData.channel?.name ?? detailData.channelId}
+            <div className="space-y-12">
+              {/* Data Flow Visualization */}
+              <div className="relative flex flex-col items-center justify-between gap-8 md:flex-row md:items-stretch">
+                <FlowCard
+                  icon={<IconBolt className="size-4" />}
+                  label="Trigger Source"
+                  title={detailData.topicType}
+                  description={detailData.connection?.providerAccountName ?? "System Task"}
                 />
-                <SubscriptionDetailItem
-                  label="Bot Runtime"
-                  value={
-                    detailData.botInstance?.displayName ?? detailData.botPluginInstanceId ?? "—"
-                  }
+                <FlowArrow />
+                <FlowCard
+                  icon={<IconSend className="size-4" />}
+                  label="Destination"
+                  title={detailData.channel?.name ?? "Unknown Channel"}
+                  description={detailData.channelId ?? "—"}
                 />
-                <SubscriptionDetailItem
-                  label="Connection"
-                  value={detailData.connection?.providerAccountName ?? detailData.connectionId}
+                <FlowArrow />
+                <FlowCard
+                  icon={<IconMapPin className="size-4" />}
+                  label="Delivery Path"
+                  title={detailData.botInstance?.displayName ?? "Bot Runtime"}
+                  description={`Bot ID: ${detailData.botPluginInstanceId?.slice(0, 8) ?? "N/A"}...`}
                 />
-                <SubscriptionDetailItem
-                  label="Owner"
-                  value={
-                    detailData.owner?.name ?? detailData.ownerChannel?.name ?? detailData.ownerId
-                  }
-                />
-                <SubscriptionDetailItem
-                  label="Topic"
-                  value={`${detailData.topicType} / ${detailData.topicKey}`}
-                />
-                <SubscriptionDetailItem label="Status" value={detailData.status} />
               </div>
 
-              <div className="space-y-3">
+              <div className="grid gap-6 border-t pt-8 text-sm sm:grid-cols-2">
+                <DetailItem label="Status" value={detailData.status} />
+                <DetailItem
+                  label="Created At"
+                  value={new Date(detailData.createdAt).toLocaleString()}
+                />
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase mb-2">
+                    Event Types
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {detailData.eventTypes.map((type) => (
+                      <span key={type} className="rounded bg-muted px-2 py-0.5 text-xs font-mono">
+                        {type}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-heading text-sm font-semibold tracking-[0.16em] uppercase">
-                      Delivery History
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Recent delivery attempts for this subscription.
+                      Recent Delivery History
                     </p>
                   </div>
-                  <Button onClick={() => void detailQuery.refetch()} variant="outline" size="sm">
+                  <Button onClick={() => void eventsQuery.refetch()} variant="outline" size="sm">
                     Refresh
                   </Button>
                 </div>
@@ -102,8 +113,8 @@ export function SubscriptionDetailSheet({
                   columns={subscriptionDeliveryEventColumns}
                   data={deliveryEvents}
                   empty={{
-                    title: "No events",
-                    description: "No delivery events for this subscription.",
+                    title: "No delivery attempts",
+                    description: "No events have been triggered for this subscription yet.",
                   }}
                 />
                 <DashboardPagination
@@ -122,7 +133,45 @@ export function SubscriptionDetailSheet({
   );
 }
 
-function SubscriptionDetailItem({ label, value }: { label: string; value: string }) {
+function FlowCard({
+  icon,
+  label,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-2 rounded-lg border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-primary">
+        {icon}
+        <span className="text-[10px] font-bold tracking-widest uppercase opacity-70">{label}</span>
+      </div>
+      <div className="mt-1">
+        <p className="font-semibold text-sm truncate" title={title}>
+          {title}
+        </p>
+        <p className="text-xs text-muted-foreground truncate" title={description}>
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div className="flex items-center justify-center opacity-30">
+      <IconArrowRight className="hidden size-5 md:block" />
+      {/* Down arrow for mobile could be added here */}
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">

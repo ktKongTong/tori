@@ -34,7 +34,15 @@ export function IntegrationProxiesPage() {
       <DataTable
         columns={integrationProxyColumns}
         data={integrationData?.items ?? []}
-        empty={{ title: "No token proxies", description: "No token proxies registered." }}
+        empty={{
+          title: "No token proxies",
+          description: "No token proxies registered.",
+          action: (
+            <Button onClick={() => modal.open(<TokenProxyDialog />)} variant="outline">
+              Add your first Token Proxy
+            </Button>
+          ),
+        }}
       />
     </div>
   );

@@ -77,10 +77,6 @@ const WORKSPACE_ITEMS: NavTreeItem[] = [
         to: "/binding/channels",
         label: "Channel Bindings",
       },
-      {
-        to: "/binding/claims",
-        label: "Claim Sessions",
-      },
     ],
   },
   {
