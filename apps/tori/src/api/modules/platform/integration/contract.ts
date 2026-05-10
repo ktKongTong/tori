@@ -13,7 +13,6 @@ export const proxyInstanceDtoSchema = z.object({
   provider: z.string(),
   name: z.string().nullable(),
   baseUrl: z.string(),
-  credentialRef: z.string(),
   status: z.string(),
   healthStatus: z.string(),
   capabilities: z.unknown().nullable(),

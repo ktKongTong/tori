@@ -43,7 +43,7 @@ export function BindingPage() {
 
       <DataTable
         columns={bindingColumns}
-        data={data?.items ?? []}
+        data={data?.data ?? []}
         isLoading={bindingQuery.isLoading}
         error={bindingQuery.error}
         onRetry={() => void bindingQuery.refetch()}

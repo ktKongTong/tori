@@ -1,19 +1,34 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, getColumns } from "drizzle-orm";
 import { connections, proxyInstances } from "@/api/db/schema/pg";
 import { accountProfiles } from "@/api/modules/steam/core/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type { CreateConnectionInput, IConnectionRepository } from "./repository.ts";
 import { list } from "@repo/db/utils/pg";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
+import { uniqueId } from "@repo/utils/id";
+import { dynamicQuery } from "@repo/db/utils/pg";
+import { toPageResult } from "@repo/db/utils";
 
 export class ConnectionPgRepository implements IConnectionRepository {
   constructor(private readonly db: PGDB) {}
 
   async listConnections(page: PageBasedPaginationParam) {
-    return list(this.db, connections, {
-      orderBy: [{ column: "createdAt", direction: "desc" }],
-      page,
-    });
+    const query = this.db
+      .select({
+        ...getColumns(connections),
+        proxy: proxyInstances,
+      })
+      .from(connections)
+      .leftJoin(proxyInstances, eq(proxyInstances.id, connections.proxyInstanceId));
+
+    const [result, total] = await Promise.all([
+      dynamicQuery(query.$dynamic(), connections, {
+        orderBy: [{ column: "createdAt", direction: "desc" }],
+        page,
+      }),
+      this.db.$count(connections),
+    ]);
+    return toPageResult(result, total, page);
   }
 
   async listAccountProfiles(page: PageBasedPaginationParam) {
@@ -44,7 +59,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
 
   async createConnection(input: CreateConnectionInput) {
     const values: typeof connections.$inferInsert = {
-      id: input.id,
+      id: input?.id ?? uniqueId(),
       ownerUserId: input.ownerUserId,
       provider: input.provider,
       providerAccountId: input.providerAccountId,

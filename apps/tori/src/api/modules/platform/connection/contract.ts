@@ -1,10 +1,12 @@
 import { PageBasedPaginationResultSchema } from "@repo/utils/schema/paging";
 import { z } from "zod";
+import { proxyInstanceDtoSchema } from "@/api/modules/platform/integration/contract.ts";
 
 export const connectionDtoSchema = z.object({
   id: z.string(),
   ownerUserId: z.string(),
   proxyInstanceId: z.string().nullable(),
+  proxy: proxyInstanceDtoSchema.nullish(),
   provider: z.string(),
   providerAccountId: z.string(),
   providerAccountName: z.string().nullable(),
@@ -45,9 +47,7 @@ export const createConnectionDtoSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const connectionCreatedDtoSchema = connectionDtoSchema.extend({
-  created: z.boolean(),
-});
+export const connectionCreatedDtoSchema = connectionDtoSchema;
 
 export const accountProfileResponseDtoSchema = z.object({
   connectionId: z.string().optional(),

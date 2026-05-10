@@ -80,18 +80,18 @@ export const connectCommand = defineBotCommand({
     });
 
     await botIngressRepository.markOnlyDefaultConnection({
-      ownerUserId: result.connection.ownerUserId,
+      ownerUserId: result.ownerUserId,
       provider: "steam",
-      connectionId: result.connection.id,
+      connectionId: result.id,
     });
 
     return {
       kind: "connected" as const,
       provider: "steam",
-      connectionId: result.connection.id,
-      providerAccountId: result.connection.providerAccountId,
+      connectionId: result.id,
+      providerAccountId: result.providerAccountId,
       accessMode: "public-id" as const,
-      created: result.created,
+      created: true,
     };
   },
 });

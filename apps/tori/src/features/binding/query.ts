@@ -23,17 +23,7 @@ export function useUserBindingsQuery(
 ) {
   return useQuery({
     queryKey: bindingQueryKeys.userBindings(pagination),
-    queryFn: async () => {
-      const bindings = await listUserBindings(pagination);
-      return {
-        items: bindings.data.map(
-          (binding): UserBindingListItem => ({
-            binding,
-            user: null,
-          }),
-        ),
-      };
-    },
+    queryFn: async () => listUserBindings(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -44,18 +34,7 @@ export function useChannelBindingsQuery(
 ) {
   return useQuery({
     queryKey: bindingQueryKeys.channelBindings(pagination),
-    queryFn: async () => {
-      const bindings = await listChannelBindings(pagination);
-      return {
-        items: bindings.data.map(
-          (binding): ChannelBindingListItem => ({
-            binding,
-            channel: null,
-            botInstance: null,
-          }),
-        ),
-      };
-    },
+    queryFn: async () => listChannelBindings(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -66,10 +45,7 @@ export function useClaimSessionsQuery(
 ) {
   return useQuery({
     queryKey: bindingQueryKeys.claimSessions(pagination),
-    queryFn: async () => {
-      const page = await listClaimSessions(pagination);
-      return { items: page.data, page: page.page };
-    },
+    queryFn: async () => listClaimSessions(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });

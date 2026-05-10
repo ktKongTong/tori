@@ -1,4 +1,4 @@
-import { NotFoundError, ParameterError } from "@/api/domain/error/index.ts";
+import { NotFoundError, ParameterError, StatusConflictError } from "@/api/domain/error/index.ts";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import { uniqueId } from "@repo/utils/id";
 import type { CreateConnectionInput } from "./type.ts";
@@ -13,9 +13,7 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
     providerAccountId: input.providerAccountId,
   });
 
-  if (existing) {
-    return { connection: existing, created: false };
-  }
+  if (existing) throw new StatusConflictError("connection already exist");
 
   if (input.accessMode !== "public-id" && !input.proxyInstanceId) {
     throw new ParameterError("proxy-backed connection requires proxyInstanceId");
@@ -24,17 +22,10 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
   const row = await ctx.repositories.connection.createConnection({
     id: uniqueId(),
     ownerUserId: userId,
-    provider: input.provider,
-    providerAccountId: input.providerAccountId,
-    providerAccountName: input.providerAccountName ?? null,
-    providerAccountAvatar: input.providerAccountAvatar ?? null,
-    accessMode: input.accessMode,
-    proxyInstanceId: input.proxyInstanceId ?? null,
-    isDefault: input.isDefault ?? false,
-    metadata: input.metadata ?? null,
+    ...input,
   });
 
-  return { connection: row, created: true };
+  return row;
 }
 
 export async function resolveConnectionAccess(ctx: ServiceContext, connectionId: string) {

@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
-import { listAccountProfiles, listConnections, listProxyInstances } from "./api";
+import { listConnections, listProxyInstances } from "./api";
+import { useToastError } from "@/lib/toast-error.ts";
 
 export const integrationQueryKeys = {
   proxyInstances: (pagination: PageBasedPaginationParam) =>
@@ -17,10 +18,7 @@ export function useProxyInstancesQuery(
 ) {
   return useQuery({
     queryKey: integrationQueryKeys.proxyInstances(pagination),
-    queryFn: async () => {
-      const page = await listProxyInstances(pagination);
-      return { items: page.data, page: page.page };
-    },
+    queryFn: async () => listProxyInstances(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -29,30 +27,14 @@ export function useProxyInstancesQuery(
 export function useConnectionsQuery(
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
 ) {
-  return useQuery({
+  const query = useQuery({
     queryKey: integrationQueryKeys.connections(pagination),
-    queryFn: async () => {
-      const [connections, proxies, profiles] = await Promise.all([
-        listConnections(pagination),
-        listProxyInstances(),
-        listAccountProfiles(),
-      ]);
-      const proxyById = new Map(proxies.data.map((proxy) => [proxy.id, proxy]));
-      const profileByConnectionId = new Map(
-        profiles.data.map((profile) => [profile.connectionId, profile]),
-      );
-
-      return {
-        items: connections.data.map((connection) => ({
-          connection,
-          proxy: connection.proxyInstanceId
-            ? (proxyById.get(connection.proxyInstanceId) ?? null)
-            : null,
-          profile: profileByConnectionId.get(connection.id) ?? null,
-        })),
-      };
-    },
+    queryFn: async () => listConnections(pagination),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
+
+  useToastError(query.error, { title: "Failed to load integrations" });
+
+  return query;
 }

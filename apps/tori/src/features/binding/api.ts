@@ -24,15 +24,8 @@ export const userBindingsSchema = userBindingListDtoSchema;
 export const channelBindingsSchema = channelBindingListDtoSchema;
 export const claimSessionsSchema = claimSessionListDtoSchema;
 
-export type UserBindingListItem = {
-  binding: UserBindingDto;
-  user: { id: string; name: string } | null;
-};
-export type ChannelBindingListItem = {
-  binding: ChannelBindingDto;
-  channel: { id: string; name: string | null } | null;
-  botInstance: { id: string; displayName: string | null } | null;
-};
+export type UserBindingListItem = UserBindingDto;
+export type ChannelBindingListItem = ChannelBindingDto;
 
 export const listUserBindings = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },

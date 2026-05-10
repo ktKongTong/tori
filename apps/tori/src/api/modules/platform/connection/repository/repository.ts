@@ -39,7 +39,7 @@ export interface ProxyInstance {
 }
 
 export interface CreateConnectionInput {
-  id: string;
+  id?: string;
   ownerUserId: string;
   provider: string;
   providerAccountId: string;

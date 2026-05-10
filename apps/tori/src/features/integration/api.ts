@@ -29,11 +29,7 @@ export const proxyInstancesSchema = proxyInstanceListDtoSchema;
 export const connectionsSchema = connectionListDtoSchema;
 export const accountProfilesSchema = accountProfileListDtoSchema;
 
-export type IntegrationConnectionListItem = {
-  connection: ConnectionDto;
-  proxy: ProxyInstanceDto | null;
-  profile: AccountProfileDto | null;
-};
+export type IntegrationConnectionListItem = ConnectionDto;
 
 export const listProxyInstances = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },

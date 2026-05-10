@@ -21,7 +21,7 @@ export function BindingChannelsPage() {
 
       <DataTable
         columns={bindingChannelColumns}
-        data={bindingData?.items ?? []}
+        data={bindingData?.data ?? []}
         empty={{
           title: "No channel bindings",
           description: "No active channel bindings available.",

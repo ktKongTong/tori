@@ -30,11 +30,9 @@ export function BindingClaimsPage() {
       <DashboardActionBar>
         <Button
           onClick={() => {
-            if (session?.user.id) {
-              modal.open(<IssueTokenDialog userId={session.user.id} />);
-            }
+            modal.open(<IssueTokenDialog userId={session!.user.id} />);
           }}
-          disabled={!session?.user.id}
+          disabled={!session?.user?.id}
         >
           Issue Token
         </Button>
@@ -42,7 +40,7 @@ export function BindingClaimsPage() {
 
       <DataTable
         columns={bindingClaimColumns}
-        data={data?.items ?? []}
+        data={data?.data ?? []}
         empty={{ title: "No claim sessions", description: "No claim sessions available." }}
       />
     </div>

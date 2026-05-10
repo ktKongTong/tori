@@ -25,7 +25,7 @@ export function ConnectionDetailSheet({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { connection, profile, proxy } = item;
+  const connection = item;
 
   const fetchProfile = useMutation({
     mutationFn: async (connectionId: string) => fetchIntegrationAccountProfile(connectionId),
@@ -46,8 +46,7 @@ export function ConnectionDetailSheet({
   useToastError(fetchProfile.error, { title: "Failed to fetch account profile" });
   useToastError(refreshFamily.error, { title: "Failed to refresh family" });
 
-  const displayName =
-    profile?.personaName ?? connection.providerAccountName ?? connection.providerAccountId;
+  const displayName = connection.providerAccountName ?? connection.providerAccountId;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -82,8 +81,11 @@ export function ConnectionDetailSheet({
                     : "Never"
                 }
               />
-              {proxy ? (
-                <DetailItem label="Attached Proxy" value={`${proxy.name} (${proxy.status})`} />
+              {connection.proxy ? (
+                <DetailItem
+                  label="Attached Proxy"
+                  value={`${connection.proxy.name} (${connection.proxy.status})`}
+                />
               ) : null}
             </div>
 
@@ -128,13 +130,6 @@ export function ConnectionDetailSheet({
                   value={connection.providerAccountId}
                   onCopy={() => copyToClipboard(connection.providerAccountId)}
                 />
-                {profile?.steamId ? (
-                  <DiagnosticItem
-                    label="Steam ID"
-                    value={profile.steamId}
-                    onCopy={() => copyToClipboard(profile.steamId)}
-                  />
-                ) : null}
               </div>
             </div>
           </div>

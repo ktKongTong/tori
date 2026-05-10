@@ -33,7 +33,7 @@ export function IntegrationProxiesPage() {
       </DashboardActionBar>
       <DataTable
         columns={integrationProxyColumns}
-        data={integrationData?.items ?? []}
+        data={integrationData?.data ?? []}
         isLoading={integrationQuery.isLoading}
         error={integrationQuery.error}
         onRetry={() => void integrationQuery.refetch()}

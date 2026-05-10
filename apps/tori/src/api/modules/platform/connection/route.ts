@@ -70,10 +70,7 @@ app.post(
     const body = c.req.valid("json");
     const result = await createConnection(c.get("serviceContext"), body);
 
-    return c.json({
-      ...result.connection,
-      created: result.created,
-    });
+    return c.json(result);
   },
 );
 
