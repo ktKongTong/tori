@@ -28,6 +28,9 @@ export type DataTableProps<TData> = {
   columns: ColumnDef<TData>[];
   data: TData[];
   empty: DataTableEmptyState | string;
+  isLoading?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
   density?: DataTableDensity;
   getRowId?: TableOptions<TData>["getRowId"];
   className?: string;

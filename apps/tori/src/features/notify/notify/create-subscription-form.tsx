@@ -17,6 +17,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Link } from "@tanstack/react-router";
 
 import { createSubscription as createSubscriptionRequest } from "@/features/notify/api";
 import { useChannelBindingsQuery } from "@/features/binding/query";
@@ -106,13 +107,66 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
 
   useToastError(createSubscription.error, { title: "Failed to create subscription" });
 
+  if (bindingQuery.isLoading || integrationQuery.isLoading) {
+    return (
+      <DialogContent>
+        <p className="p-8 text-center text-muted-foreground">Checking dependencies...</p>
+      </DialogContent>
+    );
+  }
+
+  // Dependency Checks
+  if (availableChannelBindings.length === 0) {
+    return (
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Channel Required</DialogTitle>
+          <DialogDescription>
+            You need to bind at least one chat channel before you can create a subscription.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-6 text-center">
+          <Button
+            variant="default"
+            render={<Link to="/binding/channels" />}
+            onClick={() => modal.close()}
+          >
+            Go to Channel Bindings
+          </Button>
+        </div>
+      </DialogContent>
+    );
+  }
+
+  if (availableConnections.length === 0) {
+    return (
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Connection Required</DialogTitle>
+          <DialogDescription>
+            You need to connect an external account (like Steam) before you can subscribe to its
+            events.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-6 text-center">
+          <Button
+            variant="default"
+            render={<Link to="/integration" />}
+            onClick={() => modal.close()}
+          >
+            Go to Connections
+          </Button>
+        </div>
+      </DialogContent>
+    );
+  }
+
   return (
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle className="normal-case">Create Subscription</DialogTitle>
         <DialogDescription>
-          Pick the chat surface that should receive notifications and the connection that should
-          drive refresh and matching.
+          Choose what you want to subscribe to and where the notifications should be delivered.
         </DialogDescription>
       </DialogHeader>
       <form
@@ -123,67 +177,8 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
         }}
       >
         <FieldGroup className="grid gap-4 md:grid-cols-2">
-          <subscriptionForm.Field
-            name="channelId"
-            children={(field) => {
-              const invalid = field.state.meta.errors.length > 0;
-
-              return (
-                <Field data-invalid={invalid}>
-                  <FieldLabel>Target Chat</FieldLabel>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value ?? "")}
-                  >
-                    <SelectTrigger className="w-full" aria-invalid={invalid}>
-                      <SelectValue placeholder="Select a bound chat" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableChannelBindings.map((binding) => (
-                        <SelectItem key={binding.binding.id} value={binding.binding.channelId}>
-                          {binding.channel?.name ?? binding.binding.channelId} ·{" "}
-                          {binding.binding.externalChannelName ?? binding.binding.externalChannelId}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={field.state.meta.errors} />
-                </Field>
-              );
-            }}
-          />
-          <subscriptionForm.Field
-            name="connectionId"
-            children={(field) => {
-              const invalid = field.state.meta.errors.length > 0;
-
-              return (
-                <Field data-invalid={invalid}>
-                  <FieldLabel>Connection</FieldLabel>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value ?? "")}
-                  >
-                    <SelectTrigger className="w-full" aria-invalid={invalid}>
-                      <SelectValue placeholder="Select a connection" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableConnections.map((connection) => (
-                        <SelectItem key={connection.connection.id} value={connection.connection.id}>
-                          {connection.connection.providerAccountName ??
-                            connection.connection.providerAccountId}{" "}
-                          · {connection.connection.provider}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={field.state.meta.errors} />
-                </Field>
-              );
-            }}
-          />
           <Field>
-            <FieldLabel>Subscription Template</FieldLabel>
+            <FieldLabel>1. What to subscribe to?</FieldLabel>
             <subscriptionForm.Subscribe
               selector={(state) => ({
                 eventTypes: state.values.eventTypes,
@@ -202,26 +197,89 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue placeholder="Choose a subscription target" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={'steam.family|*|["family.library.updated"]'}>
-                      Steam family library changes
+                      Steam Family Library Changes
                     </SelectItem>
                     <SelectItem value={'steam.account|*|["profile.updated"]'}>
-                      Steam profile updates
+                      Steam Profile Updates
                     </SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
           </Field>
-          <div className="md:col-span-2 flex justify-end">
+
+          <subscriptionForm.Field
+            name="connectionId"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel>2. Use which account?</FieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) => field.handleChange(value ?? "")}
+                  >
+                    <SelectTrigger className="w-full" aria-invalid={invalid}>
+                      <SelectValue placeholder="Select a connected account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableConnections.map((connection) => (
+                        <SelectItem key={connection.connection.id} value={connection.connection.id}>
+                          {connection.connection.providerAccountName ??
+                            connection.connection.providerAccountId}{" "}
+                          · {connection.connection.provider}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+
+          <subscriptionForm.Field
+            name="channelId"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel>3. Deliver to where?</FieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) => field.handleChange(value ?? "")}
+                  >
+                    <SelectTrigger className="w-full" aria-invalid={invalid}>
+                      <SelectValue placeholder="Select a bound channel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableChannelBindings.map((binding) => (
+                        <SelectItem key={binding.binding.id} value={binding.binding.channelId}>
+                          {binding.channel?.name ?? binding.binding.channelId} ·{" "}
+                          {binding.binding.externalChannelName ?? binding.binding.externalChannelId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+
+          <div className="md:col-span-2 flex justify-end mt-4">
             <subscriptionForm.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([canSubmit, isSubmitting]) => (
                 <Button
                   type="submit"
+                  className="w-full sm:w-auto"
                   disabled={createSubscription.isPending || isSubmitting || !canSubmit}
                 >
                   {createSubscription.isPending || isSubmitting

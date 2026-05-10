@@ -15,7 +15,7 @@ export function BotInstancesPage() {
   const role = (session?.user as { role?: string } | undefined)?.role ?? "";
   const isAdmin = role.includes("admin");
   const botInstancesQuery = useBotInstancesQuery();
-  const botInstancesData = botInstancesQuery.data;
+  const botInstancesData = botInstancesQuery.data?.data;
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -31,8 +31,19 @@ export function BotInstancesPage() {
       </DashboardActionBar>
       <DataTable
         columns={botInstanceColumns}
-        data={botInstancesData?.items ?? []}
-        empty={{ title: "No bot instances", description: "No bot instances available." }}
+        data={botInstancesData ?? []}
+        isLoading={botInstancesQuery.isLoading}
+        error={botInstancesQuery.error}
+        onRetry={() => void botInstancesQuery.refetch()}
+        empty={{
+          title: "No bot instances",
+          description: "No bot instances available.",
+          action: (
+            <Button onClick={() => modal.open(<CreateBotInstanceDialog />)} variant="outline">
+              Create your first Bot Instance
+            </Button>
+          ),
+        }}
       />
     </div>
   );

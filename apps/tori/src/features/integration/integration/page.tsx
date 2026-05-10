@@ -34,6 +34,9 @@ export function IntegrationPage() {
       <DataTable
         columns={columns}
         data={integrationData?.items ?? []}
+        isLoading={integrationQuery.isLoading}
+        error={integrationQuery.error}
+        onRetry={() => void integrationQuery.refetch()}
         empty={{
           title: "No provider connections available",
           description: "You have not connected any external provider accounts yet.",

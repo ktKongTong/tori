@@ -14,8 +14,7 @@ export function useBotInstancesQuery(
   return useQuery({
     queryKey: botInstancesQueryKeys.instances(pagination),
     queryFn: async () => {
-      const page = await listBotInstances(pagination);
-      return { items: page.data, page: page.page };
+      return listBotInstances(pagination);
     },
     staleTime: 0,
     refetchOnWindowFocus: true,

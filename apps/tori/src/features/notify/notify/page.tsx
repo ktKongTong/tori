@@ -49,9 +49,25 @@ export function NotifySubscriptionPage() {
       <DataTable
         columns={columns}
         data={notifyData?.data ?? []}
+        isLoading={notifyQuery.isLoading}
+        error={notifyQuery.error}
+        onRetry={() => void notifyQuery.refetch()}
         empty={{
           title: "No subscriptions available",
           description: "You have not subscribed to any events yet.",
+          action: (
+            <Button
+              onClick={() => {
+                if (session?.user?.id) {
+                  modal.open(<SubscriptionDialog userId={session.user.id} />);
+                }
+              }}
+              variant="outline"
+              disabled={!session?.user?.id}
+            >
+              Create your first Subscription
+            </Button>
+          ),
         }}
       />
 

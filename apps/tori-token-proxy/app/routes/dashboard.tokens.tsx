@@ -351,6 +351,9 @@ function DashboardTokensPage() {
       <DataTable
         columns={columns}
         data={rows}
+        isLoading={connectionsQuery.isLoading}
+        error={connectionsQuery.error instanceof Error ? connectionsQuery.error : null}
+        onRetry={() => void connectionsQuery.refetch()}
         empty={{ title: "No tokens", description: "No issued tokens are available yet." }}
       />
 

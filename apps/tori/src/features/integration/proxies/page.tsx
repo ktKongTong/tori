@@ -34,6 +34,9 @@ export function IntegrationProxiesPage() {
       <DataTable
         columns={integrationProxyColumns}
         data={integrationData?.items ?? []}
+        isLoading={integrationQuery.isLoading}
+        error={integrationQuery.error}
+        onRetry={() => void integrationQuery.refetch()}
         empty={{
           title: "No token proxies",
           description: "No token proxies registered.",

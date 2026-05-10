@@ -142,6 +142,9 @@ function DashboardOverviewPage() {
         <DataTable
           columns={connectionColumns}
           data={recentConnections}
+          isLoading={connectionsQuery.isLoading}
+          error={connectionsQuery.error instanceof Error ? connectionsQuery.error : null}
+          onRetry={() => void connectionsQuery.refetch()}
           empty={{ title: "No connections", description: "No issued tokens are available yet." }}
         />
       </section>
@@ -153,6 +156,9 @@ function DashboardOverviewPage() {
         <DataTable
           columns={logColumns}
           data={recentLogs}
+          isLoading={logsQuery.isLoading}
+          error={logsQuery.error instanceof Error ? logsQuery.error : null}
+          onRetry={() => void logsQuery.refetch()}
           empty={{ title: "No logs", description: "No request logs have been recorded yet." }}
         />
       </section>
