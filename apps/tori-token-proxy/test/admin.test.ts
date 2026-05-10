@@ -152,4 +152,68 @@ describe("admin connect flow", () => {
     expect(listData.items[0].provider).toBe("mock-connect");
     expect(listData.items[0].apiKey).toBe(completedData.apiKey);
   });
+
+  it("creates an externally exchangeable connection for Tori callback flow", async () => {
+    const { app } = createTestApp();
+    const state = "external-state-0001";
+    const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
+
+    const startResponse = await request(
+      app,
+      "GET",
+      `/admin/external-connect?provider=mock-connect&state=${encodeURIComponent(
+        state,
+      )}&callback=${encodeURIComponent(callback)}&permissions=proxy,account`,
+    );
+    expect(startResponse.status).toBe(200);
+    const html = await startResponse.text();
+    const sessionId = html.match(/external_connect_[a-f0-9]+/)?.[0];
+    expect(sessionId).toBeTruthy();
+
+    const pendingResponse = await request(app, "GET", `/admin/external-connect/${sessionId}`);
+    expect(pendingResponse.status).toBe(200);
+    expect(((await pendingResponse.json()) as any).status).toBe("pending");
+
+    const completedResponse = await request(app, "GET", `/admin/external-connect/${sessionId}`);
+    expect(completedResponse.status).toBe(200);
+    const completedData = (await completedResponse.json()) as any;
+    expect(completedData.status).toBe("completed");
+    expect(completedData.providerUid).toBe("mock-user-001");
+
+    const confirmResponse = await request(
+      app,
+      "POST",
+      `/admin/external-connect/${sessionId}/confirm`,
+      {
+        body: { state },
+      },
+    );
+    expect(confirmResponse.status).toBe(200);
+    const confirmData = (await confirmResponse.json()) as any;
+    const redirectUrl = new URL(confirmData.redirectUrl);
+    expect(`${redirectUrl.origin}${redirectUrl.pathname}`).toBe(callback);
+    expect(redirectUrl.searchParams.get("state")).toBe(state);
+    const code = redirectUrl.searchParams.get("code");
+    expect(code).toMatch(new RegExp(`^${sessionId}\\.tp_code_`));
+
+    const exchangeResponse = await request(app, "POST", "/admin/external-connect/exchange", {
+      body: { code, state },
+    });
+    expect(exchangeResponse.status).toBe(200);
+    const exchangeData = (await exchangeResponse.json()) as any;
+    expect(exchangeData.connection.provider).toBe("mock-connect");
+    expect(exchangeData.connection.providerUid).toBe("mock-user-001");
+    expect(exchangeData.account.providerAccountName).toBe("Mock Admin User");
+    expect(exchangeData.apiKey).toMatch(/^ak_/);
+
+    const repeatedExchangeResponse = await request(
+      app,
+      "POST",
+      "/admin/external-connect/exchange",
+      {
+        body: { code, state },
+      },
+    );
+    expect(repeatedExchangeResponse.status).toBe(404);
+  });
 });

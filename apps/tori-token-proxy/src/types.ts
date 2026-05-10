@@ -64,8 +64,13 @@ export interface AuthSessionState {
   flowType: "poll" | "redirect" | "direct";
   challengeData: Record<string, unknown>;
   expiresAt: number;
-  mode?: "connect" | "reconnect";
+  mode?: "connect" | "reconnect" | "external-connect";
   reconnectConnectionId?: string | null;
+  externalConnect?: {
+    state: string;
+    callbackUrl: string;
+    connectionId?: string | null;
+  } | null;
   requestedConnection?: {
     label?: string | null;
     permissions?: string[];
