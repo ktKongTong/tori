@@ -75,6 +75,7 @@ export interface CreateNotificationEventInput {
   payload: unknown;
   status?: string;
   sentAt?: Date;
+  failedAt?: Date;
   errorMessage?: string | null;
   createdAt?: Date;
 }

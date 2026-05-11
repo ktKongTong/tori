@@ -77,7 +77,8 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
   async findSubscriptionIdentity(input: {
     channelId: string;
     connectionId: string;
-    botPluginInstanceId: string;
+    ownerType: string;
+    ownerId: string;
     topicType: string;
     topicKey: string;
   }) {
@@ -88,7 +89,8 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
         and(
           eq(subscriptions.channelId, input.channelId),
           eq(subscriptions.connectionId, input.connectionId),
-          eq(subscriptions.botPluginInstanceId, input.botPluginInstanceId),
+          eq(subscriptions.ownerType, input.ownerType),
+          eq(subscriptions.ownerId, input.ownerId),
           eq(subscriptions.topicType, input.topicType),
           eq(subscriptions.topicKey, input.topicKey),
         ),
@@ -137,14 +139,6 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
     return rows.length;
   }
 
-  async deleteSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .delete(subscriptions)
-      .where(eq(subscriptions.botPluginInstanceId, botPluginInstanceId))
-      .returning({ id: subscriptions.id });
-    return rows.map((row) => row.id);
-  }
-
   async deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string) {
     const rows = await this.db
       .delete(notificationEvents)
@@ -166,20 +160,6 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
       .update(subscriptions)
       .set({ status: "disabled", updatedAt: new Date() })
       .where(and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active")))
-      .returning({ id: subscriptions.id });
-    return rows.length;
-  }
-
-  async disableActiveSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .update(subscriptions)
-      .set({ status: "disabled", updatedAt: new Date() })
-      .where(
-        and(
-          eq(subscriptions.botPluginInstanceId, botPluginInstanceId),
-          eq(subscriptions.status, "active"),
-        ),
-      )
       .returning({ id: subscriptions.id });
     return rows.length;
   }

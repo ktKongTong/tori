@@ -3,7 +3,6 @@ import type {
   PageBasedPaginationResult,
 } from "@repo/utils/schema/paging";
 import type { AccountProfileRow } from "@/api/modules/steam/core/account/repository";
-
 export interface Connection {
   id: string;
   ownerUserId: string;
@@ -18,6 +17,7 @@ export interface Connection {
   metadata: unknown;
   connectedAt: Date;
   lastSyncedAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +34,7 @@ export interface ProxyInstance {
   capabilities: unknown;
   metadata: unknown;
   lastSeenAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +49,7 @@ export interface ConnectionCredential {
   metadata: unknown;
   lastUsedAt: Date | null;
   expiresAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

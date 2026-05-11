@@ -29,8 +29,9 @@ export const disableDependentsForBotInstance = createEventConsumer<BotInstanceLi
     const botInstanceId = payload?.botInstanceId;
     if (!botInstanceId) return { id: ctx.event.id, status: "DROP", reason: "missing bot id" };
 
-    await ctx.repositories.subscription.disableActiveSubscriptionsByBotPluginInstanceId(
+    await ctx.repositories.binding.suspendActiveChannelBindingsByBotPluginInstanceId(
       botInstanceId,
+      "bot-instance-disabled",
     );
 
     return { id: ctx.event.id, status: "SUCCESS" };
@@ -46,11 +47,9 @@ export const revokeDependentsForDeletedBotInstance =
       const botInstanceId = payload?.botInstanceId;
       if (!botInstanceId) return { id: ctx.event.id, status: "DROP", reason: "missing bot id" };
 
-      await ctx.repositories.binding.revokeActiveChannelBindingsByBotPluginInstanceId(
+      await ctx.repositories.binding.suspendActiveChannelBindingsByBotPluginInstanceId(
         botInstanceId,
-      );
-      await ctx.repositories.subscription.disableActiveSubscriptionsByBotPluginInstanceId(
-        botInstanceId,
+        "bot-instance-deleted",
       );
 
       return { id: ctx.event.id, status: "SUCCESS" };

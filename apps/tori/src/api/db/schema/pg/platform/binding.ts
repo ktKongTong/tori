@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, jsonb, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, jsonb, text, uniqueIndex, timestamp } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import { requiredTimestamptz, timestamps, timestamptz } from "../utils.js";
 import { pgTable } from "./schema.js";
@@ -72,13 +72,15 @@ export const userBindings = pgTable(
     supersededByBindingId: text("superseded_by_binding_id"),
     revokedReason: text("revoked_reason"),
     metadata: jsonb("metadata"),
+    // soft delete
+    deletedAt: timestamp("deleted_at"),
     ...timestamps,
     endedAt: timestamptz("ended_at"),
   },
   (table) => [
     uniqueIndex("uq_user_binding_identity")
       .on(table.platform, table.externalUserId, table.namespace)
-      .where(sql`${table.status} = 'active'`),
+      .where(sql`${table.deletedAt} IS NULL`),
   ],
 );
 
@@ -100,14 +102,16 @@ export const channelBindings = pgTable(
     status: text("status").notNull().default("active"),
     supersededByBindingId: text("superseded_by_binding_id"),
     revokedReason: text("revoked_reason"),
+    suspendedReason: text("suspended_reason"),
     metadata: jsonb("metadata"),
+    deletedAt: timestamp("deleted_at"),
     ...timestamps,
     endedAt: timestamptz("ended_at"),
   },
   (table) => [
     uniqueIndex("uq_channel_binding_identity")
       .on(table.platform, table.externalChannelId, table.namespace)
-      .where(sql`${table.status} = 'active'`),
+      .where(sql`${table.deletedAt} IS NULL`),
   ],
 );
 

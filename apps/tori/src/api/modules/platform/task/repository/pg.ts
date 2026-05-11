@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql, isNull } from "drizzle-orm";
 import { taskDefinitions, taskRuns } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
@@ -18,6 +18,7 @@ export class TaskPgRepository implements ITaskRepository {
     return list(this.db, taskDefinitions, {
       orderBy: [{ column: "createdAt", direction: "desc" }],
       page,
+      where: isNull(taskDefinitions.deletedAt),
     });
   }
   async getTaskDefinitionsByKind(
@@ -27,6 +28,7 @@ export class TaskPgRepository implements ITaskRepository {
   ) {
     const where = and(
       eq(taskDefinitions.kind, kind),
+      isNull(taskDefinitions.deletedAt),
       userId ? eq(taskDefinitions.ownerUserId, userId) : undefined,
     );
 
@@ -37,7 +39,7 @@ export class TaskPgRepository implements ITaskRepository {
     const [task] = await this.db
       .select()
       .from(taskDefinitions)
-      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)))
       .limit(1);
     if (!task) throw new NotFoundError(`NotFound task definition: ${taskDefinitionId}`);
 
@@ -50,7 +52,10 @@ export class TaskPgRepository implements ITaskRepository {
   }
 
   async listTaskDefinitionsByOwner(ownerUserId: string, page: PageBasedPaginationParam) {
-    const where = eq(taskDefinitions.ownerUserId, ownerUserId);
+    const where = and(
+      eq(taskDefinitions.ownerUserId, ownerUserId),
+      isNull(taskDefinitions.deletedAt),
+    );
     return list(this.db, taskDefinitions, {
       where,
       orderBy: [{ column: "createdAt", direction: "desc" }],
@@ -59,7 +64,10 @@ export class TaskPgRepository implements ITaskRepository {
   }
 
   async listEnabledTaskDefinitions(page: PageBasedPaginationParam) {
-    return list(this.db, taskDefinitions, { where: eq(taskDefinitions.enabled, true), page });
+    return list(this.db, taskDefinitions, {
+      where: and(eq(taskDefinitions.enabled, true), isNull(taskDefinitions.deletedAt)),
+      page,
+    });
   }
 
   async getTaskRunById(taskRunId: string) {
@@ -75,7 +83,7 @@ export class TaskPgRepository implements ITaskRepository {
     const [taskDefinition] = await this.db
       .select()
       .from(taskDefinitions)
-      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)))
       .limit(1);
     return taskDefinition ?? null;
   }
@@ -119,7 +127,7 @@ export class TaskPgRepository implements ITaskRepository {
         lastError: null,
         updatedAt: input.finishedAt,
       })
-      .where(eq(taskDefinitions.id, taskDefinitionId));
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)));
   }
 
   async markTaskDefinitionRunFailed(
@@ -135,7 +143,7 @@ export class TaskPgRepository implements ITaskRepository {
         lastError: input.errorMessage,
         updatedAt: input.finishedAt,
       })
-      .where(eq(taskDefinitions.id, taskDefinitionId));
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)));
   }
 
   async createTaskDefinition(input: CreateTaskDefinitionInput) {
@@ -147,7 +155,7 @@ export class TaskPgRepository implements ITaskRepository {
     const [taskDefinition] = await this.db
       .update(taskDefinitions)
       .set({ ...input, updatedAt: new Date() })
-      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)))
       .returning();
     return taskDefinition ?? null;
   }
@@ -171,7 +179,7 @@ export class TaskPgRepository implements ITaskRepository {
         lastTriggeredAt: triggeredAt,
         updatedAt: new Date(),
       })
-      .where(eq(taskDefinitions.id, taskDefinitionId));
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)));
   }
 
   async disableTaskDefinitionsByPayloadConnectionId(connectionId: string) {
@@ -184,6 +192,7 @@ export class TaskPgRepository implements ITaskRepository {
       .where(
         and(
           eq(taskDefinitions.enabled, true),
+          isNull(taskDefinitions.deletedAt),
           sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`,
         ),
       )
@@ -212,10 +221,10 @@ export class TaskPgRepository implements ITaskRepository {
       .update(taskDefinitions)
       .set({
         enabled: false,
-        metadata: sql`coalesce(${taskDefinitions.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()})`,
+        deletedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)))
       .returning();
     return row ?? null;
   }
@@ -225,20 +234,22 @@ export class TaskPgRepository implements ITaskRepository {
       .update(taskDefinitions)
       .set({
         enabled: false,
-        metadata: sql`coalesce(${taskDefinitions.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()}, 'deletedByLifecycle', true)`,
+        deletedAt: new Date(),
+        metadata: sql`coalesce(${taskDefinitions.metadata}, '{}'::jsonb) || jsonb_build_object('deletedByLifecycle', true)`,
         updatedAt: new Date(),
       })
-      .where(sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`)
+      .where(
+        and(
+          sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`,
+          isNull(taskDefinitions.deletedAt),
+        ),
+      )
       .returning({ id: taskDefinitions.id });
     return rows.map((row) => row.id);
   }
 
-  async deleteTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]) {
-    if (!taskDefinitionIds.length) return 0;
-    const rows = await this.db
-      .delete(taskRuns)
-      .where(inArray(taskRuns.taskDefinitionId, taskDefinitionIds))
-      .returning({ id: taskRuns.id });
-    return rows.length;
+  async deleteTaskRunsByTaskDefinitionIds(_taskDefinitionIds: string[]) {
+    // Keep task runs as per lifecycle policy: "Retain task run"
+    return 0;
   }
 }

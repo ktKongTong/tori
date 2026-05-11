@@ -41,7 +41,7 @@ export function createTokenProxyServerApp(
   const pool = new Pool({
     connectionString: databaseUrl,
   });
-  const db = drizzle({ client: pool, schema });
+  const db = drizzle({ client: pool, schema } as never);
   const repo = new PgRepository(db);
   const registry = createDefaultProviderRegistry();
 

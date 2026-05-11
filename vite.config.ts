@@ -25,10 +25,16 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: ["apps/tori/src/routeTree.gen.ts"],
+    ignorePatterns: [
+      "apps/tori/src/routeTree.gen.ts",
+      "apps/tori-token-proxy/app/routeTree.gen.ts",
+    ],
   },
   lint: {
-    ignorePatterns: ["apps/tori/src/routeTree.gen.ts"],
+    ignorePatterns: [
+      "apps/tori/src/routeTree.gen.ts",
+      "apps/tori-token-proxy/app/routeTree.gen.ts",
+    ],
     options: { typeAware: true, typeCheck: true },
   },
   run: {

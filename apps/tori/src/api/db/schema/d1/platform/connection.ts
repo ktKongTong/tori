@@ -21,6 +21,7 @@ export const connections = sqliteTable(
     metadata: text("metadata", { mode: "json" }),
     connectedAt: requiredTimestamptz("connected_at"),
     lastSyncedAt: timestamptz("last_synced_at"),
+    deletedAt: integer("deleted_at", { mode: "timestamp" }),
     ...timestamps,
   },
   (table) => [

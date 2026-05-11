@@ -1,4 +1,4 @@
-import { and, eq, desc, count } from "drizzle-orm";
+import { and, eq, desc, count, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import {
@@ -20,7 +20,12 @@ import type {
 
 export class NotifyPgRepository implements INotifyRepository {
   async listSubscriptions() {
-    return this.db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(100);
+    return this.db
+      .select()
+      .from(subscriptions)
+      .where(isNull(subscriptions.deletedAt))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(100);
   }
 
   async listSubscriptionDetails() {
@@ -29,32 +34,28 @@ export class NotifyPgRepository implements INotifyRepository {
       .select({
         subscription: subscriptions,
         channel: channels,
-        botInstance: botPluginInstances,
         connection: connections,
         ownerUser: user,
         ownerChannel,
       })
       .from(subscriptions)
       .leftJoin(channels, eq(subscriptions.channelId, channels.id))
-      .leftJoin(botPluginInstances, eq(subscriptions.botPluginInstanceId, botPluginInstances.id))
       .leftJoin(connections, eq(subscriptions.connectionId, connections.id))
       .leftJoin(user, and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, user.id)))
       .leftJoin(
         ownerChannel,
         and(eq(subscriptions.ownerType, "CHANNEL"), eq(subscriptions.ownerId, ownerChannel.id)),
       )
+      .where(isNull(subscriptions.deletedAt))
       .orderBy(desc(subscriptions.createdAt))
       .limit(100);
-    return rows.map(
-      ({ subscription, channel, botInstance, connection, ownerUser, ownerChannel }) => ({
-        ...subscription,
-        channel,
-        botInstance,
-        connection,
-        ownerUser,
-        ownerChannel,
-      }),
-    );
+    return rows.map(({ subscription, channel, connection, ownerUser, ownerChannel }) => ({
+      ...subscription,
+      channel,
+      connection,
+      ownerUser,
+      ownerChannel,
+    }));
   }
 
   async getSubscriptionJoinedRowById(id: string) {
@@ -63,27 +64,24 @@ export class NotifyPgRepository implements INotifyRepository {
       .select({
         subscription: subscriptions,
         channel: channels,
-        botInstance: botPluginInstances,
         connection: connections,
         ownerUser: user,
         ownerChannel,
       })
       .from(subscriptions)
       .leftJoin(channels, eq(subscriptions.channelId, channels.id))
-      .leftJoin(botPluginInstances, eq(subscriptions.botPluginInstanceId, botPluginInstances.id))
       .leftJoin(connections, eq(subscriptions.connectionId, connections.id))
       .leftJoin(user, and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, user.id)))
       .leftJoin(
         ownerChannel,
         and(eq(subscriptions.ownerType, "CHANNEL"), eq(subscriptions.ownerId, ownerChannel.id)),
       )
-      .where(eq(subscriptions.id, id))
+      .where(and(eq(subscriptions.id, id), isNull(subscriptions.deletedAt)))
       .limit(1);
     if (!row) return null;
     return {
       ...row.subscription,
       channel: row.channel,
-      botInstance: row.botInstance,
       connection: row.connection,
       ownerUser: row.ownerUser,
       ownerChannel: row.ownerChannel,
@@ -123,7 +121,7 @@ export class NotifyPgRepository implements INotifyRepository {
     const [subscription] = await this.db
       .select()
       .from(subscriptions)
-      .where(eq(subscriptions.id, id))
+      .where(and(eq(subscriptions.id, id), isNull(subscriptions.deletedAt)))
       .limit(1);
     return subscription ?? null;
   }
@@ -159,6 +157,7 @@ export class NotifyPgRepository implements INotifyRepository {
         and(
           eq(subscriptions.connectionId, input.connectionId),
           eq(subscriptions.status, "active"),
+          isNull(subscriptions.deletedAt),
           eq(subscriptions.topicType, input.topicType),
         ),
       );
@@ -173,72 +172,97 @@ export class NotifyPgRepository implements INotifyRepository {
         continue;
       }
 
-      const [binding] = await this.db
+      const bindings = await this.db
         .select()
         .from(channelBindings)
         .where(
           and(
             eq(channelBindings.channelId, subscription.channelId),
             eq(channelBindings.status, "active"),
+            isNull(channelBindings.deletedAt),
           ),
-        )
-        .limit(1);
-
-      const [botPluginInstance] = subscription.botPluginInstanceId
-        ? await this.db
-            .select()
-            .from(botPluginInstances)
-            .where(eq(botPluginInstances.id, subscription.botPluginInstanceId))
-            .limit(1)
-        : [null];
-
-      const [notification] = await this.db
-        .insert(notificationEvents)
-        .values({
-          id: uniqueId(),
-          subscriptionId: subscription.id,
-          channelId: subscription.channelId,
-          botPluginInstanceId: subscription.botPluginInstanceId ?? null,
-          deliveryEndpointId: botPluginInstance?.deliveryEndpointId ?? null,
-          channelBindingId: binding?.id ?? null,
-          title: input.title,
-          body: input.body,
-          payload: input.payload,
-        })
-        .returning();
+        );
 
       const ownerUserId =
         subscription.ownerType === "USER"
           ? subscription.ownerId
           : (subscription.createdByUserId ?? null);
 
-      if (subscription.botPluginInstanceId && botPluginInstance?.status !== "active") {
-        await this.markNotificationFailed(notification.id, "bot instance missing or disabled");
+      if (!bindings.length) {
+        await this.createNotificationEvent({
+          subscriptionId: subscription.id,
+          channelId: subscription.channelId,
+          title: input.title,
+          body: input.body,
+          payload: input.payload,
+          status: "failed",
+          failedAt: new Date(),
+          errorMessage: "channel has no active bindings",
+        });
         continue;
       }
 
-      if (!notification.deliveryEndpointId) {
-        await this.markNotificationFailed(
-          notification.id,
-          "channel binding has no delivery endpoint",
+      for (const binding of bindings) {
+        const [botPluginInstance] = binding.botPluginInstanceId
+          ? await this.db
+              .select()
+              .from(botPluginInstances)
+              .where(
+                and(
+                  eq(botPluginInstances.id, binding.botPluginInstanceId),
+                  eq(botPluginInstances.status, "active"),
+                  isNull(botPluginInstances.deletedAt),
+                ),
+              )
+              .limit(1)
+          : [null];
+
+        const [notification] = await this.db
+          .insert(notificationEvents)
+          .values({
+            id: uniqueId(),
+            subscriptionId: subscription.id,
+            channelId: subscription.channelId,
+            botPluginInstanceId: binding.botPluginInstanceId ?? null,
+            deliveryEndpointId: botPluginInstance?.deliveryEndpointId ?? null,
+            channelBindingId: binding.id,
+            title: input.title,
+            body: input.body,
+            payload: input.payload,
+          })
+          .returning();
+
+        if (!botPluginInstance) {
+          await this.markNotificationFailed(notification.id, "bot instance missing or disabled");
+          continue;
+        }
+
+        if (!notification.deliveryEndpointId) {
+          await this.markNotificationFailed(
+            notification.id,
+            "bot instance has no delivery endpoint",
+          );
+          continue;
+        }
+
+        const deliveryEndpoint = await this.findActiveDeliveryEndpointById(
+          notification.deliveryEndpointId,
         );
-        continue;
-      }
+        if (!deliveryEndpoint) {
+          await this.markNotificationFailed(
+            notification.id,
+            "delivery endpoint missing or disabled",
+          );
+          continue;
+        }
 
-      const deliveryEndpoint = await this.findActiveDeliveryEndpointById(
-        notification.deliveryEndpointId,
-      );
-      if (!deliveryEndpoint) {
-        await this.markNotificationFailed(notification.id, "delivery endpoint missing or disabled");
-        continue;
+        candidates.push({
+          notification,
+          channelBinding: binding,
+          deliveryEndpoint,
+          ownerUserId,
+        });
       }
-
-      candidates.push({
-        notification,
-        channelBinding: binding ?? null,
-        deliveryEndpoint,
-        ownerUserId,
-      });
     }
 
     return candidates;
@@ -260,7 +284,7 @@ export class NotifyPgRepository implements INotifyRepository {
     const [instance] = await this.db
       .select()
       .from(botPluginInstances)
-      .where(eq(botPluginInstances.id, id))
+      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
       .limit(1);
     return instance ?? null;
   }
@@ -269,7 +293,13 @@ export class NotifyPgRepository implements INotifyRepository {
     const [deliveryEndpoint] = await this.db
       .select()
       .from(deliveryEndpoints)
-      .where(and(eq(deliveryEndpoints.id, id), eq(deliveryEndpoints.status, "active")))
+      .where(
+        and(
+          eq(deliveryEndpoints.id, id),
+          eq(deliveryEndpoints.status, "active"),
+          isNull(deliveryEndpoints.deletedAt),
+        ),
+      )
       .limit(1);
     return deliveryEndpoint ?? null;
   }

@@ -71,9 +71,9 @@ export function SubscriptionDetailSheet({
                 <FlowArrow />
                 <FlowCard
                   icon={<IconMapPin className="size-4" />}
-                  label="Delivery Path"
-                  title={detailData.botInstance?.displayName ?? "Bot Runtime"}
-                  description={`Bot ID: ${detailData.botPluginInstanceId?.slice(0, 8) ?? "N/A"}...`}
+                  label="Fan-out Routes"
+                  title="Channel Bindings"
+                  description="Resolved per delivery attempt"
                 />
               </div>
 

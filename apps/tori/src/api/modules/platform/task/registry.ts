@@ -24,9 +24,10 @@ export function defineTaskHandler(id: string, handler: TaskHandler): TaskHandler
 
 export function registerTaskHandlers(...definitions: TaskHandlerDefinition[]) {
   for (const definition of definitions) {
-    if (handlers.has(definition.id)) {
-      throw new Error(`TaskHandler already registered for kind: ${definition.id}`);
-    }
+    // if (handlers.has(definition.id)) {
+    //   return
+    //   throw new Error(`TaskHandler already registered for kind: ${definition.id}`);
+    // }
 
     handlers.set(definition.id, definition.handler);
   }

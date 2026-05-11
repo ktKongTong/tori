@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgSchema, text } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import { timestamps, timestamptz } from "../utils";
 
@@ -19,6 +19,8 @@ export const taskDefinitions = pgTable("definition", {
   lastRunStatus: text("last_run_status"),
   lastError: text("last_error"),
   metadata: jsonb("metadata"),
+  // soft delete
+  deletedAt: timestamp("deleted_at"),
   ...timestamps,
 });
 

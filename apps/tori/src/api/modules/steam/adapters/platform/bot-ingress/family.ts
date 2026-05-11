@@ -48,20 +48,12 @@ export const steamFamilySubscriptionTarget = defineSubscriptionTarget({
     const ownerType = normalizedOwnerType ?? resolveDefaultOwnerType(input.messageContext);
     const ownerId =
       ownerType === "USER" ? context.userBinding.userId : context.channelBinding.channelId;
-    if (!context.channelBinding.botPluginInstanceId) {
-      return {
-        kind: "unavailable",
-        provider: "steam",
-      };
-    }
-
     return {
       kind: "applied",
       target: {
         provider: "steam",
         resource: "family",
         channelId: context.channelBinding.channelId,
-        botPluginInstanceId: context.channelBinding.botPluginInstanceId,
         connectionId: connection.id,
         ownerType,
         ownerId,

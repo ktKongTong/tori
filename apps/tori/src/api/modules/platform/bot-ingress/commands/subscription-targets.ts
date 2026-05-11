@@ -7,7 +7,6 @@ export type ResolvedSubscriptionTarget = {
   provider: string;
   resource: string;
   channelId: string;
-  botPluginInstanceId: string;
   connectionId: string;
   ownerType: "USER" | "CHANNEL";
   ownerId: string;

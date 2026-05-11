@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { uniqueId } from "@repo/utils/id";
 import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
 import { timestamps, timestamptz } from "../utils";
@@ -20,6 +20,7 @@ export const deliveryEndpoints = sqliteTable(
     config: text("config", { mode: "json" }),
     metadata: text("metadata", { mode: "json" }),
     lastUsedAt: timestamptz("last_used_at"),
+    deletedAt: integer("deleted_at", { mode: "timestamp" }),
     ...timestamps,
   },
   (table) => [
@@ -34,7 +35,7 @@ export const subscriptions = sqliteTable("subscription", {
     .primaryKey()
     .$defaultFn(() => uniqueId()),
   channelId: text("channel_id").notNull(),
-  botPluginInstanceId: text("bot_plugin_instance_id").notNull(),
+  botPluginInstanceId: text("bot_plugin_instance_id"),
   connectionId: text("connection_id").notNull(),
   ownerType: text("owner_type").notNull(),
   ownerId: text("owner_id").notNull(),
@@ -44,6 +45,7 @@ export const subscriptions = sqliteTable("subscription", {
   status: text("status").notNull().default("active"),
   filterExpr: text("filter_expr", { mode: "json" }),
   createdByUserId: text("created_by_user_id"),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
   ...timestamps,
 });
 

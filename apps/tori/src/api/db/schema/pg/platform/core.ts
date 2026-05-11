@@ -1,4 +1,4 @@
-import { jsonb, text } from "drizzle-orm/pg-core";
+import { jsonb, text, timestamp } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import { timestamps } from "../utils";
 import { pgTable } from "./schema";
@@ -22,6 +22,7 @@ export const channels = pgTable("channel", {
   status: text("status").notNull().default("active"),
   metadata: jsonb("metadata"),
   createdByUserId: text("created_by_user_id"),
+  deletedAt: timestamp("deleted_at"),
   ...timestamps,
 });
 

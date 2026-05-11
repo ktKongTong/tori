@@ -18,6 +18,7 @@ export interface UserBinding {
   supersededByBindingId: string | null;
   revokedReason: string | null;
   metadata: unknown;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   endedAt: Date | null;
@@ -37,7 +38,9 @@ export interface ChannelBinding {
   status: string;
   supersededByBindingId: string | null;
   revokedReason: string | null;
+  suspendedReason: string | null;
   metadata: unknown;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   endedAt: Date | null;
@@ -130,6 +133,9 @@ export interface IBindingRepository {
   revokeUserBinding(bindingId: string): Promise<UserBinding | null>;
   findChannelBindingById(bindingId: string): Promise<ChannelBinding | null>;
   revokeChannelBinding(bindingId: string): Promise<ChannelBinding | null>;
-  revokeActiveChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
+  suspendActiveChannelBindingsByBotPluginInstanceId(
+    botPluginInstanceId: string,
+    reason: string,
+  ): Promise<number>;
   deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
 }

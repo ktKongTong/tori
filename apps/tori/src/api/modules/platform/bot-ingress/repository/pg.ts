@@ -1,4 +1,4 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import {
   bindingGrants,
   botPluginInstances,
@@ -68,7 +68,8 @@ export class BotIngressPgRepository implements IBotIngressRepository {
           eq(channelBindings.platform, input.platform),
           eq(channelBindings.externalChannelId, input.externalChannelId),
           eq(channelBindings.namespace, input.namespace),
-          eq(channelBindings.status, "active"),
+          inArray(channelBindings.status, ["active", "suspended"]),
+          isNull(channelBindings.deletedAt),
         ),
       )
       .limit(1);
@@ -151,6 +152,7 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       status: input.status ?? "active",
       supersededByBindingId: input.supersededByBindingId ?? null,
       revokedReason: input.revokedReason ?? null,
+      suspendedReason: input.suspendedReason ?? null,
       metadata: input.metadata ?? null,
       endedAt: input.endedAt ?? undefined,
     };
@@ -168,6 +170,8 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       .set({
         externalChannelName: input.externalChannelName,
         botPluginInstanceId: input.botPluginInstanceId,
+        status: "active",
+        suspendedReason: null,
         updatedAt: new Date(),
       })
       .where(eq(channelBindings.id, input.id))
@@ -399,7 +403,6 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       .where(
         and(
           eq(subscriptions.channelId, target.channelId),
-          eq(subscriptions.botPluginInstanceId, target.botPluginInstanceId),
           eq(subscriptions.connectionId, target.connectionId),
           eq(subscriptions.ownerType, target.ownerType),
           eq(subscriptions.ownerId, target.ownerId),

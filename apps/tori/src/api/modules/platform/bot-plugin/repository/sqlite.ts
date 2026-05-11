@@ -133,7 +133,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     id: string;
     displayName?: string | null;
     capabilities?: Record<string, unknown> | null;
-    status?: string | null;
+    status?: "active" | "disabled" | null;
   }) {
     const [updated] = await this.db
       .update(botPluginInstances)

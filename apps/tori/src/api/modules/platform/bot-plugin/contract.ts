@@ -38,7 +38,7 @@ export const createBotInstanceDtoSchema = z.object({
 export const updateBotInstanceDtoSchema = z.object({
   displayName: z.string().nullable().optional(),
   capabilities: z.record(z.string(), z.unknown()).optional(),
-  status: z.string().optional(),
+  status: z.enum(["active", "disabled"]).optional(),
 });
 
 export const attachEndpointDtoSchema = z.object({

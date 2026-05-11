@@ -4,7 +4,7 @@ import * as schema from "./schema";
 import type { DB, DBType } from "@/api/domain/infra/db";
 import { drizzle as d1Drizzle } from "drizzle-orm/d1";
 
-export const createDBFromClient = (client: Client | Pool) => drizzle({ client, schema });
+export const createDBFromClient = (client: Client | Pool) => drizzle({ client, schema } as never);
 
 export const createDB = (connection: string) =>
   createDBFromClient(new Pool({ connectionString: connection, maxUses: 1 })) as DB;

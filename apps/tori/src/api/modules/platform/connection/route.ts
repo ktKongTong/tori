@@ -11,7 +11,6 @@ import {
   connectionListDtoSchema,
   connectionStatusResponseDtoSchema,
   createConnectionDtoSchema,
-  steamFamilyRefreshResponseDtoSchema,
   tokenProxyConnectionCallbackQuerySchema,
   updateConnectionStatusDtoSchema,
 } from "./contract.ts";
@@ -27,10 +26,7 @@ import {
   actionCheckRequestSchema,
   actionCheckResponseSchema,
 } from "@/api/modules/platform/shared/action-check.ts";
-import {
-  getConnectionAccountProfile,
-  refreshConnectionFamily,
-} from "@/api/modules/platform/integration/provider-registry.ts";
+import { getConnectionAccountProfile } from "@/api/modules/platform/integration/provider-registry.ts";
 
 const app = new Hono();
 
@@ -236,23 +232,6 @@ app.delete(
   async (c) => {
     const { id } = c.req.valid("param");
     return c.json(await deleteConnection(c.get("serviceContext"), id));
-  },
-);
-
-app.post(
-  "/connections/:id/family/refresh",
-  describeRoute({
-    tags: ["Connection"],
-    summary: "Refresh steam family members",
-    request: { param: z.object({ id: z.string() }) },
-    response: {
-      description: "Refresh result",
-      body: steamFamilyRefreshResponseDtoSchema,
-    },
-  }),
-  async (c) => {
-    const { id } = c.req.valid("param");
-    return c.json(await refreshConnectionFamily(c.get("serviceContext"), id));
   },
 );
 

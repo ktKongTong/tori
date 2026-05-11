@@ -1,4 +1,4 @@
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, isNull, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomCode } from "@repo/utils/random";
 import type {
@@ -54,9 +54,9 @@ function parseJsonNullable(value: string | null | undefined) {
  * Used for Deno Deploy (Neon) and Node.js (node-postgres).
  */
 export class PgRepository implements Repository {
-  private db: NodePgDatabase<typeof schema>;
+  private db: NodePgDatabase;
 
-  constructor(db: NodePgDatabase<typeof schema>) {
+  constructor(db: NodePgDatabase) {
     this.db = db;
   }
 
@@ -70,6 +70,7 @@ export class PgRepository implements Repository {
     permissions: string;
     apiKey: string;
     status: string;
+    deletedAt: number | null;
     createdAt: number;
     updatedAt: number | null;
     lastUsedAt: number | null;
@@ -90,6 +91,7 @@ export class PgRepository implements Repository {
       permissions,
       apiKey: row.apiKey,
       status: row.status,
+      deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       lastUsedAt: row.lastUsedAt,
@@ -206,12 +208,13 @@ export class PgRepository implements Repository {
         permissions: schema.connections.permissions,
         apiKey: schema.connections.apiKey,
         status: schema.connections.status,
+        deletedAt: schema.connections.deletedAt,
         createdAt: schema.connections.createdAt,
         updatedAt: schema.connections.updatedAt,
         lastUsedAt: schema.connections.lastUsedAt,
       })
       .from(schema.connections)
-      .where(eq(schema.connections.id, id))
+      .where(and(eq(schema.connections.id, id), isNull(schema.connections.deletedAt)))
       .limit(1);
 
     return rows[0] ? this.mapConnection(rows[0]) : null;
@@ -229,12 +232,19 @@ export class PgRepository implements Repository {
         permissions: schema.connections.permissions,
         apiKey: schema.connections.apiKey,
         status: schema.connections.status,
+        deletedAt: schema.connections.deletedAt,
         createdAt: schema.connections.createdAt,
         updatedAt: schema.connections.updatedAt,
         lastUsedAt: schema.connections.lastUsedAt,
       })
       .from(schema.connections)
-      .where(and(eq(schema.connections.apiKey, apiKey), eq(schema.connections.status, "active")))
+      .where(
+        and(
+          eq(schema.connections.apiKey, apiKey),
+          eq(schema.connections.status, "active"),
+          isNull(schema.connections.deletedAt),
+        ),
+      )
       .limit(1);
 
     return rows[0] ? this.mapConnection(rows[0]) : null;
@@ -252,11 +262,13 @@ export class PgRepository implements Repository {
         permissions: schema.connections.permissions,
         apiKey: schema.connections.apiKey,
         status: schema.connections.status,
+        deletedAt: schema.connections.deletedAt,
         createdAt: schema.connections.createdAt,
         updatedAt: schema.connections.updatedAt,
         lastUsedAt: schema.connections.lastUsedAt,
       })
       .from(schema.connections)
+      .where(isNull(schema.connections.deletedAt))
       .orderBy(desc(schema.connections.createdAt));
 
     return rows.map((row) => this.mapConnection(row));
@@ -308,7 +320,10 @@ export class PgRepository implements Repository {
   }
 
   async deleteConnection(connId: string): Promise<void> {
-    await this.db.delete(schema.connections).where(eq(schema.connections.id, connId));
+    await this.db
+      .update(schema.connections)
+      .set({ deletedAt: Math.floor(Date.now() / 1000), updatedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(schema.connections.id, connId));
   }
 
   async getCredentials(connId: string): Promise<EncryptedCredentials | null> {
@@ -337,7 +352,11 @@ export class PgRepository implements Repository {
   async revokeApiKey(apiKey: string): Promise<void> {
     await this.db
       .update(schema.connections)
-      .set({ status: "revoked", updatedAt: Math.floor(Date.now() / 1000) })
+      .set({
+        status: "revoked",
+        deletedAt: Math.floor(Date.now() / 1000),
+        updatedAt: Math.floor(Date.now() / 1000),
+      })
       .where(eq(schema.connections.apiKey, apiKey));
   }
 

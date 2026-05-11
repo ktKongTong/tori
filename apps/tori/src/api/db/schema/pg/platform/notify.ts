@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { jsonb, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { jsonb, text, uniqueIndex, timestamp } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
 import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
 import { timestamps, timestamptz } from "../utils";
@@ -21,12 +21,13 @@ export const deliveryEndpoints = pgTable(
     config: jsonb("config"),
     metadata: jsonb("metadata"),
     lastUsedAt: timestamptz("last_used_at"),
+    deletedAt: timestamp("deleted_at"),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("uq_delivery_endpoint_target")
       .on(table.platform, table.kind, table.target)
-      .where(sql`${table.status} = 'active'`),
+      .where(sql`${table.deletedAt} IS NULL`),
   ],
 );
 
@@ -35,7 +36,6 @@ export const subscriptions = pgTable("subscription", {
     .primaryKey()
     .$defaultFn(() => uniqueId()),
   channelId: text("channel_id").notNull(),
-  botPluginInstanceId: text("bot_plugin_instance_id").notNull(),
   connectionId: text("connection_id").notNull(),
   ownerType: text("owner_type").notNull(), // USER | CHANNEL
   ownerId: text("owner_id").notNull(),
@@ -45,6 +45,7 @@ export const subscriptions = pgTable("subscription", {
   status: text("status").notNull().default("active"),
   filterExpr: jsonb("filter_expr"),
   createdByUserId: text("created_by_user_id"),
+  deletedAt: timestamp("deleted_at"),
   ...timestamps,
 });
 

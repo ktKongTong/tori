@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { proxyInstances } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
@@ -18,6 +18,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
     return list(this.db, proxyInstances, {
       orderBy: [{ column: "createdAt", direction: "desc" }],
       page,
+      where: isNull(proxyInstances.deletedAt),
     });
   }
 
@@ -29,7 +30,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
         and(
           eq(proxyInstances.ownerUserId, input.ownerUserId),
           eq(proxyInstances.baseUrl, input.baseUrl),
-          eq(proxyInstances.status, "active"),
+          isNull(proxyInstances.deletedAt),
         ),
       )
       .limit(1);
@@ -47,7 +48,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
         metadata: input.metadata,
         updatedAt: new Date(),
       })
-      .where(eq(proxyInstances.id, input.id))
+      .where(and(eq(proxyInstances.id, input.id), isNull(proxyInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -75,7 +76,11 @@ export class IntegrationPgRepository implements IIntegrationRepository {
       .select()
       .from(proxyInstances)
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .limit(1);
     return proxyInstance ?? null;
@@ -90,7 +95,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
         lastSeenAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(proxyInstances.id, input.id))
+      .where(and(eq(proxyInstances.id, input.id), isNull(proxyInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -100,7 +105,11 @@ export class IntegrationPgRepository implements IIntegrationRepository {
       .update(proxyInstances)
       .set({ status: input.status, updatedAt: new Date() })
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .returning();
     return updated ?? null;
@@ -109,9 +118,13 @@ export class IntegrationPgRepository implements IIntegrationRepository {
   async deleteProxyInstance(input: { id: string; ownerUserId: string }) {
     const [deleted] = await this.db
       .update(proxyInstances)
-      .set({ status: "deleted", updatedAt: new Date() })
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .returning();
     return deleted ?? null;

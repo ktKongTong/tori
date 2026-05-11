@@ -26,7 +26,6 @@ export const botInstanceSummaryDtoSchema = z.object({
 export const subscriptionDtoSchema = z.object({
   id: z.string(),
   channelId: z.string(),
-  botPluginInstanceId: z.string().nullable(),
   connectionId: z.string(),
   ownerType: z.string(),
   ownerId: z.string(),
@@ -43,14 +42,12 @@ export const subscriptionDtoSchema = z.object({
 export const subscriptionViewDtoSchema = subscriptionDtoSchema.extend({
   channel: channelSummaryDtoSchema.nullable(),
   connection: connectionSummaryDtoSchema.nullable(),
-  botInstance: botInstanceSummaryDtoSchema.nullable(),
   owner: userSummaryDtoSchema.nullable(),
   ownerChannel: channelSummaryDtoSchema.nullable(),
 });
 
 export const createSubscriptionDtoSchema = z.object({
   channelId: z.string().min(1),
-  botPluginInstanceId: z.string().optional(),
   connectionId: z.string().min(1),
   ownerType: z.enum(["USER", "CHANNEL"]),
   ownerId: z.string().optional(),

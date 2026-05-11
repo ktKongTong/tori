@@ -100,7 +100,6 @@ export const subCommand = defineBotCommand({
           payload: {
             subscriptionId: reactivated.id,
             channelId: reactivated.channelId,
-            botPluginInstanceId: reactivated.botPluginInstanceId ?? null,
             connectionId: reactivated.connectionId,
             ownerType: reactivated.ownerType,
             ownerId: reactivated.ownerId,
@@ -127,7 +126,6 @@ export const subCommand = defineBotCommand({
     const created = await getBotIngressRepository(ctx).createSubscription({
       id: uniqueId(),
       channelId: target.channelId,
-      botPluginInstanceId: target.botPluginInstanceId,
       connectionId: target.connectionId,
       ownerType: target.ownerType,
       ownerId: target.ownerId,
@@ -144,7 +142,6 @@ export const subCommand = defineBotCommand({
         payload: {
           subscriptionId: created.id,
           channelId: created.channelId,
-          botPluginInstanceId: created.botPluginInstanceId ?? null,
           connectionId: created.connectionId,
           ownerType: created.ownerType,
           ownerId: created.ownerId,

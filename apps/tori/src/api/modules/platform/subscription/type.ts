@@ -1,6 +1,5 @@
 export interface CreateSubscriptionInput {
   channelId: string;
-  botPluginInstanceId?: string;
   connectionId: string;
   ownerType: "USER" | "CHANNEL";
   ownerId?: string;
@@ -16,7 +15,6 @@ export const SUBSCRIPTION_ACTIVATED = "SubscriptionActivated";
 export type SubscriptionLifecyclePayload = {
   subscriptionId: string;
   channelId: string;
-  botPluginInstanceId: string | null;
   connectionId: string;
   ownerType: string;
   ownerId: string;

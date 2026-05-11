@@ -54,6 +54,7 @@ export interface BotIngressChannelBindingRow {
   status: string;
   supersededByBindingId: string | null;
   revokedReason: string | null;
+  suspendedReason: string | null;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -119,7 +120,6 @@ export interface BotIngressConnectionRow {
 export interface BotIngressSubscriptionRow {
   id: string;
   channelId: string;
-  botPluginInstanceId: string;
   connectionId: string;
   ownerType: string;
   ownerId: string;
@@ -227,6 +227,7 @@ export interface CreateBotIngressChannelBindingInput {
   status?: string;
   supersededByBindingId?: string | null;
   revokedReason?: string | null;
+  suspendedReason?: string | null;
   metadata?: unknown;
   endedAt?: Date | null;
 }
@@ -259,7 +260,6 @@ export interface CreateBotIngressClaimSessionInput {
 export interface CreateBotIngressSubscriptionInput {
   id: string;
   channelId: string;
-  botPluginInstanceId: string;
   connectionId: string;
   ownerType: string;
   ownerId: string;

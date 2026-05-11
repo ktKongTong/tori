@@ -15,6 +15,7 @@ export interface TaskDefinition {
   lastRunStatus: string | null;
   lastError: string | null;
   metadata: unknown;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

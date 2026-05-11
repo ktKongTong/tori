@@ -51,9 +51,9 @@ export class BotCommandRegistry {
   register(...definitions: AnyBotCommandDefinition[]) {
     for (const definition of definitions) {
       const normalizedName = normalizeCommandPath(definition.name);
-      if (this.handlers.has(normalizedName)) {
-        throw new Error(`Bot command already registered: ${definition.name}`);
-      }
+      // if (this.handlers.has(normalizedName)) {
+      //   throw new Error(`Bot command already registered: ${definition.name}`);
+      // }
       this.handlers.set(normalizedName, definition);
     }
   }

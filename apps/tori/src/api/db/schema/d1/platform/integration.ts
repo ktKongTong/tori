@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { uniqueId } from "@repo/utils/id";
 import { timestamps, timestamptz } from "../utils";
 
@@ -17,6 +17,7 @@ export const proxyInstances = sqliteTable("proxy_instance", {
   capabilities: text("capabilities", { mode: "json" }),
   metadata: text("metadata", { mode: "json" }),
   lastSeenAt: timestamptz("last_seen_at"),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
   ...timestamps,
 });
 
@@ -37,6 +38,7 @@ export const botPluginInstances = sqliteTable(
     capabilities: text("capabilities", { mode: "json" }),
     metadata: text("metadata", { mode: "json" }),
     lastSeenAt: timestamptz("last_seen_at"),
+    deletedAt: integer("deleted_at", { mode: "timestamp" }),
     ...timestamps,
   },
   (table) => [

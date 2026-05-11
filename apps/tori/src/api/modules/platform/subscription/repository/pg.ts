@@ -1,6 +1,5 @@
-import { and, eq, aliasedTable, getColumns, inArray } from "drizzle-orm";
+import { and, eq, aliasedTable, getColumns, inArray, isNull } from "drizzle-orm";
 import {
-  botPluginInstances,
   channelBindings,
   channels,
   connections,
@@ -33,19 +32,18 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
         channel: channels,
         creator: creator,
         connection: connections,
-        botInstance: botPluginInstances,
       })
       .from(subscriptions)
       .leftJoin(channels, eq(subscriptions.channelId, channels.id))
       .leftJoin(connections, eq(subscriptions.connectionId, connections.id))
-      .leftJoin(botPluginInstances, eq(subscriptions.botPluginInstanceId, botPluginInstances.id))
       .leftJoin(
         owner,
         and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, owner.id)),
       )
-      .leftJoin(creator, eq(subscriptions.createdByUserId, creator.id));
+      .leftJoin(creator, eq(subscriptions.createdByUserId, creator.id))
+      .where(isNull(subscriptions.deletedAt));
 
-    return query;
+    return query.$dynamic();
   }
   async findSubscriptionById(id: string): Promise<Subscription> {
     const [query] = await this.buildListSubscriptions().where(eq(subscriptions.id, id)).limit(1);
@@ -57,7 +55,7 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const query = this.buildListSubscriptions();
     const [data, total] = await Promise.all([
       withPagination(query.$dynamic(), page),
-      this.db.$count(subscriptions),
+      this.db.$count(subscriptions, isNull(subscriptions.deletedAt)),
     ]);
     return toPageResult(data, total, page);
   }
@@ -65,13 +63,20 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const query = this.buildListSubscriptions().where(eq(subscriptions.connectionId, connectionId));
     const [data, total] = await Promise.all([
       withPagination(query.$dynamic(), page),
-      this.db.$count(subscriptions, eq(subscriptions.connectionId, connectionId)),
+      this.db.$count(
+        subscriptions,
+        and(eq(subscriptions.connectionId, connectionId), isNull(subscriptions.deletedAt)),
+      ),
     ]);
     return toPageResult(data, total, page);
   }
 
   async listActiveSubscriptionsByChannelId(channelId: string, page: PageBasedPaginationParam) {
-    const where = and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active"));
+    const where = and(
+      eq(subscriptions.channelId, channelId),
+      eq(subscriptions.status, "active"),
+      isNull(subscriptions.deletedAt),
+    );
     const query = this.buildListSubscriptions().where(where);
     const [data, total] = await Promise.all([
       withPagination(query.$dynamic(), page),
@@ -110,7 +115,13 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const [channelBinding] = await this.db
       .select()
       .from(channelBindings)
-      .where(and(eq(channelBindings.channelId, channelId), eq(channelBindings.status, "active")))
+      .where(
+        and(
+          eq(channelBindings.channelId, channelId),
+          eq(channelBindings.status, "active"),
+          isNull(channelBindings.deletedAt),
+        ),
+      )
       .limit(1);
     return channelBinding ?? null;
   }
@@ -118,7 +129,8 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
   async findSubscriptionIdentity(input: {
     channelId: string;
     connectionId: string;
-    botPluginInstanceId: string;
+    ownerType: string;
+    ownerId: string;
     topicType: string;
     topicKey: string;
   }) {
@@ -129,9 +141,11 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
         and(
           eq(subscriptions.channelId, input.channelId),
           eq(subscriptions.connectionId, input.connectionId),
-          eq(subscriptions.botPluginInstanceId, input.botPluginInstanceId),
+          eq(subscriptions.ownerType, input.ownerType),
+          eq(subscriptions.ownerId, input.ownerId),
           eq(subscriptions.topicType, input.topicType),
           eq(subscriptions.topicKey, input.topicKey),
+          isNull(subscriptions.deletedAt),
         ),
       )
       .limit(1);
@@ -147,7 +161,7 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const [updated] = await this.db
       .update(subscriptions)
       .set({ status, updatedAt: new Date() })
-      .where(eq(subscriptions.id, id))
+      .where(and(eq(subscriptions.id, id), isNull(subscriptions.deletedAt)))
       .returning();
     return updated ?? null;
   }
@@ -156,7 +170,13 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const rows = await this.db
       .update(subscriptions)
       .set({ status: "disabled", updatedAt: new Date() })
-      .where(and(eq(subscriptions.connectionId, connectionId), eq(subscriptions.status, "active")))
+      .where(
+        and(
+          eq(subscriptions.connectionId, connectionId),
+          eq(subscriptions.status, "active"),
+          isNull(subscriptions.deletedAt),
+        ),
+      )
       .returning({ id: subscriptions.id });
     return rows.length;
   }
@@ -164,8 +184,8 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
   async deleteSubscriptionsByConnectionId(connectionId: string) {
     const rows = await this.db
       .update(subscriptions)
-      .set({ status: "deleted", updatedAt: new Date() })
-      .where(eq(subscriptions.connectionId, connectionId))
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(subscriptions.connectionId, connectionId), isNull(subscriptions.deletedAt)))
       .returning({ id: subscriptions.id });
     return rows.map((row) => row.id);
   }
@@ -177,15 +197,6 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
       .where(inArray(notificationEvents.subscriptionId, subscriptionIds))
       .returning({ id: notificationEvents.id });
     return rows.length;
-  }
-
-  async deleteSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .update(subscriptions)
-      .set({ status: "deleted", updatedAt: new Date() })
-      .where(eq(subscriptions.botPluginInstanceId, botPluginInstanceId))
-      .returning({ id: subscriptions.id });
-    return rows.map((row) => row.id);
   }
 
   async deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string) {
@@ -208,19 +219,11 @@ export class SubscriptionPgRepository implements ISubscriptionRepository {
     const rows = await this.db
       .update(subscriptions)
       .set({ status: "disabled", updatedAt: new Date() })
-      .where(and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active")))
-      .returning({ id: subscriptions.id });
-    return rows.length;
-  }
-
-  async disableActiveSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .update(subscriptions)
-      .set({ status: "disabled", updatedAt: new Date() })
       .where(
         and(
-          eq(subscriptions.botPluginInstanceId, botPluginInstanceId),
+          eq(subscriptions.channelId, channelId),
           eq(subscriptions.status, "active"),
+          isNull(subscriptions.deletedAt),
         ),
       )
       .returning({ id: subscriptions.id });

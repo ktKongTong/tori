@@ -18,6 +18,7 @@ export interface ManagedBotPluginInstance {
   capabilities: unknown;
   metadata: unknown;
   lastSeenAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +35,7 @@ export interface ManagedDeliveryEndpoint {
   config: unknown;
   metadata: unknown;
   lastUsedAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,7 +94,7 @@ export interface IBotPluginRepository {
     id: string;
     displayName?: string | null;
     capabilities?: unknown;
-    status?: string | null;
+    status?: "active" | "disabled" | null;
   }): Promise<ManagedBotPluginInstance | null>;
   findManagedBotInstanceById(id: string): Promise<ManagedBotPluginInstance | null>;
   rotateManagedBotInstanceCredential(input: { id: string; credentialHash: string }): Promise<void>;

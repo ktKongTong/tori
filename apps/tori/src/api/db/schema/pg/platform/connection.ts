@@ -23,13 +23,13 @@ export const connections = pgTable(
     connectedAt: requiredTimestamptz("connected_at").defaultNow(),
     lastSyncedAt: timestamptz("last_synced_at"),
     // soft delete
-    deletedAt: timestamptz("deleted_at"),
+    deletedAt: timestamp("deleted_at"),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("uq_connection_identity")
       .on(table.ownerUserId, table.provider, table.providerAccountId, table.accessMode)
-      .where(sql`${table.status} = 'active'`),
+      .where(sql`${table.deletedAt} IS NULL`),
   ],
 );
 
@@ -47,12 +47,14 @@ export const connectionCredentials = pgTable(
     metadata: jsonb("metadata"),
     lastUsedAt: timestamp("last_used_at"),
     expiresAt: timestamp("expires_at"),
+    // soft delete
+    deletedAt: timestamp("deleted_at"),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("uq_active_connection_credential")
       .on(table.connectionId, table.kind)
-      .where(sql`${table.status} = 'active'`),
+      .where(sql`${table.deletedAt} IS NULL`),
   ],
 );
 

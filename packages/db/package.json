@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@repo/core": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:drizzle"
   },
   "devDependencies": {
     "typescript": "catalog:",

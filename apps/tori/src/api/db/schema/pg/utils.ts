@@ -12,7 +12,7 @@ export const aliasedColumn = <T extends AnyColumn>(
 };
 
 export const timestamptz = (name: string, withTZ = false) =>
-  timestamp(name, { withTimezone: withTZ }).defaultNow().notNull();
+  timestamp(name, { withTimezone: withTZ }).defaultNow();
 
 export const createdAt = (name: string = "created_at", withTZ = false) =>
   timestamp(name, { withTimezone: withTZ }).defaultNow().notNull();

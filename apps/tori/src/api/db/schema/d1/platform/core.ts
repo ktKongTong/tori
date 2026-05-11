@@ -1,4 +1,4 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { uniqueId } from "@repo/utils/id";
 import { timestamps } from "../utils";
 
@@ -21,6 +21,7 @@ export const channels = sqliteTable("channel", {
   status: text("status").notNull().default("active"),
   metadata: text("metadata", { mode: "json" }),
   createdByUserId: text("created_by_user_id"),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
   ...timestamps,
 });
 

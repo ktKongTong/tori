@@ -16,6 +16,7 @@ export const taskDefinitions = sqliteTable("task_definition", {
   lastRunStatus: text("last_run_status"),
   lastError: text("last_error"),
   metadata: text("metadata", { mode: "json" }),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
   ...timestamps,
 });
 

@@ -28,7 +28,6 @@ export interface Subscription {
   id: string;
   channelId: string;
   channel?: Channel | null;
-  botPluginInstanceId: string | null;
   connection?: unknown;
   connectionId: string;
   owner?: User | null;
@@ -41,6 +40,7 @@ export interface Subscription {
   filterExpr: unknown;
   creator?: User | null;
   createdByUserId: string | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,7 +48,6 @@ export interface Subscription {
 export interface CreateSubscriptionInput {
   id?: string;
   channelId: string;
-  botPluginInstanceId: string;
   connectionId: string;
   ownerType: string;
   ownerId: string;
@@ -82,18 +81,17 @@ export interface ISubscriptionRepository {
   findSubscriptionIdentity(input: {
     channelId: string;
     connectionId: string;
-    botPluginInstanceId: string;
+    ownerType: string;
+    ownerId: string;
     topicType: string;
     topicKey: string;
   }): Promise<Subscription | null>;
   createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
-  updateSubscriptionStatus(id: string, status: string): Promise<Subscription | null>;
+  updateSubscriptionStatus(id: string, status: "active" | "disabled"): Promise<Subscription | null>;
   disableActiveSubscriptionsByConnectionId(connectionId: string): Promise<number>;
   deleteSubscriptionsByConnectionId(connectionId: string): Promise<string[]>;
   deleteNotificationEventsBySubscriptionIds(subscriptionIds: string[]): Promise<number>;
-  deleteSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string): Promise<string[]>;
   deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
   deleteNotificationEventsByDeliveryEndpointId(deliveryEndpointId: string): Promise<number>;
   disableActiveSubscriptionsByChannelId(channelId: string): Promise<number>;
-  disableActiveSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
 }

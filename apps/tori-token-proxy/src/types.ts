@@ -10,6 +10,7 @@ export interface Connection {
   apiKey: string;
   permissions?: string[];
   status: string;
+  deletedAt?: number | null;
   createdAt: number;
   updatedAt?: number | null;
   lastUsedAt?: number | null;

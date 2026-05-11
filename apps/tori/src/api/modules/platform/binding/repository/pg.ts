@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   bindingGrants,
   claimSessions,
@@ -17,7 +17,7 @@ export class BindingPgRepository implements IBindingRepository {
   constructor(private readonly db: PGDB) {}
 
   async listUserBindings(page: PageBasedPaginationParam) {
-    const where = eq(userBindings.status, "active");
+    const where = and(eq(userBindings.status, "active"), isNull(userBindings.deletedAt));
     const [data, total] = await Promise.all([
       withPagination(
         this.db
@@ -34,7 +34,7 @@ export class BindingPgRepository implements IBindingRepository {
   }
 
   async listChannelBindings(page: PageBasedPaginationParam) {
-    const where = eq(channelBindings.status, "active");
+    const where = and(eq(channelBindings.status, "active"), isNull(channelBindings.deletedAt));
     const [data, total] = await Promise.all([
       withPagination(
         this.db
@@ -148,7 +148,7 @@ export class BindingPgRepository implements IBindingRepository {
     const [binding] = await this.db
       .select()
       .from(userBindings)
-      .where(eq(userBindings.id, bindingId))
+      .where(and(eq(userBindings.id, bindingId), isNull(userBindings.deletedAt)))
       .limit(1);
     return binding ?? null;
   }
@@ -160,9 +160,10 @@ export class BindingPgRepository implements IBindingRepository {
         status: "revoked",
         revokedReason: "removed-by-user",
         endedAt: new Date(),
+        deletedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(userBindings.id, bindingId))
+      .where(and(eq(userBindings.id, bindingId), isNull(userBindings.deletedAt)))
       .returning();
     return revoked;
   }
@@ -171,7 +172,7 @@ export class BindingPgRepository implements IBindingRepository {
     const [binding] = await this.db
       .select()
       .from(channelBindings)
-      .where(eq(channelBindings.id, bindingId))
+      .where(and(eq(channelBindings.id, bindingId), isNull(channelBindings.deletedAt)))
       .limit(1);
     return binding ?? null;
   }
@@ -182,27 +183,32 @@ export class BindingPgRepository implements IBindingRepository {
       .set({
         status: "revoked",
         revokedReason: "removed-by-user",
+        suspendedReason: null,
         endedAt: new Date(),
+        deletedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(channelBindings.id, bindingId))
+      .where(and(eq(channelBindings.id, bindingId), isNull(channelBindings.deletedAt)))
       .returning();
     return revoked;
   }
 
-  async revokeActiveChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
+  async suspendActiveChannelBindingsByBotPluginInstanceId(
+    botPluginInstanceId: string,
+    reason: string,
+  ) {
     const rows = await this.db
       .update(channelBindings)
       .set({
-        status: "revoked",
-        revokedReason: "bot-instance-removed",
-        endedAt: new Date(),
+        status: "suspended",
+        suspendedReason: reason,
         updatedAt: new Date(),
       })
       .where(
         and(
           eq(channelBindings.botPluginInstanceId, botPluginInstanceId),
           eq(channelBindings.status, "active"),
+          isNull(channelBindings.deletedAt),
         ),
       )
       .returning({ id: channelBindings.id });
@@ -211,8 +217,17 @@ export class BindingPgRepository implements IBindingRepository {
 
   async deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
     const rows = await this.db
-      .delete(channelBindings)
-      .where(eq(channelBindings.botPluginInstanceId, botPluginInstanceId))
+      .update(channelBindings)
+      .set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(channelBindings.botPluginInstanceId, botPluginInstanceId),
+          isNull(channelBindings.deletedAt),
+        ),
+      )
       .returning({ id: channelBindings.id });
     return rows.length;
   }

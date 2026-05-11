@@ -126,7 +126,7 @@ export async function probeProxyInstance(ctx: ServiceContext, proxyInstanceId: s
 export async function updateProxyInstanceStatus(
   ctx: ServiceContext,
   proxyInstanceId: string,
-  status: string,
+  status: "active" | "disabled",
 ) {
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");

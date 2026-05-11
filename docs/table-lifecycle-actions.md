@@ -93,7 +93,7 @@ Dashboard 的普通 `Delete` 是软删除。
 - DB 记录保留。
 - 普通列表和业务 resolver 不返回 deleted 对象。
 - 历史、诊断、管理员视图可以看到 deleted 对象。
-- action 同步写 `status=deleted` 或等价字段，并写 outbox。
+- action 同步写 `deletedAt` 字段，并写 outbox。
 - 唯一约束必须允许 deleted 对象不阻塞重新创建。
 
 ### Revoke
@@ -103,7 +103,7 @@ Dashboard 的普通 `Delete` 是软删除。
 - DB 记录保留。
 - 普通 active 查询不返回 revoked 对象。
 - 写入 `endedAt`、`revokedReason` 或等价 metadata。
-- action 同步更新当前关系，并写 outbox。
+- action 同步更新当前关系，设置 `deletedAt` 并写 outbox。
 
 ### Internal Cleanup
 
@@ -219,7 +219,7 @@ Disable：
 
 Delete：
 
-- Dashboard delete 为软删除：`proxy_instance.status = deleted`。
+- Dashboard delete 为软删除：设置 `deletedAt`。
 - 如果仍有 active connections，check 应提示用户先处理；action 可选择阻止，避免静默删除账号授权的上游。
 - 内部清理：未完成 token-proxy sessions 可清理。
 - 历史保留：connections、subscriptions、notification events、task runs。
@@ -236,7 +236,7 @@ Disable：
 
 Delete：
 
-- Dashboard delete 为软删除：`connection.status = deleted`。
+- Dashboard delete 为软删除：设置 `deletedAt`。
 - 同步：删除或失效 credential reference，写 `connection.deleted` event。
 - 内部清理：token-proxy sessions、Steam account/family/library cache。
 - 异步：consumer 禁用或删除相关 subscriptions/task definitions。
@@ -246,9 +246,9 @@ Delete：
 
 业务含义：平台用户和外部 provider identity 的绑定关系。
 
-操作是 revoke，不是 delete。
+操作是 revoke，属于软删除。
 
-- 同步：`user_binding.status = revoked`，写 ended/reason，写 `binding.revoked` event。
+- 同步：`user_binding.status = revoked`，写 ended/reason，设置 `deletedAt`，写 `binding.revoked` event。
 - 不级联删除 connection。
 - claim session 和历史记录保留。
 
@@ -256,9 +256,9 @@ Delete：
 
 业务含义：外部 channel 的投递绑定关系。
 
-操作是 revoke，不是 delete。
+操作是 revoke，属于软删除。
 
-- 同步：`channel_binding.status = revoked`，写 ended/reason，写 `binding.revoked` event。
+- 同步：`channel_binding.status = revoked`，写 ended/reason，设置 `deletedAt`，写 `binding.revoked` event。
 - 异步：consumer 禁用该 channel 下 active subscriptions。
 - 运行时：notification delivery 和 bot ingress 必须排除 revoked channel binding。
 - notification events 保留。
@@ -279,7 +279,7 @@ Enable：
 
 Delete：
 
-- Dashboard delete 为软删除：`subscription.status = deleted`。
+- Dashboard delete 为软删除：设置 `deletedAt`。
 - notification events 保留。
 - 相关 task definition 由 MQ consumer disable/delete。
 
@@ -295,7 +295,7 @@ Disable：
 
 Delete：
 
-- Dashboard delete 为软删除：标记 deleted 或 disabled+deleted metadata。
+- Dashboard delete 为软删除：设置 `deletedAt`。
 - task runs 保留。
 - 内部清理只由 retention job 执行。
 

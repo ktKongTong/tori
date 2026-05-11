@@ -31,6 +31,7 @@ function createBotPluginInstance(
     capabilities: null,
     metadata: null,
     lastSeenAt: new Date(),
+    deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

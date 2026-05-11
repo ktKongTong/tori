@@ -1,4 +1,4 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { uniqueId } from "@repo/utils/id";
 import {
   bindingGrants,
@@ -68,7 +68,7 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
           eq(channelBindings.platform, input.platform),
           eq(channelBindings.externalChannelId, input.externalChannelId),
           eq(channelBindings.namespace, input.namespace),
-          eq(channelBindings.status, "active"),
+          inArray(channelBindings.status, ["active", "suspended"]),
         ),
       )
       .limit(1);
@@ -408,7 +408,6 @@ export class BotIngressSqliteRepository implements IBotIngressRepository {
       .where(
         and(
           eq(subscriptions.channelId, target.channelId),
-          eq(subscriptions.botPluginInstanceId, target.botPluginInstanceId),
           eq(subscriptions.connectionId, target.connectionId),
           eq(subscriptions.ownerType, target.ownerType),
           eq(subscriptions.ownerId, target.ownerId),

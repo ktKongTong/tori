@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, getColumns, sql } from "drizzle-orm";
+import { and, desc, eq, ne, getColumns, sql, isNull } from "drizzle-orm";
 import {
   connectionCredentials,
   connections,
@@ -28,14 +28,15 @@ export class ConnectionPgRepository implements IConnectionRepository {
         proxy: proxyInstances,
       })
       .from(connections)
-      .leftJoin(proxyInstances, eq(proxyInstances.id, connections.proxyInstanceId));
+      .leftJoin(proxyInstances, eq(proxyInstances.id, connections.proxyInstanceId))
+      .where(isNull(connections.deletedAt));
 
     const [result, total] = await Promise.all([
       dynamicQuery(query.$dynamic(), connections, {
         orderBy: [{ column: "createdAt", direction: "desc" }],
         page,
       }),
-      this.db.$count(connections),
+      this.db.$count(connections, isNull(connections.deletedAt)),
     ]);
     return toPageResult(result, total, page);
   }
@@ -48,7 +49,11 @@ export class ConnectionPgRepository implements IConnectionRepository {
       .from(accountProfiles)
       .innerJoin(
         connections,
-        and(eq(connections.id, accountProfiles.connectionId), eq(connections.status, "active")),
+        and(
+          eq(connections.id, accountProfiles.connectionId),
+          eq(connections.status, "active"),
+          isNull(connections.deletedAt),
+        ),
       );
 
     const [result, total] = await Promise.all([
@@ -58,7 +63,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
       }),
       this.db.$count(
         accountProfiles,
-        sql`exists (select 1 from ${connections} where ${connections.id} = ${accountProfiles.connectionId} and ${connections.status} = 'active')`,
+        sql`exists (select 1 from ${connections} where ${connections.id} = ${accountProfiles.connectionId} and ${connections.status} = 'active' and ${connections.deletedAt} is null)`,
       ),
     ]);
     return toPageResult(result, total, page);
@@ -77,7 +82,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
           eq(connections.ownerUserId, input.ownerUserId),
           eq(connections.provider, input.provider),
           eq(connections.providerAccountId, input.providerAccountId),
-          eq(connections.status, "active"),
+          isNull(connections.deletedAt),
         ),
       )
       .limit(1);
@@ -99,7 +104,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
           eq(connections.provider, input.provider),
           eq(connections.providerAccountId, input.providerAccountId),
           eq(connections.accessMode, input.accessMode),
-          eq(connections.status, "active"),
+          isNull(connections.deletedAt),
         ),
       )
       .limit(1);
@@ -130,7 +135,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
     const [connection] = await this.db
       .select()
       .from(connections)
-      .where(eq(connections.id, id))
+      .where(and(eq(connections.id, id), isNull(connections.deletedAt)))
       .limit(1);
     return connection ?? null;
   }
@@ -139,7 +144,13 @@ export class ConnectionPgRepository implements IConnectionRepository {
     const [connection] = await this.db
       .select()
       .from(connections)
-      .where(and(eq(connections.id, connectionId), eq(connections.status, "active")))
+      .where(
+        and(
+          eq(connections.id, connectionId),
+          eq(connections.status, "active"),
+          isNull(connections.deletedAt),
+        ),
+      )
       .limit(1);
     return connection ?? null;
   }
@@ -152,6 +163,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
         and(
           eq(connections.id, input.connectionId),
           eq(connections.status, "active"),
+          isNull(connections.deletedAt),
           input.ownerUserId ? eq(connections.ownerUserId, input.ownerUserId) : undefined,
         ),
       )
@@ -163,7 +175,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
     const [proxyInstance] = await this.db
       .select()
       .from(proxyInstances)
-      .where(eq(proxyInstances.id, proxyInstanceId))
+      .where(and(eq(proxyInstances.id, proxyInstanceId), isNull(proxyInstances.deletedAt)))
       .limit(1);
     return proxyInstance ?? null;
   }
@@ -181,6 +193,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
           eq(connections.ownerUserId, input.ownerUserId),
           eq(connections.provider, input.provider),
           eq(connections.status, "active"),
+          isNull(connections.deletedAt),
           input.excludeAccessMode ? ne(connections.accessMode, input.excludeAccessMode) : undefined,
         ),
       )
@@ -197,13 +210,13 @@ export class ConnectionPgRepository implements IConnectionRepository {
     return this.db
       .select()
       .from(connections)
-      .where(eq(connections.proxyInstanceId, proxyInstanceId));
+      .where(and(eq(connections.proxyInstanceId, proxyInstanceId), isNull(connections.deletedAt)));
   }
 
   async updateConnectionStatus(input: {
     id: string;
     ownerUserId: string;
-    status: "active" | "disabled" | "deleted";
+    status: "active" | "disabled";
   }) {
     const [connection] = await this.db
       .update(connections)
@@ -211,7 +224,13 @@ export class ConnectionPgRepository implements IConnectionRepository {
         status: input.status,
         updatedAt: new Date(),
       })
-      .where(and(eq(connections.id, input.id), eq(connections.ownerUserId, input.ownerUserId)))
+      .where(
+        and(
+          eq(connections.id, input.id),
+          eq(connections.ownerUserId, input.ownerUserId),
+          isNull(connections.deletedAt),
+        ),
+      )
       .returning();
     return connection ?? null;
   }
@@ -224,7 +243,11 @@ export class ConnectionPgRepository implements IConnectionRepository {
         updatedAt: new Date(),
       })
       .where(
-        and(eq(connections.proxyInstanceId, proxyInstanceId), eq(connections.status, "active")),
+        and(
+          eq(connections.proxyInstanceId, proxyInstanceId),
+          eq(connections.status, "active"),
+          isNull(connections.deletedAt),
+        ),
       )
       .returning();
   }
@@ -233,10 +256,16 @@ export class ConnectionPgRepository implements IConnectionRepository {
     const [connection] = await this.db
       .update(connections)
       .set({
-        status: "deleted",
+        deletedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(and(eq(connections.id, input.id), eq(connections.ownerUserId, input.ownerUserId)))
+      .where(
+        and(
+          eq(connections.id, input.id),
+          eq(connections.ownerUserId, input.ownerUserId),
+          isNull(connections.deletedAt),
+        ),
+      )
       .returning();
     return connection ?? null;
   }
@@ -274,7 +303,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
         expiresAt: input.expiresAt ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(connectionCredentials.id, input.id))
+      .where(and(eq(connectionCredentials.id, input.id), isNull(connectionCredentials.deletedAt)))
       .returning();
     return row;
   }
@@ -288,6 +317,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
           eq(connectionCredentials.connectionId, input.connectionId),
           eq(connectionCredentials.kind, input.kind),
           eq(connectionCredentials.status, "active"),
+          isNull(connectionCredentials.deletedAt),
         ),
       )
       .limit(1);
@@ -302,6 +332,7 @@ export class ConnectionPgRepository implements IConnectionRepository {
         and(
           eq(connectionCredentials.connectionId, connectionId),
           eq(connectionCredentials.status, "active"),
+          isNull(connectionCredentials.deletedAt),
         ),
       )
       .returning({ id: connectionCredentials.id });
@@ -310,8 +341,14 @@ export class ConnectionPgRepository implements IConnectionRepository {
 
   async deleteConnectionCredentialsByConnectionId(connectionId: string) {
     const rows = await this.db
-      .delete(connectionCredentials)
-      .where(eq(connectionCredentials.connectionId, connectionId))
+      .update(connectionCredentials)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(connectionCredentials.connectionId, connectionId),
+          isNull(connectionCredentials.deletedAt),
+        ),
+      )
       .returning({ id: connectionCredentials.id });
     return rows.length;
   }

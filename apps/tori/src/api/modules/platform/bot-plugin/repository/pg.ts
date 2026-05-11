@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, isNull } from "drizzle-orm";
 import { botPluginInstances, deliveryEndpoints } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra/db";
 import type {
@@ -15,7 +15,10 @@ export class BotPluginPgRepository implements IBotPluginRepository {
   constructor(private readonly db: PGDB) {}
 
   async listManagedBotInstances(ownerUserId: string, page: PageBasedPaginationParam) {
-    const where = eq(botPluginInstances.ownerUserId, ownerUserId);
+    const where = and(
+      eq(botPluginInstances.ownerUserId, ownerUserId),
+      isNull(botPluginInstances.deletedAt),
+    );
     const [data, total] = await Promise.all([
       withPagination(
         this.db
@@ -35,7 +38,13 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     const [activeMock] = await this.db
       .select()
       .from(botPluginInstances)
-      .where(and(eq(botPluginInstances.platform, "mock"), eq(botPluginInstances.status, "active")))
+      .where(
+        and(
+          eq(botPluginInstances.platform, "mock"),
+          eq(botPluginInstances.status, "active"),
+          isNull(botPluginInstances.deletedAt),
+        ),
+      )
       .limit(1);
     return activeMock ?? null;
   }
@@ -55,6 +64,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
           eq(botPluginInstances.platform, input.platform),
           eq(botPluginInstances.namespace, input.namespace),
           eq(botPluginInstances.instanceKey, input.instanceKey),
+          isNull(botPluginInstances.deletedAt),
         ),
       )
       .limit(1);
@@ -87,7 +97,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     const [existing] = await this.db
       .select()
       .from(botPluginInstances)
-      .where(eq(botPluginInstances.id, input.id))
+      .where(and(eq(botPluginInstances.id, input.id), isNull(botPluginInstances.deletedAt)))
       .limit(1);
     const [updated] = await this.db
       .update(botPluginInstances)
@@ -101,7 +111,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
         },
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, input.id))
+      .where(and(eq(botPluginInstances.id, input.id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -129,7 +139,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     id: string;
     displayName?: string | null;
     capabilities?: Record<string, unknown> | null;
-    status?: string | null;
+    status?: "active" | "disabled" | null;
   }) {
     const [updated] = await this.db
       .update(botPluginInstances)
@@ -139,7 +149,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
         status: input.status ?? undefined,
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, input.id))
+      .where(and(eq(botPluginInstances.id, input.id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return updated ?? null;
   }
@@ -148,7 +158,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     const [instance] = await this.db
       .select()
       .from(botPluginInstances)
-      .where(eq(botPluginInstances.id, id))
+      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
       .limit(1);
     return instance ?? null;
   }
@@ -165,7 +175,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
         },
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, input.id));
+      .where(and(eq(botPluginInstances.id, input.id), isNull(botPluginInstances.deletedAt)));
   }
 
   async findActiveManagedBotInstanceByCredentialHash(credentialHash: string) {
@@ -175,6 +185,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
       .where(
         and(
           eq(botPluginInstances.status, "active"),
+          isNull(botPluginInstances.deletedAt),
           eq(
             sql<string>`${botPluginInstances.metadata} ->> 'runtimeCredentialHash'`,
             credentialHash,
@@ -192,7 +203,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
         lastSeenAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, id))
+      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -203,13 +214,14 @@ export class BotPluginPgRepository implements IBotPluginRepository {
       .update(botPluginInstances)
       .set({
         status: "revoked",
+        deletedAt: new Date(),
         metadata: {
           ...Object.assign({}, instance?.metadata),
           revokedAt: new Date().toISOString(),
         },
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, id))
+      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -218,11 +230,11 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     const [deleted] = await this.db
       .update(botPluginInstances)
       .set({
-        status: "deleted",
+        deletedAt: new Date(),
         metadata: sql`coalesce(${botPluginInstances.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()}, 'runtimeCredentialHash', null)`,
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, id))
+      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return deleted ?? null;
   }
@@ -230,8 +242,8 @@ export class BotPluginPgRepository implements IBotPluginRepository {
   async deleteDeliveryEndpoint(id: string) {
     const [deleted] = await this.db
       .update(deliveryEndpoints)
-      .set({ status: "deleted", updatedAt: new Date() })
-      .where(eq(deliveryEndpoints.id, id))
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(deliveryEndpoints.id, id), isNull(deliveryEndpoints.deletedAt)))
       .returning();
     return deleted ?? null;
   }
@@ -246,7 +258,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
         deliveryEndpointId: input.deliveryEndpointId,
         updatedAt: new Date(),
       })
-      .where(eq(botPluginInstances.id, input.id))
+      .where(and(eq(botPluginInstances.id, input.id), isNull(botPluginInstances.deletedAt)))
       .returning();
     return updated ?? null;
   }

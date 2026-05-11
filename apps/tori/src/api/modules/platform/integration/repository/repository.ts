@@ -37,7 +37,7 @@ export interface UpdateProxyInstanceProbeInput {
 export interface UpdateProxyInstanceStatusInput {
   id: string;
   ownerUserId: string;
-  status: string;
+  status: "active" | "disabled";
 }
 
 export interface IIntegrationRepository {

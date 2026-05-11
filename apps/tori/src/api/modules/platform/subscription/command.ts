@@ -1,4 +1,4 @@
-import { NotFoundError, ParameterError } from "@/api/domain/error/index.ts";
+import { NotFoundError } from "@/api/domain/error/index.ts";
 import { createOutboxEventFromCtx } from "@/api/domain/infra";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import { uniqueId } from "@repo/utils/id";
@@ -14,24 +14,13 @@ export async function createSubscription(ctx: ServiceContext, input: CreateSubsc
     throw new NotFoundError("connection not found");
   }
 
-  const channelBinding = await ctx.repositories.subscription.findActiveChannelBindingByChannelId(
-    input.channelId,
-  );
-
-  if (!channelBinding) {
-    throw new NotFoundError("channel binding not found");
-  }
-
-  const botPluginInstanceId =
-    input.botPluginInstanceId ?? channelBinding.botPluginInstanceId ?? null;
-  if (!botPluginInstanceId) {
-    throw new ParameterError("channel binding has no bot plugin instance");
-  }
+  const ownerId = input.ownerId ?? ctx.userId ?? input.channelId;
 
   const existing = await ctx.repositories.subscription.findSubscriptionIdentity({
     channelId: input.channelId,
     connectionId: input.connectionId,
-    botPluginInstanceId,
+    ownerType: input.ownerType,
+    ownerId,
     topicType: input.topicType,
     topicKey: input.topicKey,
   });
@@ -43,10 +32,9 @@ export async function createSubscription(ctx: ServiceContext, input: CreateSubsc
   const row = await ctx.repositories.subscription.createSubscription({
     id: uniqueId(),
     channelId: input.channelId,
-    botPluginInstanceId,
     connectionId: input.connectionId,
     ownerType: input.ownerType,
-    ownerId: input.ownerId ?? ctx.userId ?? input.channelId,
+    ownerId,
     topicType: input.topicType,
     topicKey: input.topicKey,
     eventTypes: input.eventTypes,
@@ -61,7 +49,6 @@ export async function createSubscription(ctx: ServiceContext, input: CreateSubsc
       payload: {
         subscriptionId: row.id,
         channelId: row.channelId,
-        botPluginInstanceId: row.botPluginInstanceId ?? null,
         connectionId: row.connectionId,
         ownerType: row.ownerType,
         ownerId: row.ownerId,
@@ -78,7 +65,11 @@ export async function createSubscription(ctx: ServiceContext, input: CreateSubsc
   };
 }
 
-export async function updateSubscriptionStatus(ctx: ServiceContext, id: string, status: string) {
+export async function updateSubscriptionStatus(
+  ctx: ServiceContext,
+  id: string,
+  status: "active" | "disabled",
+) {
   if (status === "active") {
     const existing = await ctx.repositories.subscription.findSubscriptionById(id);
     const connection = await ctx.repositories.connection.findActiveConnectionById(
@@ -86,12 +77,6 @@ export async function updateSubscriptionStatus(ctx: ServiceContext, id: string, 
     );
     if (!connection) {
       throw new NotFoundError("connection not found");
-    }
-    const channelBinding = await ctx.repositories.subscription.findActiveChannelBindingByChannelId(
-      existing.channelId,
-    );
-    if (!channelBinding) {
-      throw new NotFoundError("channel binding not found");
     }
   }
 
@@ -106,7 +91,6 @@ export async function updateSubscriptionStatus(ctx: ServiceContext, id: string, 
         payload: {
           subscriptionId: updated.id,
           channelId: updated.channelId,
-          botPluginInstanceId: updated.botPluginInstanceId ?? null,
           connectionId: updated.connectionId,
           ownerType: updated.ownerType,
           ownerId: updated.ownerId,

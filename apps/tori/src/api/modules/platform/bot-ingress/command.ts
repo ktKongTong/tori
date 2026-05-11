@@ -68,11 +68,12 @@ export async function handleBotPluginCommandRequest(
   options: HandleBotPluginCommandRequestOptions = {},
 ): Promise<BotCommandResponse> {
   registerCoreBotCommands();
-
+  console.log("haha");
   const context = await resolveOrCreateContext(ctx, input.messageContext, options);
   const rawTokens = [input.commandName, ...input.commandParams].filter(Boolean);
   const resolved = botCommandRegistry.resolve(rawTokens);
 
+  console.log("haha2");
   if (!resolved) {
     return createUnsupportedCommandResponse(
       serializeResolvedContext(context),
@@ -93,5 +94,6 @@ export async function handleBotPluginCommandRequest(
     ? await resolveOrCreateContext(ctx, input.messageContext, options)
     : context;
 
+  console.log("haha3");
   return attachContext(definition, state, serializeResolvedContext(responseContext));
 }

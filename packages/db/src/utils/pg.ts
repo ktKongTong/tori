@@ -55,11 +55,7 @@ export function withPagination<T extends PgSelect>(
   return qb.limit(page.pageSize).offset((page.page - 1) * page.pageSize);
 }
 
-export async function list<
-  TSchema extends Record<string, unknown>,
-  DB extends NodePgDatabase<TSchema>,
-  TTable extends AnyPgTable,
->(
+export async function list<DB extends NodePgDatabase<any>, TTable extends AnyPgTable>(
   db: DB,
   table: TTable,
   condition: DynamicQuery<TableKey<TTable>> & {

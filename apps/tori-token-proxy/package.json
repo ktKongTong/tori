@@ -42,7 +42,7 @@
     "@tanstack/react-start": "catalog:tanstack-start",
     "@tanstack/react-table": "catalog:",
     "@tanstack/router-plugin": "catalog:tanstack-start",
-    "drizzle-orm": "catalog:",
+    "drizzle-orm": "catalog:drizzle",
     "hono": "catalog:hono",
     "nitro": "catalog:",
     "node-steam-family-group-api": "0.0.4-dev.patch04",

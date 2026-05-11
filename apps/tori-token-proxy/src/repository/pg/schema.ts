@@ -14,6 +14,8 @@ export const connections = pgTable("connections", {
   refreshTokenEnc: text("refresh_token_enc").notNull().default(""),
   apiKey: text("api_key").notNull().unique("connection_api_key"),
   status: text("status").notNull().default("active"),
+  // soft delete
+  deletedAt: integer("deleted_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
   lastUsedAt: integer("last_used_at"),

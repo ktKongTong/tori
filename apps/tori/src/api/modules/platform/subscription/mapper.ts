@@ -32,7 +32,6 @@ export function toSubscriptionDto(subscription: Subscription): SubscriptionDto {
   return {
     id: subscription.id,
     channelId: subscription.channelId,
-    botPluginInstanceId: subscription.botPluginInstanceId ?? null,
     connectionId: subscription.connectionId,
     ownerType: subscription.ownerType,
     ownerId: subscription.ownerId,
@@ -51,7 +50,6 @@ export function toSubscriptionViewDto(subscription: Subscription): SubscriptionV
   const channel = toNamedEntity(subscription.channel);
   const connection = toNamedEntity(subscription.connection);
   const owner = toNamedEntity(subscription.owner);
-  const botInstance = toNamedEntity((subscription as { botInstance?: unknown }).botInstance);
   const ownerChannel = toNamedEntity((subscription as { ownerChannel?: unknown }).ownerChannel);
 
   return {
@@ -63,9 +61,6 @@ export function toSubscriptionViewDto(subscription: Subscription): SubscriptionV
           provider: connection.provider ?? "",
           providerAccountName: connection.providerAccountName ?? null,
         }
-      : null,
-    botInstance: botInstance
-      ? { id: botInstance.id, displayName: botInstance.displayName ?? null }
       : null,
     owner: owner ? { id: owner.id, name: owner.name ?? owner.displayName ?? owner.id } : null,
     ownerChannel: ownerChannel ? { id: ownerChannel.id, name: ownerChannel.name ?? null } : null,

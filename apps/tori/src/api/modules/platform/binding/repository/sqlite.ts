@@ -198,13 +198,15 @@ export class BindingSqliteRepository implements IBindingRepository {
     return revoked;
   }
 
-  async revokeActiveChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
+  async suspendActiveChannelBindingsByBotPluginInstanceId(
+    botPluginInstanceId: string,
+    reason: string,
+  ) {
     const rows = await this.db
       .update(channelBindings)
       .set({
-        status: "revoked",
-        revokedReason: "bot-instance-removed",
-        endedAt: new Date(),
+        status: "suspended",
+        revokedReason: reason,
         updatedAt: new Date(),
       })
       .where(

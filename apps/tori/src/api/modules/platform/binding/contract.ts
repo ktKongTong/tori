@@ -34,6 +34,7 @@ export const channelBindingDtoSchema = z.object({
   status: z.string(),
   supersededByBindingId: z.string().nullable(),
   revokedReason: z.string().nullable(),
+  suspendedReason: z.string().nullable(),
   metadata: z.unknown().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
