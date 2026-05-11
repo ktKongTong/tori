@@ -4,17 +4,22 @@ import {
   accountProfileListDtoSchema,
   accountProfileResponseDtoSchema,
   connectionListDtoSchema,
+  connectionStatusResponseDtoSchema,
   steamFamilyRefreshResponseDtoSchema,
-  type AccountProfileDto,
+  tokenProxyConnectionStartResponseDtoSchema,
   type ConnectionDto,
+  type StartTokenProxyConnectionDto,
 } from "@/api/modules/platform/connection/contract";
 import {
   integrationStatusResponseDtoSchema,
   proxyInstanceListDtoSchema,
   proxyProbeResponseDtoSchema,
-  type ProxyInstanceDto,
   type RegisterProxyInstanceDto,
 } from "@/api/modules/platform/integration/contract";
+import {
+  actionCheckResponseSchema,
+  type ActionCheckAction,
+} from "@/api/modules/platform/shared/action-check";
 
 const integrationRequest = createRequestClient({
   credentials: "include",
@@ -44,6 +49,18 @@ export const registerProxyInstance = (input: RegisterProxyInstanceDto) =>
     schema: proxyProbeResponseDtoSchema,
   });
 
+export const startTokenProxyConnection = (
+  proxyInstanceId: string,
+  input: StartTokenProxyConnectionDto,
+) =>
+  integrationRequest.post(
+    `/api/integration/proxy-instances/${encodeURIComponent(proxyInstanceId)}/connections/start`,
+    input,
+    {
+      schema: tokenProxyConnectionStartResponseDtoSchema,
+    },
+  );
+
 export const listConnections = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
 ) =>
@@ -72,6 +89,37 @@ export const updateProxyStatus = (input: { id: string; status: "active" | "disab
     `/api/integration/proxy-instances/${encodeURIComponent(input.id)}`,
     { status: input.status },
     { schema: integrationStatusResponseDtoSchema },
+  );
+
+export const deleteProxyInstance = (id: string) =>
+  integrationRequest.delete(`/api/integration/proxy-instances/${encodeURIComponent(id)}`, {
+    schema: integrationStatusResponseDtoSchema,
+  });
+
+export const checkProxyAction = (input: { id: string; action: ActionCheckAction }) =>
+  integrationRequest.post(
+    `/api/integration/proxy-instances/${encodeURIComponent(input.id)}/action-check`,
+    { action: input.action },
+    { schema: actionCheckResponseSchema },
+  );
+
+export const updateConnectionStatus = (input: { id: string; status: "active" | "disabled" }) =>
+  integrationRequest.patch(
+    `/api/integration/connections/${encodeURIComponent(input.id)}`,
+    { status: input.status },
+    { schema: connectionStatusResponseDtoSchema },
+  );
+
+export const deleteConnection = (id: string) =>
+  integrationRequest.delete(`/api/integration/connections/${encodeURIComponent(id)}`, {
+    schema: connectionStatusResponseDtoSchema,
+  });
+
+export const checkConnectionAction = (input: { id: string; action: ActionCheckAction }) =>
+  integrationRequest.post(
+    `/api/integration/connections/${encodeURIComponent(input.id)}/action-check`,
+    { action: input.action },
+    { schema: actionCheckResponseSchema },
   );
 
 export const fetchIntegrationAccountProfile = (connectionId: string) =>

@@ -49,6 +49,35 @@ export const createConnectionDtoSchema = z.object({
 
 export const connectionCreatedDtoSchema = connectionDtoSchema;
 
+export const updateConnectionStatusDtoSchema = z.object({
+  status: z.enum(["active", "disabled"]),
+});
+
+export const connectionStatusResponseDtoSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+});
+
+export const startTokenProxyConnectionDtoSchema = z.object({
+  provider: z.string().min(1),
+  accessMode: z.enum(["proxy-token", "mixed"]).default("proxy-token"),
+});
+
+export const tokenProxyConnectionStartResponseDtoSchema = z.object({
+  sessionId: z.string(),
+  state: z.string(),
+  connectUrl: z.string().url(),
+  expiresAt: z.string(),
+});
+
+export const tokenProxyConnectionCallbackQuerySchema = z.object({
+  sessionId: z.string().min(1),
+  state: z.string().min(1),
+  code: z.string().min(1).optional(),
+  error: z.string().optional(),
+  error_description: z.string().optional(),
+});
+
 export const accountProfileResponseDtoSchema = z.object({
   connectionId: z.string().optional(),
   externalAccountId: z.string(),
@@ -71,3 +100,5 @@ export const steamFamilyRefreshResponseDtoSchema = z.object({
 export type ConnectionDto = z.infer<typeof connectionDtoSchema>;
 export type AccountProfileDto = z.infer<typeof accountProfileDtoSchema>;
 export type CreateConnectionDto = z.infer<typeof createConnectionDtoSchema>;
+export type StartTokenProxyConnectionDto = z.infer<typeof startTokenProxyConnectionDtoSchema>;
+export type UpdateConnectionStatusDto = z.infer<typeof updateConnectionStatusDtoSchema>;

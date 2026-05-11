@@ -114,6 +114,14 @@ export const reconnectSessionSchema = z.object({
 
 export const connectSessionSchema = reconnectSessionSchema;
 
+export const externalConnectSessionSchema = reconnectSessionSchema.extend({
+  connections: z.array(connectionSchema).default([]),
+});
+
+export const externalConnectConfirmResponseSchema = z.object({
+  redirectUrl: z.string().url(),
+});
+
 export const requestLogSchema = z.object({
   id: z.number(),
   connectionId: z.string(),

@@ -70,6 +70,7 @@ export interface AuthSessionState {
     state: string;
     callbackUrl: string;
     connectionId?: string | null;
+    authStarted?: boolean;
   } | null;
   requestedConnection?: {
     label?: string | null;

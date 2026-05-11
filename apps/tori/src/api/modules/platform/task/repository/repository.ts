@@ -98,4 +98,9 @@ export interface ITaskRepository {
   ): Promise<TaskDefinition | null>;
   createTaskRun(input: CreateTaskRunInput): Promise<TaskRun>;
   markTaskDefinitionTriggered(taskDefinitionId: string, triggeredAt: Date): Promise<void>;
+  disableTaskDefinitionsByPayloadConnectionId(connectionId: string): Promise<string[]>;
+  cancelPendingTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]): Promise<number>;
+  deleteTaskDefinition(taskDefinitionId: string): Promise<TaskDefinition | null>;
+  deleteTaskDefinitionsByPayloadConnectionId(connectionId: string): Promise<string[]>;
+  deleteTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]): Promise<number>;
 }

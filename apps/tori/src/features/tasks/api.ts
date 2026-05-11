@@ -3,6 +3,7 @@ import {
   taskDefinitionDtoSchema,
   taskDefinitionPageDtoSchema,
   taskRunPageDtoSchema,
+  type UpdateTaskDto,
 } from "@/api/modules/platform/task/contract";
 
 const tasksRequest = createRequestClient({
@@ -32,5 +33,17 @@ export const getTaskRuns = async (
   return tasksRequest.get(`/api/tasks/${encodeURIComponent(taskId)}/runs`, {
     query: input,
     schema: taskRunPageDtoSchema,
+  });
+};
+
+export const updateTaskDefinition = async (taskId: string, input: UpdateTaskDto) => {
+  return tasksRequest.patch(`/api/tasks/${encodeURIComponent(taskId)}`, input, {
+    schema: taskDefinitionDtoSchema,
+  });
+};
+
+export const deleteTaskDefinition = async (taskId: string) => {
+  return tasksRequest.delete(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    schema: taskDefinitionDtoSchema,
   });
 };

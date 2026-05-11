@@ -147,7 +147,7 @@ function NotifySubscriptionActions({
           },
         },
         {
-          label: subscription.status === "active" ? "Disable" : "Enable",
+          label: subscription.status === "active" ? "Remove" : "Enable",
           variant: subscription.status === "active" ? "destructive" : "default",
           onSelect: () =>
             updateSubscriptionStatus.mutate({

@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { channelBindings, notificationEvents, subscriptions } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import { NotFoundError } from "@/api/domain/error";
@@ -109,5 +109,78 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
       .where(eq(subscriptions.id, id))
       .returning();
     return updated ?? null;
+  }
+
+  async disableActiveSubscriptionsByConnectionId(connectionId: string) {
+    const rows = await this.db
+      .update(subscriptions)
+      .set({ status: "disabled", updatedAt: new Date() })
+      .where(and(eq(subscriptions.connectionId, connectionId), eq(subscriptions.status, "active")))
+      .returning({ id: subscriptions.id });
+    return rows.length;
+  }
+
+  async deleteSubscriptionsByConnectionId(connectionId: string) {
+    const rows = await this.db
+      .delete(subscriptions)
+      .where(eq(subscriptions.connectionId, connectionId))
+      .returning({ id: subscriptions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async deleteNotificationEventsBySubscriptionIds(subscriptionIds: string[]) {
+    if (!subscriptionIds.length) return 0;
+    const rows = await this.db
+      .delete(notificationEvents)
+      .where(inArray(notificationEvents.subscriptionId, subscriptionIds))
+      .returning({ id: notificationEvents.id });
+    return rows.length;
+  }
+
+  async deleteSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
+    const rows = await this.db
+      .delete(subscriptions)
+      .where(eq(subscriptions.botPluginInstanceId, botPluginInstanceId))
+      .returning({ id: subscriptions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string) {
+    const rows = await this.db
+      .delete(notificationEvents)
+      .where(eq(notificationEvents.botPluginInstanceId, botPluginInstanceId))
+      .returning({ id: notificationEvents.id });
+    return rows.length;
+  }
+
+  async deleteNotificationEventsByDeliveryEndpointId(deliveryEndpointId: string) {
+    const rows = await this.db
+      .delete(notificationEvents)
+      .where(eq(notificationEvents.deliveryEndpointId, deliveryEndpointId))
+      .returning({ id: notificationEvents.id });
+    return rows.length;
+  }
+
+  async disableActiveSubscriptionsByChannelId(channelId: string) {
+    const rows = await this.db
+      .update(subscriptions)
+      .set({ status: "disabled", updatedAt: new Date() })
+      .where(and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active")))
+      .returning({ id: subscriptions.id });
+    return rows.length;
+  }
+
+  async disableActiveSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string) {
+    const rows = await this.db
+      .update(subscriptions)
+      .set({ status: "disabled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(subscriptions.botPluginInstanceId, botPluginInstanceId),
+          eq(subscriptions.status, "active"),
+        ),
+      )
+      .returning({ id: subscriptions.id });
+    return rows.length;
   }
 }

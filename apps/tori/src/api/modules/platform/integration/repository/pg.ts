@@ -29,6 +29,7 @@ export class IntegrationPgRepository implements IIntegrationRepository {
         and(
           eq(proxyInstances.ownerUserId, input.ownerUserId),
           eq(proxyInstances.baseUrl, input.baseUrl),
+          eq(proxyInstances.status, "active"),
         ),
       )
       .limit(1);
@@ -103,5 +104,16 @@ export class IntegrationPgRepository implements IIntegrationRepository {
       )
       .returning();
     return updated ?? null;
+  }
+
+  async deleteProxyInstance(input: { id: string; ownerUserId: string }) {
+    const [deleted] = await this.db
+      .update(proxyInstances)
+      .set({ status: "deleted", updatedAt: new Date() })
+      .where(
+        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+      )
+      .returning();
+    return deleted ?? null;
   }
 }

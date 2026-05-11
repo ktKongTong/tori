@@ -8,7 +8,12 @@ import {
   rotateBotInstanceCredentialResponseDtoSchema,
   type AttachEndpointDto,
   type CreateBotInstanceDto,
+  type UpdateBotInstanceDto,
 } from "@/api/modules/platform/bot-plugin/contract";
+import {
+  actionCheckResponseSchema,
+  type ActionCheckAction,
+} from "@/api/modules/platform/shared/action-check";
 
 const botInstancesRequest = createRequestClient({
   credentials: "include",
@@ -48,6 +53,23 @@ export const revokeBotInstance = (id: string) =>
     {
       schema: botInstanceStatusResponseDtoSchema,
     },
+  );
+
+export const updateBotInstance = (id: string, input: UpdateBotInstanceDto) =>
+  botInstancesRequest.patch(`/api/bot-plugin/instances/${encodeURIComponent(id)}`, input, {
+    schema: botInstanceStatusResponseDtoSchema,
+  });
+
+export const deleteBotInstance = (id: string) =>
+  botInstancesRequest.delete(`/api/bot-plugin/instances/${encodeURIComponent(id)}`, {
+    schema: botInstanceStatusResponseDtoSchema,
+  });
+
+export const checkBotInstanceAction = (input: { id: string; action: ActionCheckAction }) =>
+  botInstancesRequest.post(
+    `/api/bot-plugin/instances/${encodeURIComponent(input.id)}/action-check`,
+    { action: input.action },
+    { schema: actionCheckResponseSchema },
   );
 
 export const attachBotInstanceEndpoint = (id: string, input: AttachEndpointDto) =>

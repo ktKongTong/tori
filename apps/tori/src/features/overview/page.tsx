@@ -14,15 +14,15 @@ export function DashboardOverviewPage() {
   const integration = integrationQuery.data;
   const notifySubscriptions = notifySubscriptionsQuery.data;
 
-  const activeUserBindings = binding?.items.length ?? 0;
+  const activeUserBindings = binding?.data.length ?? 0;
   const activeConnections =
-    integration?.items.filter((item) => item.connection.status === "active").length ?? 0;
+    integration?.data.filter((item) => item.status === "active").length ?? 0;
   const activeSubscriptions =
     notifySubscriptions?.data.filter((item) => item.status === "active").length ?? 0;
   const failedNotifications = 0;
   const latestSubscription = notifySubscriptions?.data[0] ?? null;
-  const latestConnection = integration?.items[0] ?? null;
-  const latestBinding = binding?.items[0] ?? null;
+  const latestConnection = integration?.data[0] ?? null;
+  const latestBinding = binding?.data[0] ?? null;
 
   const nextStep =
     activeUserBindings === 0
@@ -117,14 +117,14 @@ export function DashboardOverviewPage() {
             {
               label: "Latest binding",
               detail: latestBinding
-                ? `${latestBinding.user?.name ?? latestBinding.binding.userId} is bound on ${latestBinding.binding.platform} as ${latestBinding.binding.externalUserName ?? latestBinding.binding.externalUserId}.`
+                ? `${latestBinding.userId} is bound on ${latestBinding.platform} as ${latestBinding.externalUserName ?? latestBinding.externalUserId}.`
                 : "No user binding has been created yet.",
               to: "/binding",
             },
             {
               label: "Latest connection",
               detail: latestConnection
-                ? `${latestConnection.connection.providerAccountName ?? latestConnection.connection.providerAccountId} is available through ${latestConnection.connection.provider}.`
+                ? `${latestConnection.providerAccountName ?? latestConnection.providerAccountId} is available through ${latestConnection.provider}.`
                 : "No provider connection has been added yet.",
               to: "/integration",
             },

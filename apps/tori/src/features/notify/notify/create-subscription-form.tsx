@@ -56,6 +56,17 @@ const subscriptionDefaultValues: z.input<typeof subscriptionFormSchema> = {
   eventTypes: '["family.library.updated"]',
 };
 
+const subscriptionTargets = [
+  {
+    label: "Steam Family Library Changes",
+    value: 'steam.family|*|["family.library.updated"]',
+  },
+  {
+    label: "Steam Profile Updates",
+    value: 'steam.account|*|["profile.updated"]',
+  },
+] as const;
+
 type SubscriptionDialogProps = {
   defaultValues?: Partial<z.input<typeof subscriptionFormSchema>>;
   userId: string;
@@ -67,9 +78,18 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
 
   const bindingQuery = useChannelBindingsQuery();
   const integrationQuery = useConnectionsQuery();
-  const availableChannelBindings = bindingQuery.data?.items ?? [];
+  const availableChannelBindings =
+    bindingQuery.data?.data.filter((binding) => binding.status === "active") ?? [];
   const availableConnections =
-    integrationQuery.data?.items.filter((item) => item.connection.status === "active") ?? [];
+    integrationQuery.data?.data.filter((connection) => connection.status === "active") ?? [];
+  const connectionSelectItems = availableConnections.map((connection) => ({
+    label: `${connection.providerAccountName ?? connection.providerAccountId} / ${connection.provider}`,
+    value: connection.id,
+  }));
+  const channelBindingSelectItems = availableChannelBindings.map((binding) => ({
+    label: `${binding.externalChannelName ?? binding.externalChannelId} / ${binding.platform}`,
+    value: binding.channelId,
+  }));
 
   const createSubscription = useMutation({
     mutationFn: async (input: CreateSubscriptionDto) => createSubscriptionRequest(input),
@@ -187,6 +207,7 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
               })}
               children={(template) => (
                 <Select
+                  items={subscriptionTargets}
                   value={`${template.topicType}|${template.topicKey}|${template.eventTypes}`}
                   onValueChange={(value) => {
                     if (!value) return;
@@ -200,12 +221,11 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                     <SelectValue placeholder="Choose a subscription target" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={'steam.family|*|["family.library.updated"]'}>
-                      Steam Family Library Changes
-                    </SelectItem>
-                    <SelectItem value={'steam.account|*|["profile.updated"]'}>
-                      Steam Profile Updates
-                    </SelectItem>
+                    {subscriptionTargets.map((target) => (
+                      <SelectItem key={target.value} value={target.value}>
+                        {target.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}
@@ -221,6 +241,7 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                 <Field data-invalid={invalid}>
                   <FieldLabel>2. Use which account?</FieldLabel>
                   <Select
+                    items={connectionSelectItems}
                     value={field.state.value}
                     onValueChange={(value) => field.handleChange(value ?? "")}
                   >
@@ -228,11 +249,9 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                       <SelectValue placeholder="Select a connected account" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableConnections.map((connection) => (
-                        <SelectItem key={connection.connection.id} value={connection.connection.id}>
-                          {connection.connection.providerAccountName ??
-                            connection.connection.providerAccountId}{" "}
-                          · {connection.connection.provider}
+                      {connectionSelectItems.map((connection) => (
+                        <SelectItem key={connection.value} value={connection.value}>
+                          {connection.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -252,6 +271,7 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                 <Field data-invalid={invalid}>
                   <FieldLabel>3. Deliver to where?</FieldLabel>
                   <Select
+                    items={channelBindingSelectItems}
                     value={field.state.value}
                     onValueChange={(value) => field.handleChange(value ?? "")}
                   >
@@ -259,10 +279,9 @@ export function SubscriptionDialog({ defaultValues, userId }: SubscriptionDialog
                       <SelectValue placeholder="Select a bound channel" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableChannelBindings.map((binding) => (
-                        <SelectItem key={binding.binding.id} value={binding.binding.channelId}>
-                          {binding.channel?.name ?? binding.binding.channelId} ·{" "}
-                          {binding.binding.externalChannelName ?? binding.binding.externalChannelId}
+                      {channelBindingSelectItems.map((binding) => (
+                        <SelectItem key={binding.value} value={binding.value}>
+                          {binding.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

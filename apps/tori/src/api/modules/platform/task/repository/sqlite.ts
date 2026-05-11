@@ -1,4 +1,4 @@
-import { and, eq, desc, count } from "drizzle-orm";
+import { and, eq, desc, count, inArray, sql } from "drizzle-orm";
 import { taskDefinitions, taskRuns } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import type {
@@ -234,5 +234,63 @@ export class TaskSqliteRepository implements ITaskRepository {
         updatedAt: new Date(),
       })
       .where(eq(taskDefinitions.id, taskDefinitionId));
+  }
+
+  async disableTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+    const rows = await this.db
+      .update(taskDefinitions)
+      .set({
+        enabled: false,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(taskDefinitions.enabled, true),
+          sql`json_extract(${taskDefinitions.payload}, '$.connectionId') = ${connectionId}`,
+        ),
+      )
+      .returning({ id: taskDefinitions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async cancelPendingTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]) {
+    if (!taskDefinitionIds.length) return 0;
+    const rows = await this.db
+      .update(taskRuns)
+      .set({
+        status: "CANCELLED",
+        errorMessage: "task cancelled because connection was removed",
+        finishedAt: new Date(),
+      })
+      .where(
+        and(inArray(taskRuns.taskDefinitionId, taskDefinitionIds), eq(taskRuns.status, "PENDING")),
+      )
+      .returning({ id: taskRuns.id });
+    return rows.length;
+  }
+
+  async deleteTaskDefinition(taskDefinitionId: string) {
+    const [row] = await this.db
+      .delete(taskDefinitions)
+      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .returning();
+    return row ?? null;
+  }
+
+  async deleteTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+    const rows = await this.db
+      .delete(taskDefinitions)
+      .where(sql`json_extract(${taskDefinitions.payload}, '$.connectionId') = ${connectionId}`)
+      .returning({ id: taskDefinitions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async deleteTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]) {
+    if (!taskDefinitionIds.length) return 0;
+    const rows = await this.db
+      .delete(taskRuns)
+      .where(inArray(taskRuns.taskDefinitionId, taskDefinitionIds))
+      .returning({ id: taskRuns.id });
+    return rows.length;
   }
 }

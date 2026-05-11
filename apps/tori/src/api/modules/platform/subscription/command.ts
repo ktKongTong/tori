@@ -9,6 +9,11 @@ import {
 } from "./type.ts";
 
 export async function createSubscription(ctx: ServiceContext, input: CreateSubscriptionInput) {
+  const connection = await ctx.repositories.connection.findActiveConnectionById(input.connectionId);
+  if (!connection) {
+    throw new NotFoundError("connection not found");
+  }
+
   const channelBinding = await ctx.repositories.subscription.findActiveChannelBindingByChannelId(
     input.channelId,
   );
@@ -74,6 +79,22 @@ export async function createSubscription(ctx: ServiceContext, input: CreateSubsc
 }
 
 export async function updateSubscriptionStatus(ctx: ServiceContext, id: string, status: string) {
+  if (status === "active") {
+    const existing = await ctx.repositories.subscription.findSubscriptionById(id);
+    const connection = await ctx.repositories.connection.findActiveConnectionById(
+      existing.connectionId,
+    );
+    if (!connection) {
+      throw new NotFoundError("connection not found");
+    }
+    const channelBinding = await ctx.repositories.subscription.findActiveChannelBindingByChannelId(
+      existing.channelId,
+    );
+    if (!channelBinding) {
+      throw new NotFoundError("channel binding not found");
+    }
+  }
+
   const updated = await ctx.repositories.subscription.updateSubscriptionStatus(id, status);
   if (!updated) throw new NotFoundError("subscription not found");
 

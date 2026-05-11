@@ -111,4 +111,14 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
       .returning();
     return updated ?? null;
   }
+
+  async deleteProxyInstance(input: { id: string; ownerUserId: string }) {
+    const [deleted] = await this.db
+      .delete(proxyInstances)
+      .where(
+        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+      )
+      .returning();
+    return deleted ?? null;
+  }
 }

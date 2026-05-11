@@ -70,4 +70,12 @@ export class SteamAccountSqliteRepository implements ISteamAccountRepository {
       .limit(1);
     return row ?? null;
   }
+
+  async deleteAccountDataByConnectionId(connectionId: string) {
+    const profile = await this.findAccountProfileByConnectionId(connectionId);
+    if (profile) {
+      await this.db.delete(userLibraryItems).where(eq(userLibraryItems.steamId, profile.steamId));
+    }
+    await this.db.delete(accountProfiles).where(eq(accountProfiles.connectionId, connectionId));
+  }
 }

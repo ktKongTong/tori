@@ -1,13 +1,10 @@
-import { useMemo, useState } from "react";
 import { DataTable } from "@repo/data-table";
 import { Button } from "@repo/ui/components/button";
 
 import { DashboardActionBar } from "@/components/dashboard-ui";
 import { createIntegrationConnectionColumns } from "./columns";
-import { ConnectionDetailSheet } from "./detail-sheet";
 import { AddConnectionDialog } from "./create-connection-dialog";
 import { useConnectionsQuery } from "@/features/integration/query";
-import { useToastError } from "@/lib/toast-error";
 import { useModal } from "@/lib/modal.tsx";
 
 const columns = createIntegrationConnectionColumns();

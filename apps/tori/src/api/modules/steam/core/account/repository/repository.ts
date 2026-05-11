@@ -50,4 +50,5 @@ export interface ISteamAccountRepository {
   upsertAccountProfile(input: UpsertAccountProfileInput): Promise<AccountProfileRow>;
   replaceUserLibraryItems(input: ReplaceUserLibraryItemsInput): Promise<UserLibraryItemRow[]>;
   findAccountProfileByConnectionId(connectionId: string): Promise<AccountProfileRow | null>;
+  deleteAccountDataByConnectionId(connectionId: string): Promise<void>;
 }

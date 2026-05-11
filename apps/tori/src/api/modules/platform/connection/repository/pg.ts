@@ -1,9 +1,18 @@
-import { and, desc, eq, ne, getColumns } from "drizzle-orm";
-import { connections, proxyInstances } from "@/api/db/schema/pg";
+import { and, desc, eq, ne, getColumns, sql } from "drizzle-orm";
+import {
+  connectionCredentials,
+  connections,
+  proxyInstances,
+  tokenProxyConnectionSessions,
+} from "@/api/db/schema/pg";
 import { accountProfiles } from "@/api/modules/steam/core/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
-import type { CreateConnectionInput, IConnectionRepository } from "./repository.ts";
-import { list } from "@repo/db/utils/pg";
+import type {
+  CreateConnectionCredentialInput,
+  CreateConnectionInput,
+  CreateTokenProxyConnectionSessionInput,
+  IConnectionRepository,
+} from "./repository.ts";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 import { uniqueId } from "@repo/utils/id";
 import { dynamicQuery } from "@repo/db/utils/pg";
@@ -32,10 +41,27 @@ export class ConnectionPgRepository implements IConnectionRepository {
   }
 
   async listAccountProfiles(page: PageBasedPaginationParam) {
-    return list(this.db, accountProfiles, {
-      orderBy: [{ column: "updatedAt", direction: "desc" }],
-      page,
-    });
+    const query = this.db
+      .select({
+        ...getColumns(accountProfiles),
+      })
+      .from(accountProfiles)
+      .innerJoin(
+        connections,
+        and(eq(connections.id, accountProfiles.connectionId), eq(connections.status, "active")),
+      );
+
+    const [result, total] = await Promise.all([
+      dynamicQuery(query.$dynamic(), accountProfiles, {
+        orderBy: [{ column: "updatedAt", direction: "desc" }],
+        page,
+      }),
+      this.db.$count(
+        accountProfiles,
+        sql`exists (select 1 from ${connections} where ${connections.id} = ${accountProfiles.connectionId} and ${connections.status} = 'active')`,
+      ),
+    ]);
+    return toPageResult(result, total, page);
   }
 
   async findConnectionByOwnerAndProviderAccount(input: {
@@ -51,6 +77,29 @@ export class ConnectionPgRepository implements IConnectionRepository {
           eq(connections.ownerUserId, input.ownerUserId),
           eq(connections.provider, input.provider),
           eq(connections.providerAccountId, input.providerAccountId),
+          eq(connections.status, "active"),
+        ),
+      )
+      .limit(1);
+    return connection ?? null;
+  }
+
+  async findConnectionByOwnerProviderAccountAndAccessMode(input: {
+    ownerUserId: string;
+    provider: string;
+    providerAccountId: string;
+    accessMode: string;
+  }) {
+    const [connection] = await this.db
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.ownerUserId, input.ownerUserId),
+          eq(connections.provider, input.provider),
+          eq(connections.providerAccountId, input.providerAccountId),
+          eq(connections.accessMode, input.accessMode),
+          eq(connections.status, "active"),
         ),
       )
       .limit(1);
@@ -142,5 +191,219 @@ export class ConnectionPgRepository implements IConnectionRepository {
       )
       .limit(1);
     return connection ?? null;
+  }
+
+  async listConnectionsByProxyInstanceId(proxyInstanceId: string) {
+    return this.db
+      .select()
+      .from(connections)
+      .where(eq(connections.proxyInstanceId, proxyInstanceId));
+  }
+
+  async updateConnectionStatus(input: {
+    id: string;
+    ownerUserId: string;
+    status: "active" | "disabled" | "deleted";
+  }) {
+    const [connection] = await this.db
+      .update(connections)
+      .set({
+        status: input.status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(connections.id, input.id), eq(connections.ownerUserId, input.ownerUserId)))
+      .returning();
+    return connection ?? null;
+  }
+
+  async disableActiveConnectionsByProxyInstanceId(proxyInstanceId: string) {
+    return this.db
+      .update(connections)
+      .set({
+        status: "disabled",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(connections.proxyInstanceId, proxyInstanceId), eq(connections.status, "active")),
+      )
+      .returning();
+  }
+
+  async deleteConnection(input: { id: string; ownerUserId: string }) {
+    const [connection] = await this.db
+      .update(connections)
+      .set({
+        status: "deleted",
+        updatedAt: new Date(),
+      })
+      .where(and(eq(connections.id, input.id), eq(connections.ownerUserId, input.ownerUserId)))
+      .returning();
+    return connection ?? null;
+  }
+
+  async createConnectionCredential(input: CreateConnectionCredentialInput) {
+    const [row] = await this.db
+      .insert(connectionCredentials)
+      .values({
+        id: input.id,
+        connectionId: input.connectionId,
+        proxyInstanceId: input.proxyInstanceId,
+        kind: input.kind,
+        credentialRef: input.credentialRef,
+        status: input.status ?? "active",
+        metadata: input.metadata ?? null,
+        expiresAt: input.expiresAt ?? null,
+      })
+      .returning();
+    return row;
+  }
+
+  async updateConnectionCredential(input: {
+    id: string;
+    proxyInstanceId: string;
+    credentialRef: string;
+    metadata?: unknown;
+    expiresAt?: Date | null;
+  }) {
+    const [row] = await this.db
+      .update(connectionCredentials)
+      .set({
+        proxyInstanceId: input.proxyInstanceId,
+        credentialRef: input.credentialRef,
+        metadata: input.metadata ?? null,
+        expiresAt: input.expiresAt ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(connectionCredentials.id, input.id))
+      .returning();
+    return row;
+  }
+
+  async findActiveConnectionCredential(input: { connectionId: string; kind: string }) {
+    const [credential] = await this.db
+      .select()
+      .from(connectionCredentials)
+      .where(
+        and(
+          eq(connectionCredentials.connectionId, input.connectionId),
+          eq(connectionCredentials.kind, input.kind),
+          eq(connectionCredentials.status, "active"),
+        ),
+      )
+      .limit(1);
+    return credential ?? null;
+  }
+
+  async disableActiveConnectionCredentialsByConnectionId(connectionId: string) {
+    const rows = await this.db
+      .update(connectionCredentials)
+      .set({ status: "disabled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(connectionCredentials.connectionId, connectionId),
+          eq(connectionCredentials.status, "active"),
+        ),
+      )
+      .returning({ id: connectionCredentials.id });
+    return rows.length;
+  }
+
+  async deleteConnectionCredentialsByConnectionId(connectionId: string) {
+    const rows = await this.db
+      .delete(connectionCredentials)
+      .where(eq(connectionCredentials.connectionId, connectionId))
+      .returning({ id: connectionCredentials.id });
+    return rows.length;
+  }
+
+  async deleteTokenProxyConnectionSessionsByConnectionId(connectionId: string) {
+    const rows = await this.db
+      .delete(tokenProxyConnectionSessions)
+      .where(eq(tokenProxyConnectionSessions.connectionId, connectionId))
+      .returning({ id: tokenProxyConnectionSessions.id });
+    return rows.length;
+  }
+
+  async deleteTokenProxyConnectionSessionsByProxyInstanceId(proxyInstanceId: string) {
+    const rows = await this.db
+      .delete(tokenProxyConnectionSessions)
+      .where(eq(tokenProxyConnectionSessions.proxyInstanceId, proxyInstanceId))
+      .returning({ id: tokenProxyConnectionSessions.id });
+    return rows.length;
+  }
+
+  async createTokenProxyConnectionSession(input: CreateTokenProxyConnectionSessionInput) {
+    const [row] = await this.db
+      .insert(tokenProxyConnectionSessions)
+      .values({
+        id: input.id,
+        state: input.state,
+        ownerUserId: input.ownerUserId,
+        proxyInstanceId: input.proxyInstanceId,
+        provider: input.provider,
+        accessMode: input.accessMode,
+        callbackUrl: input.callbackUrl,
+        tokenProxyConnectUrl: input.tokenProxyConnectUrl,
+        metadata: input.metadata ?? null,
+        expiresAt: input.expiresAt,
+      })
+      .returning();
+    return row;
+  }
+
+  async findTokenProxyConnectionSession(input: { id: string; state: string }) {
+    const [session] = await this.db
+      .select()
+      .from(tokenProxyConnectionSessions)
+      .where(
+        and(
+          eq(tokenProxyConnectionSessions.id, input.id),
+          eq(tokenProxyConnectionSessions.state, input.state),
+        ),
+      )
+      .limit(1);
+    return session ?? null;
+  }
+
+  async completeTokenProxyConnectionSession(input: {
+    id: string;
+    state: string;
+    tokenProxyCode: string;
+    connectionId: string;
+  }) {
+    const [row] = await this.db
+      .update(tokenProxyConnectionSessions)
+      .set({
+        status: "completed",
+        tokenProxyCode: input.tokenProxyCode,
+        connectionId: input.connectionId,
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tokenProxyConnectionSessions.id, input.id),
+          eq(tokenProxyConnectionSessions.state, input.state),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async failTokenProxyConnectionSession(input: { id: string; state: string; error: string }) {
+    const [row] = await this.db
+      .update(tokenProxyConnectionSessions)
+      .set({
+        status: "failed",
+        error: input.error,
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tokenProxyConnectionSessions.id, input.id),
+          eq(tokenProxyConnectionSessions.state, input.state),
+        ),
+      )
+      .returning();
+    return row ?? null;
   }
 }

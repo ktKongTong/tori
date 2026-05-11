@@ -41,12 +41,22 @@ export async function handleTaskRun(ctx: ServiceContext, taskRunId: string) {
   if (!taskRun) {
     throw new NotFoundError("task run not found");
   }
+  if (taskRun.status !== "PENDING") {
+    return;
+  }
 
   const taskDefinition = await ctx.repositories.task.getTaskDefinitionById(
     taskRun.taskDefinitionId,
   );
   if (!taskDefinition) {
     throw new NotFoundError("task definition not found");
+  }
+  if (!taskDefinition.enabled) {
+    await ctx.repositories.task.markTaskRunFailed(taskRun.id, {
+      errorMessage: "task definition is disabled",
+      finishedAt: new Date(),
+    });
+    return;
   }
 
   const handler = handlers.get(taskDefinition.kind);

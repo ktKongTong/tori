@@ -46,6 +46,11 @@ const externalConnectQuerySchema = z.object({
 
 const externalConnectConfirmSchema = z.object({
   state: z.string().min(16),
+  connectionId: z.string().min(1).optional(),
+});
+
+const externalConnectStartNewSchema = z.object({
+  state: z.string().min(16),
 });
 
 const externalConnectExchangeSchema = z.object({
@@ -80,6 +85,7 @@ const authFlowSessionSchema = z.object({
   displayName: z.string().nullable(),
   apiKey: z.string().nullable().optional(),
   connection: connectionViewSchema.nullable().optional(),
+  connections: z.array(connectionViewSchema).default([]),
   errorMessage: z.string().nullable(),
 });
 
@@ -180,6 +186,7 @@ function createAuthFlowSessionView(
     expiresAt: number;
     result?: { providerUid: string; displayName: string } | null;
     connection?: ReturnType<typeof serializeConnection> | null;
+    connections?: ReturnType<typeof serializeConnection>[];
     apiKey?: string | null;
     error?: string | null;
   },
@@ -202,14 +209,11 @@ function createAuthFlowSessionView(
     providerUid: session.result?.providerUid ?? null,
     displayName: session.result?.displayName ?? null,
     connection: session.connection ?? null,
+    connections: session.connections ?? [],
     apiKey: session.apiKey ?? null,
     errorMessage: session.error ?? null,
     connectionId,
   });
-}
-
-function jsonForScript(value: unknown) {
-  return JSON.stringify(value).replaceAll("<", "\\u003c");
 }
 
 function parsePermissions(value: string | undefined, provider: string) {
@@ -227,122 +231,6 @@ function parsePermissions(value: string | undefined, provider: string) {
     : provider === "steam"
       ? ["proxy", "account", "steam-family"]
       : ["proxy", "account"];
-}
-
-function createExternalConnectPage(config: {
-  sessionId: string;
-  provider: string;
-  state: string;
-  callbackUrl: string;
-  verificationUri: string | null;
-  pollIntervalSeconds: string;
-  expiresAt: number;
-}) {
-  const serialized = jsonForScript(config);
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Connect ${config.provider}</title>
-    <style>
-      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: Canvas; color: CanvasText; }
-      main { width: min(560px, calc(100vw - 32px)); border: 1px solid color-mix(in srgb, CanvasText 16%, transparent); padding: 24px; }
-      h1 { margin: 0 0 8px; font-size: 20px; }
-      p { color: color-mix(in srgb, CanvasText 70%, transparent); line-height: 1.5; }
-      a, button { font: inherit; }
-      button { width: 100%; padding: 10px 12px; margin-top: 12px; }
-      code { overflow-wrap: anywhere; }
-      .box { border: 1px solid color-mix(in srgb, CanvasText 14%, transparent); padding: 12px; margin: 16px 0; }
-      .error { color: #b42318; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>Connect ${config.provider}</h1>
-      <p id="status">Waiting for provider authorization.</p>
-      <div class="box">
-        <p>Open the provider verification URL and complete authorization.</p>
-        <p><a id="verification-link" target="_blank" rel="noreferrer">Open verification page</a></p>
-        <code id="verification-uri"></code>
-      </div>
-      <div id="account" class="box" hidden>
-        <p>Authorized account</p>
-        <strong id="display-name"></strong>
-        <p><code id="provider-uid"></code></p>
-        <button id="confirm" type="button">Confirm connection</button>
-      </div>
-      <p id="error" class="error"></p>
-    </main>
-    <script>
-      const config = ${serialized};
-      const statusEl = document.getElementById("status");
-      const errorEl = document.getElementById("error");
-      const accountEl = document.getElementById("account");
-      const displayNameEl = document.getElementById("display-name");
-      const providerUidEl = document.getElementById("provider-uid");
-      const verificationUriEl = document.getElementById("verification-uri");
-      const verificationLinkEl = document.getElementById("verification-link");
-      const confirmEl = document.getElementById("confirm");
-      let completed = false;
-
-      function setVerificationUri(uri) {
-        if (!uri) return;
-        verificationUriEl.textContent = uri;
-        verificationLinkEl.href = uri;
-      }
-
-      async function poll() {
-        if (completed) return;
-        const response = await fetch("/admin/external-connect/" + encodeURIComponent(config.sessionId));
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error_description || "Polling failed");
-        setVerificationUri(payload.verificationUri);
-
-        if (payload.status === "pending") {
-          statusEl.textContent = "Waiting for provider authorization.";
-          window.setTimeout(poll, Math.max(2000, Number(payload.pollIntervalSeconds || 5) * 1000));
-          return;
-        }
-
-        if (payload.status === "completed") {
-          completed = true;
-          statusEl.textContent = "Authorization completed. Confirm the account to continue.";
-          accountEl.hidden = false;
-          displayNameEl.textContent = payload.displayName || payload.providerUid || config.provider;
-          providerUidEl.textContent = payload.providerUid || "";
-          return;
-        }
-
-        throw new Error(payload.errorMessage || "Authorization failed");
-      }
-
-      confirmEl.addEventListener("click", async () => {
-        confirmEl.disabled = true;
-        statusEl.textContent = "Creating token-proxy connection.";
-        const response = await fetch("/admin/external-connect/" + encodeURIComponent(config.sessionId) + "/confirm", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: config.state })
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          confirmEl.disabled = false;
-          throw new Error(payload.error_description || "Confirm failed");
-        }
-        window.location.href = payload.redirectUrl;
-      });
-
-      setVerificationUri(config.verificationUri);
-      poll().catch((error) => {
-        errorEl.textContent = error instanceof Error ? error.message : String(error);
-        statusEl.textContent = "Connection failed.";
-      });
-    </script>
-  </body>
-</html>`;
 }
 
 export function adminRoutes(deps: AdminDeps) {
@@ -420,7 +308,6 @@ export function adminRoutes(deps: AdminDeps) {
         );
       }
 
-      const begin = await provider.beginAuth({});
       const sessionId = randomCode("external_connect", 12);
       const expiresIn = 300;
       const expiresAt = Date.now() + expiresIn * 1000;
@@ -431,13 +318,14 @@ export function adminRoutes(deps: AdminDeps) {
         {
           providerName: query.provider,
           flowType: "poll",
-          challengeData: begin.challengeData,
+          challengeData: {},
           expiresAt,
           mode: "external-connect",
           externalConnect: {
             state: query.state,
             callbackUrl: query.callback,
             connectionId: null,
+            authStarted: false,
           },
           requestedConnection: {
             label: query.label ?? "Tori",
@@ -447,27 +335,68 @@ export function adminRoutes(deps: AdminDeps) {
         expiresIn,
       );
 
-      const view = createAuthFlowSessionView(
-        null,
-        query.provider,
-        {
-          id: sessionId,
-          challengeData: begin.challengeData,
-          expiresAt,
-        },
-        "pending",
+      return c.redirect(
+        `/external-connect/${encodeURIComponent(sessionId)}?state=${encodeURIComponent(query.state)}`,
       );
+    },
+  );
 
-      return c.html(
-        createExternalConnectPage({
-          sessionId,
-          provider: query.provider,
-          state: query.state,
-          callbackUrl: query.callback,
-          verificationUri: view.verificationUri,
-          pollIntervalSeconds: view.pollIntervalSeconds,
-          expiresAt,
-        }),
+  app.post(
+    "/external-connect/:sid/new",
+    zValidator("json", externalConnectStartNewSchema, zodHook),
+    async (c) => {
+      const sid = c.req.param("sid");
+      const body = c.req.valid("json");
+      const session = await repo.getAuthSession(sid);
+
+      if (!session || session.mode !== "external-connect" || !session.externalConnect) {
+        return c.json({ error: "not_found", error_description: "connect session not found" }, 404);
+      }
+
+      if (session.externalConnect.state !== body.state) {
+        return c.json({ error: "invalid_request", error_description: "state mismatch" }, 400);
+      }
+
+      if (session.expiresAt < Date.now()) {
+        await repo.deleteAuthSession(sid);
+        return c.json({ error: "expired", error_description: "connect session expired" }, 410);
+      }
+
+      const provider = registry.get(session.providerName);
+      if (provider.flow !== "poll") {
+        return c.json(
+          {
+            error: "invalid_request",
+            error_description: `provider ${session.providerName} does not support external connect flow`,
+          },
+          400,
+        );
+      }
+
+      const begin = await provider.beginAuth({});
+      const nextSession = {
+        ...session,
+        challengeData: begin.challengeData,
+        result: null,
+        error: null,
+        externalConnect: {
+          ...session.externalConnect,
+          authStarted: true,
+        },
+      };
+      await repo.setAuthSession(sid, nextSession, 300);
+
+      return c.json(
+        createAuthFlowSessionView(
+          null,
+          session.providerName,
+          {
+            id: sid,
+            challengeData: nextSession.challengeData,
+            expiresAt: session.expiresAt,
+          },
+          "pending",
+        ),
       );
     },
   );
@@ -496,6 +425,13 @@ export function adminRoutes(deps: AdminDeps) {
       );
     }
 
+    const existingConnections = (await repo.listConnections())
+      .filter(
+        (connection) =>
+          connection.provider === session.providerName && connection.status === "active",
+      )
+      .map((connection) => serializeConnection(connection));
+
     if (session.error) {
       return c.json(
         createAuthFlowSessionView(
@@ -505,6 +441,7 @@ export function adminRoutes(deps: AdminDeps) {
             id: sid,
             challengeData: session.challengeData,
             expiresAt: session.expiresAt,
+            connections: existingConnections,
             error: session.error,
           },
           "failed",
@@ -522,8 +459,25 @@ export function adminRoutes(deps: AdminDeps) {
             challengeData: session.challengeData,
             expiresAt: session.expiresAt,
             result: session.result,
+            connections: existingConnections,
           },
           "completed",
+        ),
+      );
+    }
+
+    if (!session.externalConnect?.authStarted) {
+      return c.json(
+        createAuthFlowSessionView(
+          null,
+          session.providerName,
+          {
+            id: sid,
+            challengeData: session.challengeData,
+            expiresAt: session.expiresAt,
+            connections: existingConnections,
+          },
+          "pending",
         ),
       );
     }
@@ -621,6 +575,43 @@ export function adminRoutes(deps: AdminDeps) {
       if (session.expiresAt < Date.now()) {
         await repo.deleteAuthSession(sid);
         return c.json({ error: "expired", error_description: "connect session expired" }, 410);
+      }
+
+      if (body.connectionId) {
+        const existingConnection = await repo.getConnectionById(body.connectionId);
+        if (
+          !existingConnection ||
+          existingConnection.provider !== session.providerName ||
+          existingConnection.status !== "active"
+        ) {
+          return c.json(
+            { error: "invalid_request", error_description: "connection is not available" },
+            400,
+          );
+        }
+
+        const codeSecret = randomCode("tp_code", 16);
+        const code = `${sid}.${codeSecret}`;
+        const callbackUrl = new URL(session.externalConnect.callbackUrl);
+        callbackUrl.searchParams.set("state", session.externalConnect.state);
+        callbackUrl.searchParams.set("code", code);
+
+        await repo.setAuthSession(
+          sid,
+          {
+            ...session,
+            authCode: code,
+            externalConnect: {
+              ...session.externalConnect,
+              connectionId: existingConnection.id,
+            },
+          },
+          300,
+        );
+
+        return c.json({
+          redirectUrl: callbackUrl.toString(),
+        });
       }
 
       if (!session.result) {

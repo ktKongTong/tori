@@ -6,6 +6,11 @@ import { randomCode } from "@repo/utils/random";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
 import { getBotPluginRepository, type ManagedBotPluginInstance } from "./repository/index.js";
+import {
+  BOT_INSTANCE_DELETED,
+  BOT_INSTANCE_DISABLED,
+  createBotInstanceLifecycleEvent,
+} from "@/api/modules/platform/bot-plugin/event.ts";
 import type {
   AttachEndpointInput,
   CreateBotInstanceInput,
@@ -102,6 +107,9 @@ export async function updateManagedBotInstance(
     status: body.status,
   });
   if (!updated) throw new UnauthorizedError("Bot plugin instance not found");
+  if (body.status === "disabled") {
+    await ctx.sendEvent(createBotInstanceLifecycleEvent(ctx, BOT_INSTANCE_DISABLED, updated.id));
+  }
   return updated;
 }
 
@@ -132,7 +140,25 @@ export async function revokeManagedBotInstance(ctx: ServiceContext, id: string) 
   const repository = getBotPluginRepository(ctx);
   const instance = await repository.findManagedBotInstanceById(id);
   if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
-  return repository.revokeManagedBotInstance(id);
+  const revoked = await repository.revokeManagedBotInstance(id);
+  await ctx.sendEvent(createBotInstanceLifecycleEvent(ctx, BOT_INSTANCE_DELETED, revoked.id));
+  return revoked;
+}
+
+export async function deleteManagedBotInstance(ctx: ServiceContext, id: string) {
+  const repository = getBotPluginRepository(ctx);
+  const instance = await repository.findManagedBotInstanceById(id);
+  if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
+
+  const deleted = await repository.deleteManagedBotInstance(id);
+  if (!deleted) throw new UnauthorizedError("Bot plugin instance not found");
+
+  await ctx.sendEvent(createBotInstanceLifecycleEvent(ctx, BOT_INSTANCE_DELETED, deleted.id));
+
+  return {
+    id: deleted.id,
+    status: "deleted",
+  };
 }
 
 export async function attachManagedBotInstanceEndpoint(

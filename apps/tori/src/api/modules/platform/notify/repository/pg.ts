@@ -212,6 +212,11 @@ export class NotifyPgRepository implements INotifyRepository {
           ? subscription.ownerId
           : (subscription.createdByUserId ?? null);
 
+      if (subscription.botPluginInstanceId && botPluginInstance?.status !== "active") {
+        await this.markNotificationFailed(notification.id, "bot instance missing or disabled");
+        continue;
+      }
+
       if (!notification.deliveryEndpointId) {
         await this.markNotificationFailed(
           notification.id,

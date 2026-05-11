@@ -214,6 +214,28 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     return updated;
   }
 
+  async deleteManagedBotInstance(id: string) {
+    const [deleted] = await this.db
+      .update(botPluginInstances)
+      .set({
+        status: "deleted",
+        metadata: sql`coalesce(${botPluginInstances.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()}, 'runtimeCredentialHash', null)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(botPluginInstances.id, id))
+      .returning();
+    return deleted ?? null;
+  }
+
+  async deleteDeliveryEndpoint(id: string) {
+    const [deleted] = await this.db
+      .update(deliveryEndpoints)
+      .set({ status: "deleted", updatedAt: new Date() })
+      .where(eq(deliveryEndpoints.id, id))
+      .returning();
+    return deleted ?? null;
+  }
+
   async attachManagedBotInstanceEndpoint(input: {
     id: string;
     deliveryEndpointId?: string | null;

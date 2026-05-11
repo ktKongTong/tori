@@ -94,4 +94,5 @@ export interface ISteamFamilyRepository {
   countFamilyLibraryItemsByFamilyId(familyId: string): Promise<number>;
   countFamilyLibraryMatchesByFamilyId(familyId: string, query?: string | null): Promise<number>;
   queryFamilyLibraryRows(input: QueryFamilyLibraryRowsInput): Promise<SteamFamilyLibraryRow[]>;
+  deleteFamilyDataByOwnerConnectionId(connectionId: string): Promise<void>;
 }

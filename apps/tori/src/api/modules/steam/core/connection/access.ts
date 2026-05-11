@@ -36,13 +36,21 @@ export async function resolveSteamFamilyAccess(
     throw new ParameterError("Connection requires an active proxy instance");
   }
 
+  const credential = await ctx.repositories.connection.findActiveConnectionCredential({
+    connectionId: connection.id,
+    kind: "token-proxy-api-key",
+  });
+  if (!credential) {
+    throw new ParameterError("Connection requires an active token-proxy credential");
+  }
+
   return {
     connection,
     proxyInstance,
     proxyBaseUrl: proxyInstance.baseUrl.replace(/\/+$/, ""),
     proxyHeaders: {
       accept: "application/json",
-      "X-API-KEY": proxyInstance.credentialRef,
+      "X-API-KEY": credential.credentialRef,
     },
   };
 }

@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -12,9 +13,12 @@ import {
 
 import { InspectTokenProxyDialog } from "./proxy-dialogs";
 import {
+  checkProxyAction,
+  deleteProxyInstance,
   probeProxyInstance,
   updateProxyStatus as updateProxyInstanceStatus,
 } from "@/features/integration/api";
+import { ActionImpactDialog } from "@/features/action-check/confirm-dialog";
 import { useModal } from "@/lib/modal";
 import type { ProxyInstanceDto } from "@/api/modules/platform/integration/contract";
 
@@ -84,6 +88,8 @@ export const integrationProxyColumns: ColumnDef<ProxyInstanceDto>[] = [
 function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
   const modal = useModal();
   const queryClient = useQueryClient();
+  const [impact, setImpact] = useState<Awaited<ReturnType<typeof checkProxyAction>> | null>(null);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const probeProxy = useMutation({
     mutationFn: async (proxyId: string) => probeProxyInstance(proxyId),
     onSuccess: async (data) => {
@@ -103,40 +109,81 @@ function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
       });
     },
   });
+  const deleteProxy = useMutation({
+    mutationFn: async (id: string) => deleteProxyInstance(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["integration", "proxy-instances"] });
+      await queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
+      await queryClient.invalidateQueries({ queryKey: ["notify", "subscriptions"] });
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Proxy deleted");
+    },
+  });
 
   return (
-    <DataTableActions
-      label={`Open actions for ${proxy.name}`}
-      items={[
-        {
-          label: "Inspect",
-          onSelect: () => {
-            modal.open(
-              <InspectTokenProxyDialog
-                proxy={{
-                  baseUrl: proxy.baseUrl,
-                  healthStatus: proxy.healthStatus,
-                  name: proxy.name ?? proxy.baseUrl,
-                  providers: proxy.providers,
-                }}
-              />,
-            );
+    <>
+      <DataTableActions
+        label={`Open actions for ${proxy.name}`}
+        items={[
+          {
+            label: "Inspect",
+            onSelect: () => {
+              modal.open(
+                <InspectTokenProxyDialog
+                  proxy={{
+                    baseUrl: proxy.baseUrl,
+                    healthStatus: proxy.healthStatus,
+                    name: proxy.name ?? proxy.baseUrl,
+                    providers: proxy.providers,
+                  }}
+                />,
+              );
+            },
           },
-        },
-        {
-          label: "Refresh Capabilities",
-          onSelect: () => probeProxy.mutate(proxy.id),
-        },
-        {
-          label: proxy.status === "active" ? "Disable" : "Enable",
-          variant: proxy.status === "active" ? "destructive" : "default",
-          onSelect: () =>
-            updateProxyStatus.mutate({
-              id: proxy.id,
-              status: proxy.status === "active" ? "disabled" : "active",
-            }),
-        },
-      ]}
-    />
+          {
+            label: "Refresh Capabilities",
+            onSelect: () => probeProxy.mutate(proxy.id),
+          },
+          {
+            label: proxy.status === "active" ? "Disable" : "Enable",
+            variant: proxy.status === "active" ? "destructive" : "default",
+            onSelect: () => {
+              void (async () => {
+                const status = proxy.status === "active" ? "disabled" : "active";
+                if (status === "disabled") {
+                  const nextImpact = await checkProxyAction({ id: proxy.id, action: "disable" });
+                  setImpact(nextImpact);
+                  setPendingAction(() => () => updateProxyStatus.mutate({ id: proxy.id, status }));
+                  return;
+                }
+                updateProxyStatus.mutate({ id: proxy.id, status });
+              })();
+            },
+          },
+          {
+            label: "Delete",
+            variant: "destructive",
+            onSelect: () => {
+              void (async () => {
+                const nextImpact = await checkProxyAction({ id: proxy.id, action: "delete" });
+                setImpact(nextImpact);
+                setPendingAction(() => () => deleteProxy.mutate(proxy.id));
+              })();
+            },
+          },
+        ]}
+      />
+      <ActionImpactDialog
+        impact={impact}
+        open={Boolean(impact)}
+        onOpenChange={(open) => {
+          if (!open) setImpact(null);
+        }}
+        onConfirm={() => {
+          pendingAction?.();
+          setPendingAction(null);
+        }}
+      />
+    </>
   );
 }

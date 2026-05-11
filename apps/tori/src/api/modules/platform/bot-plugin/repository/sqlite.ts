@@ -218,6 +218,22 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     return updated;
   }
 
+  async deleteManagedBotInstance(id: string) {
+    const [deleted] = await this.db
+      .delete(botPluginInstances)
+      .where(eq(botPluginInstances.id, id))
+      .returning();
+    return deleted ?? null;
+  }
+
+  async deleteDeliveryEndpoint(id: string) {
+    const [deleted] = await this.db
+      .delete(deliveryEndpoints)
+      .where(eq(deliveryEndpoints.id, id))
+      .returning();
+    return deleted ?? null;
+  }
+
   async attachManagedBotInstanceEndpoint(input: {
     id: string;
     deliveryEndpointId?: string | null;

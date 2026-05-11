@@ -128,4 +128,8 @@ export interface IBindingRepository {
   }): Promise<void>;
   findUserBindingById(bindingId: string): Promise<UserBinding | null>;
   revokeUserBinding(bindingId: string): Promise<UserBinding | null>;
+  findChannelBindingById(bindingId: string): Promise<ChannelBinding | null>;
+  revokeChannelBinding(bindingId: string): Promise<ChannelBinding | null>;
+  revokeActiveChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
+  deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
 }

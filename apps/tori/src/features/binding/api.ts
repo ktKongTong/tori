@@ -76,3 +76,10 @@ export const revokeUserBinding = (bindingId: string) =>
     undefined,
     { schema: bindingStatusResponseDtoSchema },
   );
+
+export const revokeChannelBinding = (bindingId: string) =>
+  bindingRequest.post(
+    `/api/binding/channel-bindings/${encodeURIComponent(bindingId)}/revoke`,
+    undefined,
+    { schema: bindingStatusResponseDtoSchema },
+  );

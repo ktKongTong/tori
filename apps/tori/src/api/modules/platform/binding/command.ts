@@ -4,6 +4,7 @@ import { randomCode } from "@repo/utils/random";
 import { sha256Hash } from "@repo/utils/encoding/hash";
 
 import { getBindingRepository } from "./repository/index.js";
+import { createChannelBindingRevokedEvent } from "@/api/modules/platform/binding/event.ts";
 import type {
   BindingGrantPurpose,
   BindingGrantSubjectType,
@@ -184,6 +185,30 @@ export async function revokeUserBinding(ctx: ServiceContext, bindingId: string) 
 
   const revoked = await repository.revokeUserBinding(binding.id);
   if (!revoked) throw new NotFoundError("User binding not found");
+
+  return revoked;
+}
+
+export async function revokeChannelBinding(ctx: ServiceContext, bindingId: string) {
+  const repository = getBindingRepository(ctx);
+  const binding = await repository.findChannelBindingById(bindingId);
+
+  if (!binding) throw new NotFoundError("Channel binding not found");
+  if (binding.status !== "active") throw new ParameterError("Channel binding is already inactive");
+  if (!ctx.userId) throw new UnauthorizedError("Authenticated user required");
+  if (!ctx.isAdmin()) {
+    throw new UnauthorizedError("Only admins can remove channel bindings");
+  }
+
+  const revoked = await repository.revokeChannelBinding(binding.id);
+  if (!revoked) throw new NotFoundError("Channel binding not found");
+
+  await ctx.sendEvent(
+    createChannelBindingRevokedEvent(ctx, {
+      channelBindingId: revoked.id,
+      channelId: revoked.channelId,
+    }),
+  );
 
   return revoked;
 }

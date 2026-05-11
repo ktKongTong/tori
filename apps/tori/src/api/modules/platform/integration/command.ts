@@ -2,8 +2,12 @@ import { ofetch } from "ofetch";
 import { NotFoundError, ParameterError } from "@/api/domain/error/index.ts";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import { uniqueId } from "@repo/utils/id";
-
 import type { ProbeProxyInstanceResult, RegisterProxyInstanceInput } from "./type.js";
+import {
+  createProxyInstanceLifecycleEvent,
+  PROXY_INSTANCE_DELETED,
+  PROXY_INSTANCE_DISABLED,
+} from "@/api/modules/platform/integration/event.ts";
 
 async function probeProxy(
   baseUrl: string,
@@ -134,5 +138,38 @@ export async function updateProxyInstanceStatus(
   });
 
   if (!updated) throw new NotFoundError("proxy instance not found");
+
+  if (status === "disabled") {
+    await ctx.sendEvent(
+      createProxyInstanceLifecycleEvent(ctx, PROXY_INSTANCE_DISABLED, updated.id),
+    );
+  }
+
   return updated;
+}
+
+export async function deleteProxyInstance(ctx: ServiceContext, proxyInstanceId: string) {
+  const userId = ctx.userId;
+  if (!userId) throw new NotFoundError("user not found");
+
+  const proxy = await ctx.repositories.integration.findProxyInstanceForOwner({
+    id: proxyInstanceId,
+    ownerUserId: userId,
+  });
+  if (!proxy) throw new NotFoundError("proxy instance not found");
+
+  await ctx.repositories.connection.deleteTokenProxyConnectionSessionsByProxyInstanceId(proxy.id);
+
+  const deleted = await ctx.repositories.integration.deleteProxyInstance({
+    id: proxy.id,
+    ownerUserId: userId,
+  });
+  if (!deleted) throw new NotFoundError("proxy instance not found");
+
+  await ctx.sendEvent(createProxyInstanceLifecycleEvent(ctx, PROXY_INSTANCE_DELETED, deleted.id));
+
+  return {
+    id: deleted.id,
+    status: "deleted",
+  };
 }

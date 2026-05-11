@@ -70,6 +70,17 @@ function parseCookie(setCookie: string | null) {
   return setCookie.split(";")[0];
 }
 
+function externalConnectSessionId(response: Response) {
+  expect(response.status).toBe(302);
+  const location = response.headers.get("location");
+  expect(location).toBeTruthy();
+  const url = new URL(location ?? "", "http://localhost");
+  expect(url.pathname).toMatch(/^\/external-connect\/external_connect_[a-f0-9]+$/);
+  const sessionId = url.pathname.split("/").at(-1);
+  if (!sessionId) throw new Error("missing external connect session id");
+  return sessionId;
+}
+
 function request(
   app: ReturnType<typeof createApp>,
   method: string,
@@ -165,10 +176,16 @@ describe("admin connect flow", () => {
         state,
       )}&callback=${encodeURIComponent(callback)}&permissions=proxy,account`,
     );
-    expect(startResponse.status).toBe(200);
-    const html = await startResponse.text();
-    const sessionId = html.match(/external_connect_[a-f0-9]+/)?.[0];
+    const sessionId = externalConnectSessionId(startResponse);
     expect(sessionId).toBeTruthy();
+
+    const newResponse = await request(app, "POST", `/admin/external-connect/${sessionId}/new`, {
+      body: { state },
+    });
+    expect(newResponse.status).toBe(200);
+    expect(((await newResponse.json()) as any).verificationUri).toBe(
+      "https://mock.example.com/connect",
+    );
 
     const pendingResponse = await request(app, "GET", `/admin/external-connect/${sessionId}`);
     expect(pendingResponse.status).toBe(200);
@@ -215,5 +232,65 @@ describe("admin connect flow", () => {
       },
     );
     expect(repeatedExchangeResponse.status).toBe(404);
+  });
+
+  it("lets external connect choose an existing token-proxy connection before creating a new one", async () => {
+    const { app, repo } = createTestApp();
+    const existing = await repo.createConnection({
+      provider: "mock-connect",
+      providerUid: "mock-user-existing",
+      displayName: "Existing Mock User",
+      label: "existing",
+      permissions: ["proxy", "account"],
+      tokenInject: "bearer",
+      credentials: {
+        accessToken: "encrypted-access-token",
+        refreshToken: "encrypted-refresh-token",
+      },
+    });
+    const state = "external-state-0002";
+    const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
+
+    const startResponse = await request(
+      app,
+      "GET",
+      `/admin/external-connect?provider=mock-connect&state=${encodeURIComponent(
+        state,
+      )}&callback=${encodeURIComponent(callback)}&permissions=proxy,account`,
+    );
+    const sessionId = externalConnectSessionId(startResponse);
+    expect(sessionId).toBeTruthy();
+
+    const sessionResponse = await request(app, "GET", `/admin/external-connect/${sessionId}`);
+    expect(sessionResponse.status).toBe(200);
+    const sessionData = (await sessionResponse.json()) as any;
+    expect(sessionData.connections).toHaveLength(1);
+    expect(sessionData.connections[0].displayName).toBe("Existing Mock User");
+
+    const confirmResponse = await request(
+      app,
+      "POST",
+      `/admin/external-connect/${sessionId}/confirm`,
+      {
+        body: { state, connectionId: existing.id },
+      },
+    );
+    expect(confirmResponse.status).toBe(200);
+    const confirmData = (await confirmResponse.json()) as any;
+    const redirectUrl = new URL(confirmData.redirectUrl);
+    expect(`${redirectUrl.origin}${redirectUrl.pathname}`).toBe(callback);
+    expect(redirectUrl.searchParams.get("state")).toBe(state);
+    const code = redirectUrl.searchParams.get("code");
+    expect(code).toMatch(new RegExp(`^${sessionId}\\.tp_code_`));
+
+    const exchangeResponse = await request(app, "POST", "/admin/external-connect/exchange", {
+      body: { code, state },
+    });
+    expect(exchangeResponse.status).toBe(200);
+    const exchangeData = (await exchangeResponse.json()) as any;
+    expect(exchangeData.connection.id).toBe(existing.id);
+    expect(exchangeData.connection.providerUid).toBe("mock-user-existing");
+    expect(exchangeData.account.providerAccountName).toBe("Existing Mock User");
+    expect(exchangeData.apiKey).toBe(existing.apiKey);
   });
 });

@@ -45,11 +45,6 @@ export const Route = createFileRoute("/dashboard/tokens")({
   component: DashboardTokensPage,
 });
 
-function formatDate(epochSeconds: number | null | undefined) {
-  if (!epochSeconds) return "Never";
-  return new Date(epochSeconds * 1000).toLocaleString();
-}
-
 function getConnectionStatusTone(status: string) {
   if (status === "active") return "success" as const;
   if (status === "revoked") return "danger" as const;

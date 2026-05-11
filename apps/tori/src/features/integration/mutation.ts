@@ -19,7 +19,7 @@ export const useCreateConnection = () => {
         schema: connectionCreatedDtoSchema,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["integration", "connections"] });
       toast.success("Connection created successfully");
       // onOpenChange(false);
     },

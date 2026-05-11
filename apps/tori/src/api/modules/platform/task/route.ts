@@ -150,6 +150,28 @@ app.patch(
   },
 );
 
+app.delete(
+  "/:id",
+  requireAdmin(),
+  describeRoute({
+    tags: ["Tasks"],
+    summary: "Delete task definition",
+    request: { param: z.object({ id: z.string() }) },
+    response: {
+      description: "Deleted task definition",
+      body: taskDefinitionDtoSchema,
+    },
+  }),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const deleted = await c.get("serviceContext").repositories.task.deleteTaskDefinition(id);
+    if (!deleted) {
+      throw new NotFoundError("task definition not found");
+    }
+    return c.json(toTaskDefinitionDto(deleted));
+  },
+);
+
 app.post(
   "/:id/run",
   describeRoute({

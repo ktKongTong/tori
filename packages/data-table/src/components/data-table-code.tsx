@@ -38,7 +38,7 @@ export function DataTableCode({
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigator.clipboard.writeText(value);
+    void navigator.clipboard.writeText(value);
     // Ideally use sonner or similar to show a toast, but keeping it simple for now
   };
 

@@ -3,7 +3,12 @@ import { Hono } from "hono";
 import { ParameterError } from "@/api/domain/error/index.ts";
 import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import { consumeAnonymousClaim, issueBindingToken, revokeUserBinding } from "./index.js";
+import {
+  consumeAnonymousClaim,
+  issueBindingToken,
+  revokeChannelBinding,
+  revokeUserBinding,
+} from "./index.js";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
 import {
   bindingStatusResponseDtoSchema,
@@ -141,6 +146,29 @@ app.post(
     if (!id) throw new ParameterError("User binding id is required");
 
     const revoked = await revokeUserBinding(c.get("serviceContext"), id);
+
+    return c.json({
+      id: revoked.id,
+      status: revoked.status,
+    });
+  },
+);
+
+app.post(
+  "/channel-bindings/:id/revoke",
+  describeRoute({
+    tags: ["Binding"],
+    summary: "Revoke channel binding",
+    response: {
+      description: "Revoked channel binding",
+      body: bindingStatusResponseDtoSchema,
+    },
+  }),
+  async (c) => {
+    const id = c.req.param("id");
+    if (!id) throw new ParameterError("Channel binding id is required");
+
+    const revoked = await revokeChannelBinding(c.get("serviceContext"), id);
 
     return c.json({
       id: revoked.id,

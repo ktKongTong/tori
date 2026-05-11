@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 
-import {
-  listChannelBindings,
-  listClaimSessions,
-  listUserBindings,
-  type ChannelBindingListItem,
-  type UserBindingListItem,
-} from "./api";
+import { listChannelBindings, listClaimSessions, listUserBindings } from "./api";
 
 export const bindingQueryKeys = {
   userBindings: (pagination: PageBasedPaginationParam) =>

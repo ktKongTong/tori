@@ -173,4 +173,12 @@ export class SteamFamilySqliteRepository implements ISteamFamilyRepository {
       .limit(input.limit)
       .offset(input.offset);
   }
+
+  async deleteFamilyDataByOwnerConnectionId(connectionId: string) {
+    const family = await this.findFamilyByOwnerConnectionId(connectionId);
+    if (!family) return;
+    await this.db.delete(familyMembers).where(eq(familyMembers.familyId, family.id));
+    await this.db.delete(familyLibraryItems).where(eq(familyLibraryItems.familyId, family.id));
+    await this.db.delete(families).where(eq(families.id, family.id));
+  }
 }

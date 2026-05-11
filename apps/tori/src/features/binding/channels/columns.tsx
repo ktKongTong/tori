@@ -1,40 +1,83 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { objectColumn, statusColumn, timeColumn } from "@repo/data-table";
+import { DataTableActions, objectColumn, statusColumn, timeColumn } from "@repo/data-table";
 
-import type { ChannelBindingListItem } from "@/features/binding/api";
+import { revokeChannelBinding, type ChannelBindingListItem } from "@/features/binding/api";
+import { useToastError } from "@/lib/toast-error";
 
 export const bindingChannelColumns: ColumnDef<ChannelBindingListItem>[] = [
   objectColumn({
     id: "botChannel",
     header: "Bot Channel",
-    title: (row) => row.binding.externalChannelName ?? row.binding.externalChannelId,
+    title: (row) => row.externalChannelName ?? row.externalChannelId,
   }),
   {
     id: "platform",
     header: "Platform",
-    cell: ({ row }) => row.original.binding.platform,
+    cell: ({ row }) => row.original.platform,
   },
   {
     id: "toriChannel",
     header: "Tori Channel",
-    cell: ({ row }) => row.original.channel?.name ?? row.original.binding.channelId,
+    cell: ({ row }) => row.original.channelId,
   },
   {
     id: "botInstance",
     header: "Bot Instance",
-    cell: ({ row }) =>
-      row.original.botInstance?.displayName ?? row.original.binding.botPluginInstanceId ?? "—",
+    cell: ({ row }) => row.original.botPluginInstanceId ?? "—",
   },
   statusColumn({
     id: "status",
     header: "Status",
-    text: (row) => row.binding.status,
-    tone: (row) => (row.binding.status === "active" ? "success" : "neutral"),
+    text: (row) => row.status,
+    tone: (row) => (row.status === "active" ? "success" : "neutral"),
   }),
   timeColumn({
     id: "createdAt",
     header: "Mapped At",
-    value: (row) => row.binding.createdAt,
+    value: (row) => row.createdAt,
   }),
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => <ChannelBindingActions binding={row.original} />,
+    meta: {
+      kind: "actions",
+      priority: "secondary",
+      align: "right",
+    },
+  },
 ];
+
+function ChannelBindingActions({ binding }: { binding: ChannelBindingListItem }) {
+  const queryClient = useQueryClient();
+  const removeBinding = useMutation({
+    mutationFn: async (bindingId: string) => revokeChannelBinding(bindingId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["binding", "channel-bindings"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["notify", "subscriptions"],
+      });
+    },
+  });
+
+  useToastError(removeBinding.error, { title: "Failed to remove channel binding" });
+
+  const label = binding.externalChannelName ?? binding.externalChannelId;
+
+  return (
+    <DataTableActions
+      label={`Open actions for ${label}`}
+      items={[
+        {
+          label: "Remove",
+          variant: "destructive",
+          onSelect: () => removeBinding.mutate(binding.id),
+        },
+      ]}
+    />
+  );
+}

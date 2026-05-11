@@ -3,6 +3,10 @@ import {
   registerTaskHandlers,
   scanDueTaskCron,
 } from "@/api/modules/platform/task/index.ts";
+import { platformBindingConsumers } from "@/api/modules/platform/binding/event.ts";
+import { platformBotInstanceConsumers } from "@/api/modules/platform/bot-plugin/event.ts";
+import { platformConnectionConsumers } from "@/api/modules/platform/connection/event.ts";
+import { platformProxyInstanceConsumers } from "@/api/modules/platform/integration/event.ts";
 import { registerBotCommandDefinitions } from "@/api/modules/platform/bot-ingress/command.ts";
 import { registerSubscriptionTargets } from "@/api/modules/platform/bot-ingress/commands/subscription-targets.ts";
 import { registerIntegrationProviderHandlers } from "@/api/modules/platform/integration/provider-registry.ts";
@@ -28,7 +32,14 @@ export function registerApiV2Runtime() {
   cronRegistry.register("* * * * *", outboxCron);
 
   registerTaskHandlers(...steamTaskHandlers);
-  eventRouter.registerConsumer(...platformTaskConsumers, ...steamEventConsumers);
+  eventRouter.registerConsumer(
+    ...platformTaskConsumers,
+    ...platformBindingConsumers,
+    ...platformBotInstanceConsumers,
+    ...platformConnectionConsumers,
+    ...platformProxyInstanceConsumers,
+    ...steamEventConsumers,
+  );
   registerBotCommandDefinitions(...steamBotCommandDefinitions);
   registerSubscriptionTargets(...steamSubscriptionTargetDefinitions);
   registerIntegrationProviderHandlers(steamIntegrationProviderHandlers);

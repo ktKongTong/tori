@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { taskDefinitions, taskRuns } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
@@ -172,5 +172,73 @@ export class TaskPgRepository implements ITaskRepository {
         updatedAt: new Date(),
       })
       .where(eq(taskDefinitions.id, taskDefinitionId));
+  }
+
+  async disableTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+    const rows = await this.db
+      .update(taskDefinitions)
+      .set({
+        enabled: false,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(taskDefinitions.enabled, true),
+          sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`,
+        ),
+      )
+      .returning({ id: taskDefinitions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async cancelPendingTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]) {
+    if (!taskDefinitionIds.length) return 0;
+    const rows = await this.db
+      .update(taskRuns)
+      .set({
+        status: "CANCELLED",
+        errorMessage: "task cancelled because upstream resource was disabled or removed",
+        finishedAt: new Date(),
+      })
+      .where(
+        and(inArray(taskRuns.taskDefinitionId, taskDefinitionIds), eq(taskRuns.status, "PENDING")),
+      )
+      .returning({ id: taskRuns.id });
+    return rows.length;
+  }
+
+  async deleteTaskDefinition(taskDefinitionId: string) {
+    const [row] = await this.db
+      .update(taskDefinitions)
+      .set({
+        enabled: false,
+        metadata: sql`coalesce(${taskDefinitions.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(taskDefinitions.id, taskDefinitionId))
+      .returning();
+    return row ?? null;
+  }
+
+  async deleteTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+    const rows = await this.db
+      .update(taskDefinitions)
+      .set({
+        enabled: false,
+        metadata: sql`coalesce(${taskDefinitions.metadata}, '{}'::jsonb) || jsonb_build_object('deletedAt', ${new Date().toISOString()}, 'deletedByLifecycle', true)`,
+        updatedAt: new Date(),
+      })
+      .where(sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`)
+      .returning({ id: taskDefinitions.id });
+    return rows.map((row) => row.id);
+  }
+
+  async deleteTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]) {
+    if (!taskDefinitionIds.length) return 0;
+    const rows = await this.db
+      .delete(taskRuns)
+      .where(inArray(taskRuns.taskDefinitionId, taskDefinitionIds))
+      .returning({ id: taskRuns.id });
+    return rows.length;
   }
 }

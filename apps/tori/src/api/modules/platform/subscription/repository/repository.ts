@@ -88,4 +88,12 @@ export interface ISubscriptionRepository {
   }): Promise<Subscription | null>;
   createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
   updateSubscriptionStatus(id: string, status: string): Promise<Subscription | null>;
+  disableActiveSubscriptionsByConnectionId(connectionId: string): Promise<number>;
+  deleteSubscriptionsByConnectionId(connectionId: string): Promise<string[]>;
+  deleteNotificationEventsBySubscriptionIds(subscriptionIds: string[]): Promise<number>;
+  deleteSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string): Promise<string[]>;
+  deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
+  deleteNotificationEventsByDeliveryEndpointId(deliveryEndpointId: string): Promise<number>;
+  disableActiveSubscriptionsByChannelId(channelId: string): Promise<number>;
+  disableActiveSubscriptionsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
 }

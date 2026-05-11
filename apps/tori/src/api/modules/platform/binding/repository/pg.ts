@@ -166,4 +166,54 @@ export class BindingPgRepository implements IBindingRepository {
       .returning();
     return revoked;
   }
+
+  async findChannelBindingById(bindingId: string) {
+    const [binding] = await this.db
+      .select()
+      .from(channelBindings)
+      .where(eq(channelBindings.id, bindingId))
+      .limit(1);
+    return binding ?? null;
+  }
+
+  async revokeChannelBinding(bindingId: string) {
+    const [revoked] = await this.db
+      .update(channelBindings)
+      .set({
+        status: "revoked",
+        revokedReason: "removed-by-user",
+        endedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(channelBindings.id, bindingId))
+      .returning();
+    return revoked;
+  }
+
+  async revokeActiveChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
+    const rows = await this.db
+      .update(channelBindings)
+      .set({
+        status: "revoked",
+        revokedReason: "bot-instance-removed",
+        endedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(channelBindings.botPluginInstanceId, botPluginInstanceId),
+          eq(channelBindings.status, "active"),
+        ),
+      )
+      .returning({ id: channelBindings.id });
+    return rows.length;
+  }
+
+  async deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
+    const rows = await this.db
+      .delete(channelBindings)
+      .where(eq(channelBindings.botPluginInstanceId, botPluginInstanceId))
+      .returning({ id: channelBindings.id });
+    return rows.length;
+  }
 }

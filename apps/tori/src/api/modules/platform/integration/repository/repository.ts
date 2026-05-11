@@ -58,4 +58,5 @@ export interface IIntegrationRepository {
   }): Promise<ProxyInstance | null>;
   updateProxyInstanceProbe(input: UpdateProxyInstanceProbeInput): Promise<ProxyInstance>;
   updateProxyInstanceStatus(input: UpdateProxyInstanceStatusInput): Promise<ProxyInstance | null>;
+  deleteProxyInstance(input: { id: string; ownerUserId: string }): Promise<ProxyInstance | null>;
 }
