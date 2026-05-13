@@ -30,7 +30,7 @@ export type ChannelBindingListItem = ChannelBindingDto;
 export const listUserBindings = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
 ) =>
-  bindingRequest.get("/api/binding/user-bindings", {
+  bindingRequest.get("/api/binding/user", {
     query: pagination,
     schema: userBindingListDtoSchema,
   });
@@ -38,7 +38,7 @@ export const listUserBindings = (
 export const listChannelBindings = (
   pagination: PageBasedPaginationParam = { page: 1, pageSize: 100 },
 ) =>
-  bindingRequest.get("/api/binding/channel-bindings", {
+  bindingRequest.get("/api/binding/channel", {
     query: pagination,
     schema: channelBindingListDtoSchema,
   });
@@ -71,11 +71,11 @@ export const consumeAnonymousClaim = (token: string) =>
   );
 
 export const deleteUserBinding = (bindingId: string) =>
-  bindingRequest.delete(`/api/binding/user-bindings/${encodeURIComponent(bindingId)}`, {
+  bindingRequest.delete(`/api/binding/user/${encodeURIComponent(bindingId)}`, {
     schema: bindingStatusResponseDtoSchema,
   });
 
 export const deleteChannelBinding = (bindingId: string) =>
-  bindingRequest.delete(`/api/binding/channel-bindings/${encodeURIComponent(bindingId)}`, {
+  bindingRequest.delete(`/api/binding/channel/${encodeURIComponent(bindingId)}`, {
     schema: bindingStatusResponseDtoSchema,
   });

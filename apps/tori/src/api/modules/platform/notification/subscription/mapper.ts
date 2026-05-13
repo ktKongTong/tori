@@ -2,12 +2,12 @@ import type { PageBasedPaginationResult } from "@repo/utils/schema/paging";
 import type {
   NotificationEvent,
   Subscription,
-} from "@/api/modules/platform/subscription/repository/repository.ts";
+} from "@/api/modules/platform/notification/subscription/repository/repository.ts";
 import type {
   SubscriptionDto,
   SubscriptionViewDto,
-} from "@/api/modules/platform/subscription/contract";
-import type { NotificationEventDto } from "@/api/modules/platform/notify/contract";
+} from "@/api/modules/platform/notification/subscription/contract";
+import type { NotificationEventDto } from "../notification/contract";
 
 type NamedEntity = {
   id: string;

@@ -1,7 +1,7 @@
 import { createEventConsumer, createOutboxEventFromCtx } from "@/api/domain/infra";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import type { EventEnvelope } from "@/api/domain/infra/eventing/message.ts";
-import { disableConnectionRuntimeDependents } from "@/api/modules/platform/connection/event.ts";
+import { disableConnectionRuntimeDependents } from "../connection/event.ts";
 
 export const PROXY_INSTANCE_DISABLED = "platform.proxy-instance.disabled";
 export const PROXY_INSTANCE_DELETED = "platform.proxy-instance.deleted";

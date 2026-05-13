@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { StatusConflictError } from "@/api/domain/error/index.ts";
-import { createNotificationStreamResponse } from "@/api/modules/platform/notify/route-stream.ts";
+import { createNotificationStreamResponse } from "../notification/notification/route-stream.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
 
 import { assertBotPluginMessageContextAccess, requireBotIngressAccess } from "./auth.js";

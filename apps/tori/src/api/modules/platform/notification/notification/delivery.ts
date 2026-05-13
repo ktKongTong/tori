@@ -1,4 +1,4 @@
-import type { NotificationDeliveryCandidate } from "@/api/modules/platform/notify/repository/repository.ts";
+import type { NotificationDeliveryCandidate } from "./repository/repository.ts";
 import { notifyBus, type StreamNotification } from "./bus.js";
 
 const WEBHOOK_DELIVERY_ATTEMPTS = 3;

@@ -3,7 +3,7 @@ import { createOutboxEventFromCtx } from "@/api/domain/infra";
 import {
   SUBSCRIPTION_ACTIVATED,
   SUBSCRIPTION_CREATED,
-} from "@/api/modules/platform/subscription/type.ts";
+} from "@/api/modules/platform/notification/subscription/type.ts";
 import { uniqueId } from "@repo/utils/id";
 
 import { defineBotCommand } from "../registry.js";

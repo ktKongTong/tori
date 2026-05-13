@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { jsonb, text, uniqueIndex, timestamp } from "drizzle-orm/pg-core";
 import { uniqueId } from "@repo/utils/id";
-import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
+import type { NotificationBody } from "@/api/modules/platform/notification/notification/body.ts";
 import { timestamps, timestamptz } from "../utils";
 import { pgTable } from "./schema";
 

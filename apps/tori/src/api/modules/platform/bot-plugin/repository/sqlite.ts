@@ -55,7 +55,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     return toPageResult(data, total ?? 0, page);
   }
 
-  async findActiveMockBotInstance() {
+  async findActivePlaygroundBotInstance() {
     const [activeMock] = await this.db
       .select()
       .from(botPluginInstances)

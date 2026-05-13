@@ -26,7 +26,7 @@ const app = new Hono();
 app.use("*", requireAuth());
 
 app.get(
-  "/user-bindings",
+  "/user",
   describeRoute({
     tags: ["Binding"],
     summary: "List user bindings",
@@ -44,7 +44,7 @@ app.get(
 );
 
 app.get(
-  "/channel-bindings",
+  "/channel",
   describeRoute({
     tags: ["Binding"],
     summary: "List channel bindings",
@@ -137,7 +137,7 @@ app.post(
 );
 
 app.delete(
-  "/user-bindings/:id",
+  "/user/:id",
   describeRoute({
     tags: ["Binding"],
     summary: "Remove user binding",
@@ -160,7 +160,7 @@ app.delete(
 );
 
 app.delete(
-  "/channel-bindings/:id",
+  "/channel/:id",
   describeRoute({
     tags: ["Binding"],
     summary: "Remove channel binding",

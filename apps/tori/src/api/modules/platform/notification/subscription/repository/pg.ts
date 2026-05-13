@@ -13,7 +13,7 @@ import type {
   CreateSubscriptionInput,
   ISubscriptionRepository,
   Subscription,
-} from "@/api/modules/platform/subscription/repository/repository.ts";
+} from "@/api/modules/platform/notification/subscription/repository/repository.ts";
 import { toPageResult } from "@repo/db/utils";
 import { withPagination } from "@repo/db/utils/pg";
 import { NotFoundError } from "@/api/domain/error";

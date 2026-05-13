@@ -1,6 +1,6 @@
 import { PageBasedPaginationResultSchema } from "@repo/utils/schema/paging";
 import { z } from "zod";
-import { notificationEventDtoSchema } from "@/api/modules/platform/notify/contract";
+import { notificationEventDtoSchema } from "../notification/contract";
 
 export const userSummaryDtoSchema = z.object({
   id: z.string(),

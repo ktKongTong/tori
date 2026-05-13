@@ -5,7 +5,7 @@ import {
   SUBSCRIPTION_CREATED,
   SUBSCRIPTION_DISABLED,
   type SubscriptionLifecyclePayload,
-} from "@/api/modules/platform/subscription/type";
+} from "@/api/modules/platform/notification/subscription/type";
 import { listSubscriptionTaskDefinitions } from "./task-definition";
 
 function getSubscriptionTaskDefinitionId(metadata: unknown) {

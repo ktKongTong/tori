@@ -4,13 +4,13 @@ import {
   scanDueTaskCron,
 } from "@/api/modules/platform/task/index.ts";
 import { platformBotInstanceConsumers } from "@/api/modules/platform/bot-plugin/event.ts";
-import { platformConnectionConsumers } from "@/api/modules/platform/connection/event.ts";
-import { platformProxyInstanceConsumers } from "@/api/modules/platform/integration/event.ts";
-import { platformSubscriptionConsumers } from "@/api/modules/platform/subscription/event.ts";
-import { registerSubscriptionTaskDefinitions } from "@/api/modules/platform/subscription/task-definition.ts";
+import { platformConnectionConsumers } from "@/api/modules/platform/integration/connection/event.ts";
+import { platformProxyInstanceConsumers } from "@/api/modules/platform/integration/proxy-instance/event.ts";
+import { platformSubscriptionConsumers } from "@/api/modules/platform/notification/subscription/event.ts";
+import { registerSubscriptionTaskDefinitions } from "@/api/modules/platform/notification/subscription/task-definition.ts";
 import { registerBotCommandDefinitions } from "@/api/modules/platform/bot-ingress/command.ts";
 import { registerSubscriptionTargets } from "@/api/modules/platform/bot-ingress/commands/subscription-targets.ts";
-import { registerIntegrationProviderHandlers } from "@/api/modules/platform/integration/provider-registry.ts";
+import { registerIntegrationProviderHandlers } from "@/api/modules/platform/integration/proxy-instance/provider-registry.ts";
 import {
   steamBotCommandDefinitions,
   steamEventConsumers,

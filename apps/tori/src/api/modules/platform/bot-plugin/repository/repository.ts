@@ -77,7 +77,7 @@ export interface IBotPluginRepository {
     input: { ownerUserId: string; includeAll?: boolean },
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<ManagedBotPluginInstance>>;
-  findActiveMockBotInstance(): Promise<ManagedBotPluginInstance | null>;
+  findActivePlaygroundBotInstance(): Promise<ManagedBotPluginInstance | null>;
   findManagedBotInstanceIdentity(input: {
     ownerUserId: string;
     platform: string;

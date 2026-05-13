@@ -1,7 +1,7 @@
 import { createEventConsumer, createOutboxEventFromCtx } from "@/api/domain/infra";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import type { EventEnvelope } from "@/api/domain/infra/eventing/message.ts";
-import { SUBSCRIPTION_DISABLED } from "@/api/modules/platform/subscription/type.ts";
+import { SUBSCRIPTION_DISABLED } from "@/api/modules/platform/notification/subscription/type.ts";
 
 export const CONNECTION_DISABLED = "platform.connection.disabled";
 export const CONNECTION_DELETED = "platform.connection.deleted";

@@ -7,7 +7,7 @@ import {
   subscriptionPageDtoSchema,
   subscriptionViewDtoSchema,
   type CreateSubscriptionDto,
-} from "@/api/modules/platform/subscription/contract";
+} from "@/api/modules/platform/notification/subscription/contract";
 
 const notifyRequest = createRequestClient({
   credentials: "include",

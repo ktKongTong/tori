@@ -48,7 +48,7 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
   const credentialHash = await hashCredential(credential);
 
   if (body.platform === "playground") {
-    const activeMock = await repository.findActiveMockBotInstance();
+    const activeMock = await repository.findActivePlaygroundBotInstance();
     if (activeMock)
       throw new StatusConflictError("platform default playground bot instance already exists");
   }

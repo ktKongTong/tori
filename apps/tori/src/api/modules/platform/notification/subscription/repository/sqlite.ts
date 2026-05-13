@@ -5,7 +5,7 @@ import { NotFoundError } from "@/api/domain/error";
 import type {
   CreateSubscriptionInput,
   ISubscriptionRepository,
-} from "@/api/modules/platform/subscription/repository/repository.ts";
+} from "@/api/modules/platform/notification/subscription/repository/repository.ts";
 import { toPageResult } from "@repo/db/utils";
 import { withPagination } from "@repo/db/utils/sqlite";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";

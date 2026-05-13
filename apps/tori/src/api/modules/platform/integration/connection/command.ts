@@ -12,7 +12,7 @@ import {
   CONNECTION_DELETED,
   CONNECTION_DISABLED,
   createConnectionLifecycleEvent,
-} from "@/api/modules/platform/connection/event.ts";
+} from "@/api/modules/platform/integration/connection/event.ts";
 
 const TOKEN_PROXY_CREDENTIAL_KIND = "token-proxy-api-key";
 

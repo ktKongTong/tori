@@ -16,7 +16,7 @@ import type {
   CreateNotificationCandidatesInput,
   CreateNotificationEventInput,
   INotifyRepository,
-} from "@/api/modules/platform/notify/repository/repository.ts";
+} from "../repository/repository.ts";
 
 export class NotifyPgRepository implements INotifyRepository {
   async listSubscriptions() {

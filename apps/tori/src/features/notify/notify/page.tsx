@@ -10,7 +10,7 @@ import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
 import { useNotificationSubscriptionsQuery } from "@/features/notify/query";
 import { useToastError } from "@/lib/toast-error";
-import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
+import type { SubscriptionViewDto } from "@/api/modules/platform/notification/subscription/contract";
 
 export function NotifySubscriptionPage() {
   const modal = useModal();

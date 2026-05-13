@@ -1,6 +1,6 @@
 import { PageBasedPaginationResultSchema } from "@repo/utils/schema/paging";
 import { z } from "zod";
-import { proxyInstanceDtoSchema } from "@/api/modules/platform/integration/contract.ts";
+import { proxyInstanceDtoSchema } from "@/api/modules/platform/integration/proxy-instance/contract.ts";
 
 export const connectionDtoSchema = z.object({
   id: z.string(),

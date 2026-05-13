@@ -9,13 +9,13 @@ import {
   tokenProxyConnectionStartResponseDtoSchema,
   type ConnectionDto,
   type StartTokenProxyConnectionDto,
-} from "@/api/modules/platform/connection/contract";
+} from "@/api/modules/platform/integration/connection/contract";
 import {
   integrationStatusResponseDtoSchema,
   proxyInstanceListDtoSchema,
   proxyProbeResponseDtoSchema,
   type RegisterProxyInstanceDto,
-} from "@/api/modules/platform/integration/contract";
+} from "@/api/modules/platform/integration/proxy-instance/contract";
 import {
   actionCheckResponseSchema,
   type ActionCheckAction,

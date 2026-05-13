@@ -1,4 +1,4 @@
-import type { ProxyInstance } from "@/api/modules/platform/connection/repository/repository.ts";
+import type { ProxyInstance } from "@/api/modules/platform/integration/connection/repository/repository.ts";
 export type { ProxyInstance };
 import type {
   PageBasedPaginationParam,

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   connectionCreatedDtoSchema,
   type CreateConnectionDto,
-} from "@/api/modules/platform/connection/contract";
+} from "@/api/modules/platform/integration/connection/contract";
 import { toast } from "sonner";
 import { createRequestClient } from "@repo/request";
 

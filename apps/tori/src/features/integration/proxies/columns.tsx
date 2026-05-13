@@ -21,7 +21,7 @@ import {
 } from "@/features/integration/api";
 import { ActionImpactDialog } from "@/features/action-check/confirm-dialog";
 import { useModal } from "@/lib/modal";
-import type { ProxyInstanceDto } from "@/api/modules/platform/integration/contract";
+import type { ProxyInstanceDto } from "@/api/modules/platform/integration/proxy-instance/contract";
 
 export const integrationProxyColumns: ColumnDef<ProxyInstanceDto>[] = [
   objectColumn({

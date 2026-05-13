@@ -51,12 +51,12 @@ async function resolveContextBotInstanceId(
     return null;
   }
 
-  const [namedMockInstance] = await getBotIngressRepository(ctx).listNamedActiveMockBotInstances();
-  if (!namedMockInstance) {
+  const [instance] = await getBotIngressRepository(ctx).listNamedActivePlaygroundBotInstances();
+  if (!instance) {
     throw new ParameterError("Mock bot runtime with display name is required.");
   }
 
-  return namedMockInstance.id;
+  return instance.id;
 }
 
 export function assertClaimSupportedMessageContext(messageContext: MessageContextInput) {

@@ -9,7 +9,7 @@ import {
   proxyProbeResponseDtoSchema,
   registerProxyInstanceDtoSchema,
   updateProxyInstanceDtoSchema,
-} from "@/api/modules/platform/integration/contract";
+} from "@/api/modules/platform/integration/proxy-instance/contract";
 import { NotFoundError } from "@/api/domain/error/index.ts";
 import {
   createActionCheckResponse,
@@ -19,15 +19,15 @@ import {
 import {
   startTokenProxyConnectionDtoSchema,
   tokenProxyConnectionStartResponseDtoSchema,
-} from "@/api/modules/platform/connection/contract.ts";
+} from "@/api/modules/platform/integration/connection/contract.ts";
 import {
   deleteProxyInstance,
   probeProxyInstance,
   registerProxyInstance,
   updateProxyInstanceStatus,
 } from "./index";
-import { startTokenProxyConnection } from "@/api/modules/platform/connection/command.ts";
-import type { ProxyInstance } from "@/api/modules/platform/integration/repository/repository.ts";
+import { startTokenProxyConnection } from "@/api/modules/platform/integration/connection/command.ts";
+import type { ProxyInstance } from "@/api/modules/platform/integration/proxy-instance/repository/repository.ts";
 
 const app = new Hono();
 

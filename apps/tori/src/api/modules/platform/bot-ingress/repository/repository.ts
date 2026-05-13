@@ -259,7 +259,7 @@ export interface CreateBotIngressSubscriptionInput {
 }
 
 export interface IBotIngressRepository {
-  listNamedActiveMockBotInstances(): Promise<BotIngressBotPluginInstanceRow[]>;
+  listNamedActivePlaygroundBotInstances(): Promise<BotIngressBotPluginInstanceRow[]>;
   findActiveUserBindingIdentity(input: {
     platform: string;
     externalUserId: string;

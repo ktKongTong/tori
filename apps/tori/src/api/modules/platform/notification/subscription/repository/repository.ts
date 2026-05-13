@@ -3,8 +3,8 @@ import type {
   PageBasedPaginationResult,
 } from "@repo/utils/schema/paging";
 import type { User } from "@/api/domain/infra";
-import type { Channel } from "@/api/modules/platform/notify/repository/repository.ts";
-import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
+import type { Channel } from "../../notification/repository/repository.ts";
+import type { NotificationBody } from "../../notification/body.ts";
 import type { ChannelBinding } from "@/api/modules/platform/binding/repository";
 
 export interface NotificationEvent {

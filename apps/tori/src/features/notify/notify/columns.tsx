@@ -15,7 +15,7 @@ import { updateSubscriptionStatus as updateSubscriptionStatusRequest } from "@/f
 import { useModal } from "@/lib/modal";
 import { useSession } from "@/lib/auth-client";
 import { useToastError } from "@/lib/toast-error";
-import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
+import type { SubscriptionViewDto } from "@/api/modules/platform/notification/subscription/contract";
 
 function getSubscriptionTargetLabel(topicType: string) {
   if (topicType.includes("family")) return "Steam Family Library";

@@ -5,7 +5,10 @@ import { useForm } from "@tanstack/react-form";
 import { useLocation } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { NotificationBody, NotificationBodyBlock } from "@/api/modules/platform/notify/body";
+import type {
+  NotificationBody,
+  NotificationBodyBlock,
+} from "@/api/modules/platform/notification/notification/body.ts";
 import { z } from "zod";
 
 import { DashboardNotice } from "@/components/dashboard-ui";

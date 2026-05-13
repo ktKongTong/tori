@@ -26,7 +26,7 @@ import type {
 export class BotIngressSqliteRepository implements IBotIngressRepository {
   constructor(private readonly db: SqliteDB) {}
 
-  async listNamedActiveMockBotInstances() {
+  async listNamedActivePlaygroundBotInstances() {
     const rows = await this.db
       .select()
       .from(botPluginInstances)

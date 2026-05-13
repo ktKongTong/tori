@@ -24,7 +24,7 @@ import { useChannelBindingsQuery } from "@/features/binding/query";
 import { useConnectionsQuery } from "@/features/integration/query";
 import { useModal } from "@/lib/modal";
 import { useToastError } from "@/lib/toast-error";
-import type { CreateSubscriptionDto } from "@/api/modules/platform/subscription/contract";
+import type { CreateSubscriptionDto } from "@/api/modules/platform/notification/subscription/contract";
 
 const subscriptionFormSchema = z.object({
   channelId: z.string().trim().min(1, "Target chat is required"),

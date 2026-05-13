@@ -26,7 +26,7 @@ import { uniqueId } from "@repo/utils/id";
 export class BotIngressPgRepository implements IBotIngressRepository {
   constructor(private readonly db: PGDB) {}
 
-  async listNamedActiveMockBotInstances() {
+  async listNamedActivePlaygroundBotInstances() {
     const rows = await this.db
       .select()
       .from(botPluginInstances)

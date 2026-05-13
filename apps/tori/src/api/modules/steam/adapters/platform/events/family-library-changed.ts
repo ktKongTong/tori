@@ -1,6 +1,9 @@
 import { createEventConsumer } from "@/api/domain/infra/eventing";
-import { createNotificationBody, type NotificationBody } from "@/api/modules/platform/notify/body";
-import { deliverNotificationCandidate } from "@/api/modules/platform/notify/delivery";
+import {
+  createNotificationBody,
+  type NotificationBody,
+} from "@/api/modules/platform/notification/notification/body";
+import { deliverNotificationCandidate } from "@/api/modules/platform/notification/notification/delivery";
 import type { SteamFamilyLibraryChangedPayload } from "@/api/modules/steam/core/family/types";
 
 export const STEAM_FAMILY_LIBRARY_CHANGED = "SteamFamilyLibraryChanged";

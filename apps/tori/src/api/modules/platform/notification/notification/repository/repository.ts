@@ -1,4 +1,4 @@
-import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
+import type { NotificationBody } from "../body.ts";
 import type { ManagedBotPluginInstance } from "@/api/modules/platform/bot-plugin/repository";
 import type { ChannelBinding } from "@/api/modules/platform/binding/repository";
 import type { User } from "@/api/domain/infra";

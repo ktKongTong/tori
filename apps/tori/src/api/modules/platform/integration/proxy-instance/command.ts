@@ -7,7 +7,7 @@ import {
   createProxyInstanceLifecycleEvent,
   PROXY_INSTANCE_DELETED,
   PROXY_INSTANCE_DISABLED,
-} from "@/api/modules/platform/integration/event.ts";
+} from "./event.ts";
 
 async function probeProxy(
   baseUrl: string,

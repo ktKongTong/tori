@@ -1,8 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { objectColumn, statusColumn, timeColumn, type DataTableStatusTone } from "@repo/data-table";
-import type { NotificationEventDto } from "@/api/modules/platform/notify/contract";
-import type { SubscriptionViewDto } from "@/api/modules/platform/subscription/contract";
+import type { NotificationEventDto } from "@/api/modules/platform/notification/notification/contract";
+import type { SubscriptionViewDto } from "@/api/modules/platform/notification/subscription/contract";
 
 type NotificationEventListItemDto = {
   event: NotificationEventDto;

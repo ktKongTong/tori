@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { NotificationDeliveryCandidate } from "@/api/modules/platform/notify/repository/repository.ts";
+import type { NotificationDeliveryCandidate } from "./repository/repository.ts";
 import { createNotificationBody } from "./body.js";
 import { deliverNotificationCandidate } from "./delivery.js";
 

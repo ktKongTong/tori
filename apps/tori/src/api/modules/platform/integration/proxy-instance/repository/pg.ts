@@ -7,7 +7,7 @@ import type {
   UpdateProxyInstanceProbeInput,
   UpdateProxyInstanceRegistrationInput,
   UpdateProxyInstanceStatusInput,
-} from "@/api/modules/platform/integration/repository/repository.ts";
+} from "@/api/modules/platform/integration/proxy-instance/repository/repository.ts";
 import { list } from "@repo/db/utils/pg";
 import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 

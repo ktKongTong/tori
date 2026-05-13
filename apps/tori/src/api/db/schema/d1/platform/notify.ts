@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { uniqueId } from "@repo/utils/id";
-import type { NotificationBody } from "@/api/modules/platform/notify/body.ts";
+import type { NotificationBody } from "@/api/modules/platform/notification/notification/body.ts";
 import { timestamps, timestamptz } from "../utils";
 
 export const deliveryEndpoints = sqliteTable(

@@ -55,7 +55,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     return toPageResult(data, total, page);
   }
 
-  async findActiveMockBotInstance() {
+  async findActivePlaygroundBotInstance() {
     const [activeMock] = await this.db
       .select()
       .from(botPluginInstances)

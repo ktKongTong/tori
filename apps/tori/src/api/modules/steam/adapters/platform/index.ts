@@ -2,13 +2,13 @@ import type {
   ConnectionAccountProfileResult,
   ConnectionFamilyRefreshResult,
   IntegrationProviderHandlers,
-} from "@/api/modules/platform/integration/provider-registry.ts";
+} from "@/api/modules/platform/integration/proxy-instance/provider-registry.ts";
 import type { AnyBotCommandDefinition } from "@/api/modules/platform/bot-ingress/registry.ts";
 import type { SubscriptionTargetDefinition } from "@/api/modules/platform/bot-ingress/commands/subscription-targets.ts";
 import {
   defineSubscriptionTaskDefinition,
   type SubscriptionTaskDefinition,
-} from "@/api/modules/platform/subscription/task-definition.ts";
+} from "@/api/modules/platform/notification/subscription/task-definition.ts";
 import { getSteamConnectionAccountProfile } from "../../core/account/service.js";
 import { steamAccountCommandDefinitions } from "./bot-ingress/account.js";
 import { refreshSteamFamily } from "../../core/family/service.js";

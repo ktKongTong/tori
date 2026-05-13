@@ -8,9 +8,12 @@ import {
   subscriptionPageDtoSchema,
   subscriptionViewDtoSchema,
   updateSubscriptionDtoSchema,
-} from "@/api/modules/platform/subscription/contract";
+} from "@/api/modules/platform/notification/subscription/contract";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
-import { createSubscription, updateSubscriptionStatus } from "@/api/modules/platform/subscription";
+import {
+  createSubscription,
+  updateSubscriptionStatus,
+} from "@/api/modules/platform/notification/subscription";
 import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { z } from "zod";
 import {
@@ -18,7 +21,7 @@ import {
   mapSubscriptionPage,
   toSubscriptionDto,
   toSubscriptionViewDto,
-} from "@/api/modules/platform/subscription/mapper.ts";
+} from "@/api/modules/platform/notification/subscription/mapper.ts";
 
 const app = new Hono();
 

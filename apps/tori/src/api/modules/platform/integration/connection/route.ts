@@ -26,7 +26,7 @@ import {
   actionCheckRequestSchema,
   actionCheckResponseSchema,
 } from "@/api/modules/platform/shared/action-check.ts";
-import { getConnectionAccountProfile } from "@/api/modules/platform/integration/provider-registry.ts";
+import { getConnectionAccountProfile } from "@/api/modules/platform/integration/proxy-instance/provider-registry.ts";
 
 const app = new Hono();
 

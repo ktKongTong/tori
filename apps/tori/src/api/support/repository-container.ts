@@ -15,19 +15,19 @@ import {
 import {
   ConnectionPgRepository,
   ConnectionSqliteRepository,
-} from "@/api/modules/platform/connection/repository";
+} from "@/api/modules/platform/integration/connection/repository";
 import {
   IntegrationPgRepository,
   IntegrationSqliteRepository,
-} from "@/api/modules/platform/integration/repository";
+} from "@/api/modules/platform/integration/proxy-instance/repository";
 import {
   NotifyPgRepository,
   NotifySqliteRepository,
-} from "@/api/modules/platform/notify/repository";
+} from "@/api/modules/platform/notification/notification/repository";
 import {
   SubscriptionPgRepository,
   SubscriptionSqliteRepository,
-} from "@/api/modules/platform/subscription/repository";
+} from "@/api/modules/platform/notification/subscription/repository";
 import { TaskPgRepository, TaskSqliteRepository } from "@/api/modules/platform/task/repository";
 
 export function createRepositoryContainer<T extends DBType>(
