@@ -2,6 +2,11 @@ import { createEventConsumer, createOutboxEventFromCtx } from "@/api/domain/infr
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import type { EventEnvelope } from "@/api/domain/infra/eventing/message.ts";
 import { SUBSCRIPTION_DISABLED } from "@/api/modules/platform/notification/subscription/type.ts";
+import {
+  PROXY_INSTANCE_DELETED,
+  PROXY_INSTANCE_DISABLED,
+  type ProxyInstanceLifecyclePayload,
+} from "@/api/modules/platform/integration/proxy-instance/event.ts";
 
 export const CONNECTION_DISABLED = "platform.connection.disabled";
 export const CONNECTION_DELETED = "platform.connection.deleted";
@@ -49,21 +54,23 @@ export async function disableConnectionRuntimeDependents(
   }
 }
 
-export const disableDependentsForConnection = createEventConsumer<ConnectionLifecyclePayload>(
-  "platform.connection.disabled",
-  CONNECTION_DISABLED,
-  async (ctx) => {
-    const payload = ctx.event.payload as EventEnvelope<ConnectionLifecyclePayload>["payload"];
-    const connectionId = payload?.connectionId;
-    if (!connectionId) return { id: ctx.event.id, status: "DROP", reason: "missing connection id" };
+export const disableDependentsOnConnectionDisabled =
+  createEventConsumer<ConnectionLifecyclePayload>(
+    "platform.connection.disabled",
+    CONNECTION_DISABLED,
+    async (ctx) => {
+      const payload = ctx.event.payload as EventEnvelope<ConnectionLifecyclePayload>["payload"];
+      const connectionId = payload?.connectionId;
+      if (!connectionId)
+        return { id: ctx.event.id, status: "DROP", reason: "missing connection id" };
 
-    await disableConnectionRuntimeDependents(ctx, connectionId);
+      await disableConnectionRuntimeDependents(ctx, connectionId);
 
-    return { id: ctx.event.id, status: "SUCCESS" };
-  },
-);
+      return { id: ctx.event.id, status: "SUCCESS" };
+    },
+  );
 
-export const cleanupDeletedConnection = createEventConsumer<ConnectionLifecyclePayload>(
+export const cleanupOnConnectionDeleted = createEventConsumer<ConnectionLifecyclePayload>(
   "platform.connection.deleted",
   CONNECTION_DELETED,
   async (ctx) => {
@@ -81,7 +88,45 @@ export const cleanupDeletedConnection = createEventConsumer<ConnectionLifecycleP
   },
 );
 
+async function disableConnectionsForProxyInstance(ctx: ServiceContext, proxyInstanceId: string) {
+  const disabledConnections =
+    await ctx.repositories.connection.disableActiveConnectionsByProxyInstanceId(proxyInstanceId);
+  for (const connection of disabledConnections) {
+    await disableConnectionRuntimeDependents(ctx, connection.id);
+  }
+}
+
+export const disableConnectionsOnProxyDisabled = createEventConsumer<ProxyInstanceLifecyclePayload>(
+  "platform.proxy-instance.disabled",
+  PROXY_INSTANCE_DISABLED,
+  async (ctx) => {
+    const payload = ctx.event.payload as EventEnvelope<ProxyInstanceLifecyclePayload>["payload"];
+    const proxyInstanceId = payload?.proxyInstanceId;
+    if (!proxyInstanceId) return { id: ctx.event.id, status: "DROP", reason: "missing proxy id" };
+
+    await disableConnectionsForProxyInstance(ctx, proxyInstanceId);
+
+    return { id: ctx.event.id, status: "SUCCESS" };
+  },
+);
+
+export const disableConnectionsOnProxyDeleted = createEventConsumer<ProxyInstanceLifecyclePayload>(
+  "platform.proxy-instance.deleted",
+  PROXY_INSTANCE_DELETED,
+  async (ctx) => {
+    const payload = ctx.event.payload as EventEnvelope<ProxyInstanceLifecyclePayload>["payload"];
+    const proxyInstanceId = payload?.proxyInstanceId;
+    if (!proxyInstanceId) return { id: ctx.event.id, status: "DROP", reason: "missing proxy id" };
+
+    await disableConnectionsForProxyInstance(ctx, proxyInstanceId);
+
+    return { id: ctx.event.id, status: "SUCCESS" };
+  },
+);
+
 export const platformConnectionConsumers = [
-  disableDependentsForConnection,
-  cleanupDeletedConnection,
+  disableDependentsOnConnectionDisabled,
+  cleanupOnConnectionDeleted,
+  disableConnectionsOnProxyDisabled,
+  disableConnectionsOnProxyDeleted,
 ];

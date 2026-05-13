@@ -5,7 +5,6 @@ import {
 } from "@/api/modules/platform/task/index.ts";
 import { platformBotInstanceConsumers } from "@/api/modules/platform/bot-plugin/event.ts";
 import { platformConnectionConsumers } from "@/api/modules/platform/integration/connection/event.ts";
-import { platformProxyInstanceConsumers } from "@/api/modules/platform/integration/proxy-instance/event.ts";
 import { platformSubscriptionConsumers } from "@/api/modules/platform/notification/subscription/event.ts";
 import { registerSubscriptionTaskDefinitions } from "@/api/modules/platform/notification/subscription/task-definition.ts";
 import { registerBotCommandDefinitions } from "@/api/modules/platform/bot-ingress/command.ts";
@@ -38,7 +37,6 @@ export function registerApiV2Runtime() {
     ...platformTaskConsumers,
     ...platformBotInstanceConsumers,
     ...platformConnectionConsumers,
-    ...platformProxyInstanceConsumers,
     ...platformSubscriptionConsumers,
     ...steamEventConsumers,
   );
