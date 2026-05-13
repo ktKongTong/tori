@@ -27,10 +27,39 @@ import {
   updateProxyInstanceStatus,
 } from "./index";
 import { startTokenProxyConnection } from "@/api/modules/platform/connection/command.ts";
+import type { ProxyInstance } from "@/api/modules/platform/integration/repository/repository.ts";
 
 const app = new Hono();
 
 app.use("*", requireAuth());
+
+function readProxyProviders(capabilities: unknown) {
+  if (!capabilities || typeof capabilities !== "object") return [];
+  const providers = (capabilities as { providers?: unknown }).providers;
+  if (!Array.isArray(providers)) return [];
+  return providers
+    .filter((provider): provider is { name?: unknown; flow?: unknown; grantType?: unknown } =>
+      Boolean(provider && typeof provider === "object"),
+    )
+    .map((provider) => ({
+      name: typeof provider.name === "string" ? provider.name : "unknown",
+      flow: typeof provider.flow === "string" ? provider.flow : "unknown",
+      grantType:
+        typeof provider.grantType === "string"
+          ? provider.grantType
+          : typeof (provider as { grant_type?: unknown }).grant_type === "string"
+            ? (provider as { grant_type: string }).grant_type
+            : "unknown",
+    }));
+}
+
+function toProxyInstanceDto(proxy: ProxyInstance, currentUserId: string | null, isAdmin: boolean) {
+  return {
+    ...proxy,
+    providers: readProxyProviders(proxy.capabilities),
+    canManage: isAdmin || proxy.ownerUserId === currentUserId,
+  };
+}
 
 app.get(
   "/proxy-instances",
@@ -45,7 +74,17 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    return c.json(await c.get("serviceContext").repositories.integration.listProxyInstances(page));
+    const ctx = c.get("serviceContext");
+    const result = await ctx.repositories.integration.listVisibleProxyInstances(
+      { ownerUserId: ctx.userId!, includeAll: ctx.isAdmin() },
+      page,
+    );
+    return c.json({
+      ...result,
+      data: result.data.map((proxy) =>
+        toProxyInstanceDto(proxy, ctx.userId ?? null, ctx.isAdmin()),
+      ),
+    });
   },
 );
 
@@ -159,10 +198,13 @@ app.post(
     const { action } = c.req.valid("json");
     const userId = c.get("serviceContext").userId;
     if (!userId) throw new NotFoundError("user not found");
-    const proxy = await c.get("serviceContext").repositories.integration.findProxyInstanceForOwner({
-      id,
-      ownerUserId: userId,
-    });
+    const ctx = c.get("serviceContext");
+    const proxy = ctx.isAdmin()
+      ? await ctx.repositories.integration.findProxyInstanceById(id)
+      : await ctx.repositories.integration.findProxyInstanceForOwner({
+          id,
+          ownerUserId: userId,
+        });
     if (!proxy) throw new NotFoundError("proxy instance not found");
 
     return c.json(
@@ -177,7 +219,7 @@ app.post(
         summary:
           action === "delete"
             ? "This proxy instance will be hidden from normal lists. Existing connection history remains; active connections should be disabled or deleted separately."
-            : "This proxy instance will stop new token-proxy flows immediately. Related connections, subscriptions, and tasks are disabled asynchronously.",
+            : "This proxy instance will stop new token-proxy flows immediately. Related connections and subscriptions are disabled asynchronously; subscription lifecycle disables derived tasks.",
         affected: [
           {
             type: "connection",
@@ -192,7 +234,8 @@ app.post(
           {
             type: "task_definition",
             action: "async-disable",
-            reason: "Tasks affected through those connections are disabled asynchronously.",
+            reason:
+              "Task definitions derived from affected subscriptions stop after subscription lifecycle processing.",
           },
         ],
         retained: [

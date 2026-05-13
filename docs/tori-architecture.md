@@ -179,16 +179,13 @@ Tori 不依赖异步级联一定已经完成。所有运行时入口都必须检
 - `namespace`
 - `source`
 - `assurance`
-- `status`
-- `revokedReason`
-- `endedAt`
 - `deletedAt`
 
 业务语义：
 
-- active binding 表示外部 user 当前可解析为 Tori user。
-- revoked binding 表示绑定关系终止。
-- deleted binding 从普通查询中隐藏，但历史可保留。
+- `deletedAt IS NULL` 表示外部 user 当前可解析为 Tori user。
+- 设置 `deletedAt` 表示移除该外部身份映射。
+- claim/bind 将 anonymous user 合并到真实 user 时，更新同一条 binding 的 `userId/source/assurance/establishedByGrantId`。
 
 唯一约束按 `deletedAt IS NULL` 过滤，让删除后的外部身份可以重新绑定。
 
@@ -207,15 +204,16 @@ Tori 不依赖异步级联一定已经完成。所有运行时入口都必须检
 - `source`
 - `assurance`
 - `status`
-- `revokedReason`
-- `endedAt`
+- `suspendedReason`
 - `deletedAt`
 
 业务语义：
 
 - channel binding 决定 bot command 和 notification delivery 的 channel 归属。
 - bot plugin 上报 message context 时，bot-ingress 会根据 platform/externalChannelId/namespace 找或建 channel binding。
-- channel binding revoke 后，相关 subscription 应通过对应 module event 异步禁用。
+- `active` 表示该外部投递线路可用于 notification delivery。
+- `suspended` 表示映射意图保留，但当前 bot runtime 不可投递，等待 bot 接管恢复。
+- channel binding remove 只写 `deletedAt`；subscription 不因外部投递地址删除而被删除。
 
 ### Claim Session 与 Binding Grant
 
@@ -402,7 +400,6 @@ runtime credential hash 当前存放在 `metadata.runtimeCredentialHash`。
 核心字段：
 
 - `channelId`
-- `botPluginInstanceId`
 - `connectionId`
 - `ownerType`
 - `ownerId`
@@ -416,11 +413,20 @@ runtime credential hash 当前存放在 `metadata.runtimeCredentialHash`。
 
 创建 subscription 必须校验：
 
-- connection active。
-- channel binding active。
-- bot plugin instance 可解析。
+- 普通用户只能使用自己拥有的 active connection；管理员可以使用任意 active connection。
+- 目标 `channelId` 至少存在一个 active channel binding。
+- `ownerType = USER` 时，`ownerId` 强制为当前用户。
+- `ownerType = CHANNEL` 时，`ownerId` 强制为目标 `channelId`。
 
-subscription 激活会写 outbox event。Steam adapter 监听 subscription lifecycle event，为 Steam family subscription 确保 refresh task definition。
+subscription 的 Dashboard/API 可见性和管理权按最小规则判断：
+
+- 普通用户可见/可管理 `ownerType = USER && ownerId = 当前用户` 的订阅。
+- 普通用户可见/可管理 `createdByUserId = 当前用户` 的订阅。
+- 管理员可见/可管理全部未删除订阅。
+
+subscription 创建和激活会写 outbox event。平台层 subscription consumer 根据已注册的 subscription task definition 模板创建或恢复派生 task definition。业务模块只注册模板和 task handler，不直接消费 subscription lifecycle event。
+
+subscription 停用同样会写 lifecycle event。平台层 subscription consumer 负责禁用由该 subscription 派生的 task definition，并取消这些 task definition 下的 pending task runs。派生关系通过 `task.definition.metadata.subscriptionId` 表达。
 
 ### Notification Event
 
@@ -496,8 +502,6 @@ deletedAt: Date | null;
 
 - `active`
 - `disabled`
-- `revoked`
-- `superseded`
 - `pending`
 - `completed`
 - `failed`
@@ -512,9 +516,9 @@ deletedAt: Date | null;
 
 撤销语义：
 
-- revoke 用于 binding / credential / authorization 类关系终止。
-- revoked 记录保留历史。
-- 普通 active 查询不返回 revoked。
+- user binding、channel binding 不使用 revoke；移除时只写 `deletedAt`。
+- revoke 只用于明确需要保留“凭证/授权被撤销”语义的 runtime credential 或 bot runtime。
+- 普通 active 查询不返回 revoked runtime 资源。
 
 内部清理：
 
@@ -565,7 +569,6 @@ Action check 只做轻量影响提示，不递归计算完整依赖图。
 - `platform.connection.deleted`
 - `platform.proxy-instance.disabled`
 - `platform.proxy-instance.deleted`
-- `platform.channel-binding.revoked`
 - `platform.bot-instance.disabled`
 - `platform.bot-instance.deleted`
 
@@ -817,7 +820,7 @@ Tori 校验：
 
 bot-ingress 根据 messageContext 做上下文解析：
 
-1. 查找 active user binding。
+1. 查找未删除的 user binding。
 2. 查找 active channel binding。
 3. 如果 user binding 不存在，创建 anonymous user 和 self-asserted user binding。
 4. 如果 channel binding 不存在，创建 Tori channel 和 channel binding。
@@ -838,7 +841,7 @@ bot-ingress 根据 messageContext 做上下文解析：
 - `sub`
 - `unsub`
 
-Steam adapter 注册 Steam-specific subscription target 和 task handlers。
+Steam module 注册 Steam-specific subscription target、subscription task definition 模板和 task handlers。
 
 bot command handler 返回业务 action/state/context，plugin 负责渲染成平台消息。
 
@@ -925,7 +928,7 @@ Steam 不拥有 connection/subscription/task/notify 表。它通过 platform 能
 
 - 使用 connection resolver 获取 Steam account access。
 - 使用 task definition/run 执行 refresh。
-- 使用 subscription lifecycle event 确保 Steam refresh task。
+- 注册 subscription task definition 模板，让 platform/subscription 根据 lifecycle event 创建、恢复、停用派生 task。
 - 使用 notify module 生成 delivery candidate。
 
 ## 9. 模块依赖规则
@@ -977,7 +980,7 @@ steam
 以下规则应作为后续实现和 review 的标准：
 
 - delete 使用 `deletedAt` 字段，普通查询使用 `isNull(deletedAt)`。
-- status 表示 active/disabled/revoked 等业务状态，不表示删除。
+- status 表示 active/disabled 等业务运行状态，不表示删除；只有确实存在撤销语义的 runtime 资源才使用 revoked。
 - event consumer 放在资源 owner module。
 - action-check 是轻量确认，不是同步级联计划。
 - 下游级联通过 MQ/outbox 异步处理。

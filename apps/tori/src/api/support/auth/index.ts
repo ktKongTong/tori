@@ -3,9 +3,10 @@ import { createAuth } from "@repo/auth/server";
 import * as pgSchema from "@/api/db/schema/pg/index.ts";
 import * as sqliteSchema from "@/api/db/schema/d1/index.ts";
 import type { DBOptions } from "@/api/db/index";
-import type { Auth } from "@/api/domain/infra/auth.ts";
+import type { Auth, User } from "@/api/domain/infra/auth.ts";
 import type { ENV } from "@/api/domain/infra/env.ts";
-import { getTrustedOriginPattern } from "@/api/support/auth/base-url.ts";
+import { getTrustedOriginPattern } from "./base-url.ts";
+import { ensureDefaultMockBindings } from "./playground-binding";
 
 export const getTrustedOrigins = (env: ENV) => {
   const res = getTrustedOriginPattern(env.BETTER_AUTH_TRUSTED_ORIGIN);
@@ -29,6 +30,17 @@ const getIns = (dbOpt: DBOptions, env: ENV) => {
     trustedOrigins: getTrustedOrigins(env),
     emailAndPassword: {
       enabled: true,
+    },
+    overrides: {
+      databaseHooks: {
+        user: {
+          create: {
+            after: async (user) => {
+              await ensureDefaultMockBindings(dbOpt, user as User);
+            },
+          },
+        },
+      },
     },
     socialProviders: {
       github: {

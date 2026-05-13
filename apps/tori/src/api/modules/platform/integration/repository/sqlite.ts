@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { proxyInstances } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import type {
@@ -15,15 +15,76 @@ import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 export class IntegrationSqliteRepository implements IIntegrationRepository {
   constructor(private readonly db: SqliteDB) {}
 
+  private publicProxyWhere() {
+    return sql`(json_extract(${proxyInstances.metadata}, '$.visibility') = 'public' or json_extract(${proxyInstances.metadata}, '$.public') = 1)`;
+  }
+
   async listProxyInstances(page: PageBasedPaginationParam) {
+    const where = isNull(proxyInstances.deletedAt);
     const [data, [{ value: total }]] = await Promise.all([
       withPagination(
-        this.db.select().from(proxyInstances).orderBy(desc(proxyInstances.createdAt)).$dynamic(),
+        this.db
+          .select()
+          .from(proxyInstances)
+          .where(where)
+          .orderBy(desc(proxyInstances.createdAt))
+          .$dynamic(),
         page,
       ),
-      this.db.select({ value: count() }).from(proxyInstances),
+      this.db.select({ value: count() }).from(proxyInstances).where(where),
     ]);
     return toPageResult(data, total ?? 0, page);
+  }
+
+  async listVisibleProxyInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
+    page: PageBasedPaginationParam,
+  ) {
+    const where = input.includeAll
+      ? isNull(proxyInstances.deletedAt)
+      : and(
+          isNull(proxyInstances.deletedAt),
+          or(eq(proxyInstances.ownerUserId, input.ownerUserId), this.publicProxyWhere()),
+        );
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(proxyInstances)
+          .where(where)
+          .orderBy(desc(proxyInstances.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(proxyInstances).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async findProxyInstanceById(id: string) {
+    const [proxyInstance] = await this.db
+      .select()
+      .from(proxyInstances)
+      .where(and(eq(proxyInstances.id, id), isNull(proxyInstances.deletedAt)))
+      .limit(1);
+    return proxyInstance ?? null;
+  }
+
+  async findVisibleProxyInstance(input: { id: string; ownerUserId: string; includeAll?: boolean }) {
+    const [proxyInstance] = await this.db
+      .select()
+      .from(proxyInstances)
+      .where(
+        and(
+          eq(proxyInstances.id, input.id),
+          isNull(proxyInstances.deletedAt),
+          input.includeAll
+            ? undefined
+            : or(eq(proxyInstances.ownerUserId, input.ownerUserId), this.publicProxyWhere()),
+        ),
+      )
+      .limit(1);
+    return proxyInstance ?? null;
   }
 
   async findProxyInstanceByOwnerAndBaseUrl(input: { ownerUserId: string; baseUrl: string }) {
@@ -34,6 +95,7 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
         and(
           eq(proxyInstances.ownerUserId, input.ownerUserId),
           eq(proxyInstances.baseUrl, input.baseUrl),
+          isNull(proxyInstances.deletedAt),
         ),
       )
       .limit(1);
@@ -51,7 +113,7 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
         metadata: input.metadata,
         updatedAt: new Date(),
       })
-      .where(eq(proxyInstances.id, input.id))
+      .where(and(eq(proxyInstances.id, input.id), isNull(proxyInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -81,7 +143,11 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
       .select()
       .from(proxyInstances)
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .limit(1);
     return proxyInstance ?? null;
@@ -96,7 +162,7 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
         lastSeenAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(proxyInstances.id, input.id))
+      .where(and(eq(proxyInstances.id, input.id), isNull(proxyInstances.deletedAt)))
       .returning();
     return updated;
   }
@@ -106,7 +172,11 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
       .update(proxyInstances)
       .set({ status: input.status, updatedAt: new Date() })
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .returning();
     return updated ?? null;
@@ -114,9 +184,14 @@ export class IntegrationSqliteRepository implements IIntegrationRepository {
 
   async deleteProxyInstance(input: { id: string; ownerUserId: string }) {
     const [deleted] = await this.db
-      .delete(proxyInstances)
+      .update(proxyInstances)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
-        and(eq(proxyInstances.id, input.id), eq(proxyInstances.ownerUserId, input.ownerUserId)),
+        and(
+          eq(proxyInstances.id, input.id),
+          eq(proxyInstances.ownerUserId, input.ownerUserId),
+          isNull(proxyInstances.deletedAt),
+        ),
       )
       .returning();
     return deleted ?? null;

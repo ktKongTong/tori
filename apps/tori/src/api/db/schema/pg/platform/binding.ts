@@ -68,14 +68,10 @@ export const userBindings = pgTable(
     source: text("source").notNull(),
     assurance: text("assurance").notNull(),
     establishedByGrantId: text("established_by_grant_id"),
-    status: text("status").notNull().default("active"),
-    supersededByBindingId: text("superseded_by_binding_id"),
-    revokedReason: text("revoked_reason"),
     metadata: jsonb("metadata"),
     // soft delete
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
-    endedAt: timestamptz("ended_at"),
   },
   (table) => [
     uniqueIndex("uq_user_binding_identity")
@@ -100,13 +96,10 @@ export const channelBindings = pgTable(
     assurance: text("assurance").notNull(),
     establishedByGrantId: text("established_by_grant_id"),
     status: text("status").notNull().default("active"),
-    supersededByBindingId: text("superseded_by_binding_id"),
-    revokedReason: text("revoked_reason"),
     suspendedReason: text("suspended_reason"),
     metadata: jsonb("metadata"),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
-    endedAt: timestamptz("ended_at"),
   },
   (table) => [
     uniqueIndex("uq_channel_binding_identity")

@@ -1,11 +1,13 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, getColumns, inArray, isNull, sql } from "drizzle-orm";
 import {
   bindingGrants,
+  botPluginInstances,
+  channelBindings,
+  channels,
   claimSessions,
   subscriptions,
   user,
   userBindings,
-  channelBindings,
 } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra/db";
 import type { CreateBindingGrantInput, IBindingRepository } from "./repository";
@@ -17,7 +19,23 @@ export class BindingPgRepository implements IBindingRepository {
   constructor(private readonly db: PGDB) {}
 
   async listUserBindings(page: PageBasedPaginationParam) {
-    const where = and(eq(userBindings.status, "active"), isNull(userBindings.deletedAt));
+    const where = isNull(userBindings.deletedAt);
+    const [data, total] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(userBindings)
+          .where(where)
+          .orderBy(desc(userBindings.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.$count(userBindings, where),
+    ]);
+    return toPageResult(data, total, page);
+  }
+  async listUserBindingsByUserId(userId: string, page: PageBasedPaginationParam) {
+    const where = and(eq(userBindings.userId, userId), isNull(userBindings.deletedAt));
     const [data, total] = await Promise.all([
       withPagination(
         this.db
@@ -34,18 +52,108 @@ export class BindingPgRepository implements IBindingRepository {
   }
 
   async listChannelBindings(page: PageBasedPaginationParam) {
-    const where = and(eq(channelBindings.status, "active"), isNull(channelBindings.deletedAt));
+    const where = and(
+      inArray(channelBindings.status, ["active", "suspended"]),
+      isNull(channelBindings.deletedAt),
+    );
+    const columns = getColumns(channelBindings);
     const [data, total] = await Promise.all([
       withPagination(
         this.db
-          .select()
+          .select({
+            ...columns,
+            channel: {
+              id: channels.id,
+              type: channels.type,
+              name: channels.name,
+              status: channels.status,
+            },
+            botInstance: {
+              id: botPluginInstances.id,
+              platform: botPluginInstances.platform,
+              namespace: botPluginInstances.namespace,
+              instanceKey: botPluginInstances.instanceKey,
+              name: botPluginInstances.name,
+              status: botPluginInstances.status,
+              lastSeenAt: botPluginInstances.lastSeenAt,
+            },
+          })
           .from(channelBindings)
+          .leftJoin(channels, eq(channels.id, channelBindings.channelId))
+          .leftJoin(
+            botPluginInstances,
+            and(
+              eq(botPluginInstances.id, channelBindings.botPluginInstanceId),
+              isNull(botPluginInstances.deletedAt),
+            ),
+          )
           .where(where)
           .orderBy(desc(channelBindings.createdAt))
           .$dynamic(),
         page,
       ),
       this.db.$count(channelBindings, where),
+    ]);
+    return toPageResult(data, total, page);
+  }
+
+  async listChannelBindingsForUser(userId: string, page: PageBasedPaginationParam) {
+    const where = and(
+      inArray(channelBindings.status, ["active", "suspended"]),
+      isNull(channelBindings.deletedAt),
+      eq(channels.createdByUserId, userId),
+    );
+    const columns = getColumns(channelBindings);
+    const [data, total] = await Promise.all([
+      withPagination(
+        this.db
+          .select({
+            ...columns,
+            channel: {
+              id: channels.id,
+              type: channels.type,
+              name: channels.name,
+              status: channels.status,
+            },
+            botInstance: {
+              id: botPluginInstances.id,
+              platform: botPluginInstances.platform,
+              namespace: botPluginInstances.namespace,
+              instanceKey: botPluginInstances.instanceKey,
+              name: botPluginInstances.name,
+              status: botPluginInstances.status,
+              lastSeenAt: botPluginInstances.lastSeenAt,
+            },
+          })
+          .from(channelBindings)
+          .innerJoin(
+            channels,
+            and(
+              eq(channels.id, channelBindings.channelId),
+              eq(channels.createdByUserId, userId),
+              isNull(channels.deletedAt),
+            ),
+          )
+          .leftJoin(
+            botPluginInstances,
+            and(
+              eq(botPluginInstances.id, channelBindings.botPluginInstanceId),
+              isNull(botPluginInstances.deletedAt),
+            ),
+          )
+          .where(where)
+          .orderBy(desc(channelBindings.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.$count(
+        channelBindings,
+        and(
+          inArray(channelBindings.status, ["active", "suspended"]),
+          isNull(channelBindings.deletedAt),
+          sql`exists (select 1 from ${channels} where ${channels.id} = ${channelBindings.channelId} and ${channels.createdByUserId} = ${userId} and ${channels.deletedAt} is null)`,
+        ),
+      ),
     ]);
     return toPageResult(data, total, page);
   }
@@ -130,9 +238,12 @@ export class BindingPgRepository implements IBindingRepository {
       .update(userBindings)
       .set({
         userId: input.authenticatedUserId,
+        source: "claim-session",
+        assurance: "token-confirmed",
+        establishedByGrantId: input.grantId,
         updatedAt: new Date(),
       })
-      .where(eq(userBindings.userId, input.anonymousUserId));
+      .where(and(eq(userBindings.userId, input.anonymousUserId), isNull(userBindings.deletedAt)));
 
     await this.db
       .update(bindingGrants)
@@ -153,19 +264,16 @@ export class BindingPgRepository implements IBindingRepository {
     return binding ?? null;
   }
 
-  async revokeUserBinding(bindingId: string) {
-    const [revoked] = await this.db
+  async deleteUserBinding(bindingId: string) {
+    const [deleted] = await this.db
       .update(userBindings)
       .set({
-        status: "revoked",
-        revokedReason: "removed-by-user",
-        endedAt: new Date(),
         deletedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(and(eq(userBindings.id, bindingId), isNull(userBindings.deletedAt)))
       .returning();
-    return revoked;
+    return deleted;
   }
 
   async findChannelBindingById(bindingId: string) {
@@ -177,20 +285,53 @@ export class BindingPgRepository implements IBindingRepository {
     return binding ?? null;
   }
 
-  async revokeChannelBinding(bindingId: string) {
-    const [revoked] = await this.db
+  async findChannelBindingWithRelationsById(bindingId: string) {
+    const columns = getColumns(channelBindings);
+    const [binding] = await this.db
+      .select({
+        ...columns,
+        channel: {
+          id: channels.id,
+          type: channels.type,
+          name: channels.name,
+          status: channels.status,
+          createdByUserId: channels.createdByUserId,
+        },
+        botInstance: {
+          id: botPluginInstances.id,
+          platform: botPluginInstances.platform,
+          namespace: botPluginInstances.namespace,
+          instanceKey: botPluginInstances.instanceKey,
+          name: botPluginInstances.name,
+          status: botPluginInstances.status,
+          lastSeenAt: botPluginInstances.lastSeenAt,
+        },
+      })
+      .from(channelBindings)
+      .leftJoin(channels, eq(channels.id, channelBindings.channelId))
+      .leftJoin(
+        botPluginInstances,
+        and(
+          eq(botPluginInstances.id, channelBindings.botPluginInstanceId),
+          isNull(botPluginInstances.deletedAt),
+        ),
+      )
+      .where(and(eq(channelBindings.id, bindingId), isNull(channelBindings.deletedAt)))
+      .limit(1);
+    return binding ?? null;
+  }
+
+  async deleteChannelBinding(bindingId: string) {
+    const [deleted] = await this.db
       .update(channelBindings)
       .set({
-        status: "revoked",
-        revokedReason: "removed-by-user",
         suspendedReason: null,
-        endedAt: new Date(),
         deletedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(and(eq(channelBindings.id, bindingId), isNull(channelBindings.deletedAt)))
       .returning();
-    return revoked;
+    return deleted;
   }
 
   async suspendActiveChannelBindingsByBotPluginInstanceId(
@@ -208,23 +349,6 @@ export class BindingPgRepository implements IBindingRepository {
         and(
           eq(channelBindings.botPluginInstanceId, botPluginInstanceId),
           eq(channelBindings.status, "active"),
-          isNull(channelBindings.deletedAt),
-        ),
-      )
-      .returning({ id: channelBindings.id });
-    return rows.length;
-  }
-
-  async deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .update(channelBindings)
-      .set({
-        deletedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(channelBindings.botPluginInstanceId, botPluginInstanceId),
           isNull(channelBindings.deletedAt),
         ),
       )

@@ -1,5 +1,4 @@
 import { Button } from "@repo/ui/components/button";
-import { Navigate } from "@tanstack/react-router";
 import { DataTable } from "@repo/data-table";
 
 import { DashboardActionBar } from "@/components/dashboard-ui";
@@ -17,14 +16,14 @@ export function BotInstancesPage() {
   const botInstancesQuery = useBotInstancesQuery();
   const botInstancesData = botInstancesQuery.data?.data;
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <div className="space-y-6">
       <DashboardActionBar>
-        <Button onClick={() => modal.open(<CreateBotInstanceDialog />)}>Create Bot Instance</Button>
+        {isAdmin ? (
+          <Button onClick={() => modal.open(<CreateBotInstanceDialog />)}>
+            Create Bot Instance
+          </Button>
+        ) : null}
         <Button onClick={() => void botInstancesQuery.refetch()} variant="outline">
           Refresh
         </Button>
@@ -38,11 +37,11 @@ export function BotInstancesPage() {
         empty={{
           title: "No bot instances",
           description: "No bot instances available.",
-          action: (
+          action: isAdmin ? (
             <Button onClick={() => modal.open(<CreateBotInstanceDialog />)} variant="outline">
               Create your first Bot Instance
             </Button>
-          ),
+          ) : undefined,
         }}
       />
     </div>

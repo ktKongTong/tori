@@ -55,7 +55,7 @@ const createBotInstanceFormSchema = z
       },
       { message: "Capabilities must be valid JSON" },
     ),
-    displayName: z.string(),
+    name: z.string(),
     instanceKey: z.string().trim().min(1, "Instance key is required"),
     namespace: z.string().trim().min(1, "Namespace is required"),
     platform: z.string().trim().min(1, "Platform is required"),
@@ -81,7 +81,7 @@ const createBotInstanceDefaultValues: z.input<typeof createBotInstanceFormSchema
   platform: "",
   namespace: "managed",
   instanceKey: "",
-  displayName: "",
+  name: "",
   capabilities: '{"ingress":true}',
   endpointKind: "webhook",
   endpointTarget: "",
@@ -122,12 +122,12 @@ export function CreateBotInstanceDialog() {
         platform: parsed.platform,
         namespace: parsed.namespace,
         instanceKey: parsed.instanceKey,
-        displayName: parsed.displayName,
+        name: parsed.name,
         capabilities: parsed.capabilities.trim() ? JSON.parse(parsed.capabilities) : undefined,
         deliveryEndpoint: {
           kind: parsed.endpointKind,
           target: parsed.endpointTarget,
-          displayName: parsed.displayName ? `${parsed.displayName} delivery` : null,
+          name: parsed.name ? `${parsed.name} delivery` : null,
           secret: parsed.endpointSecret.trim() || null,
           config: parsed.endpointConfig.trim() ? JSON.parse(parsed.endpointConfig) : undefined,
           metadata: { source: "bot-instance-create" },
@@ -216,7 +216,7 @@ export function CreateBotInstanceDialog() {
             }}
           />
           <createForm.Field
-            name="displayName"
+            name="name"
             children={(field) => {
               const invalid = field.state.meta.errors.length > 0;
 
@@ -262,7 +262,7 @@ export function CreateBotInstanceDialog() {
               Delivery Endpoint
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Webhook is the default for separated bot plugins. Internal is only for playground/mock
+              Webhook is the default for separated bot plugins. Internal is only for playground
               runtimes.
             </p>
           </div>

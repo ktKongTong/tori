@@ -11,13 +11,26 @@ export const userBindingDtoSchema = z.object({
   source: z.string(),
   assurance: z.string(),
   establishedByGrantId: z.string().nullable(),
-  status: z.string(),
-  supersededByBindingId: z.string().nullable(),
-  revokedReason: z.string().nullable(),
   metadata: z.unknown().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  endedAt: z.string().nullable(),
+});
+
+export const channelBindingChannelDtoSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  name: z.string().nullable(),
+  status: z.string(),
+});
+
+export const channelBindingBotInstanceDtoSchema = z.object({
+  id: z.string(),
+  platform: z.string(),
+  namespace: z.string().nullable(),
+  instanceKey: z.string(),
+  name: z.string().nullable(),
+  status: z.string(),
+  lastSeenAt: z.string().nullable(),
 });
 
 export const channelBindingDtoSchema = z.object({
@@ -31,14 +44,13 @@ export const channelBindingDtoSchema = z.object({
   source: z.string(),
   assurance: z.string(),
   establishedByGrantId: z.string().nullable(),
-  status: z.string(),
-  supersededByBindingId: z.string().nullable(),
-  revokedReason: z.string().nullable(),
+  status: z.enum(["active", "suspended"]),
   suspendedReason: z.string().nullable(),
   metadata: z.unknown().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  endedAt: z.string().nullable(),
+  channel: channelBindingChannelDtoSchema.nullish(),
+  botInstance: channelBindingBotInstanceDtoSchema.nullish(),
 });
 
 export const claimSessionDtoSchema = z.object({

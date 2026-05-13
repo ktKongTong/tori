@@ -78,6 +78,7 @@ export interface ITaskRepository {
   ): Promise<PageBasedPaginationResult<TaskRun>>;
   getTaskRunById(taskRunId: string): Promise<TaskRun | null>;
   getTaskDefinitionById(taskDefinitionId: string): Promise<TaskDefinition | null>;
+  listTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string): Promise<TaskDefinition[]>;
   markTaskRunProcessing(taskRunId: string, startedAt: Date): Promise<void>;
   markTaskRunDone(taskRunId: string, input: { summary?: unknown; finishedAt: Date }): Promise<void>;
   markTaskRunFailed(
@@ -99,7 +100,7 @@ export interface ITaskRepository {
   ): Promise<TaskDefinition | null>;
   createTaskRun(input: CreateTaskRunInput): Promise<TaskRun>;
   markTaskDefinitionTriggered(taskDefinitionId: string, triggeredAt: Date): Promise<void>;
-  disableTaskDefinitionsByPayloadConnectionId(connectionId: string): Promise<string[]>;
+  disableTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string): Promise<string[]>;
   cancelPendingTaskRunsByTaskDefinitionIds(taskDefinitionIds: string[]): Promise<number>;
   deleteTaskDefinition(taskDefinitionId: string): Promise<TaskDefinition | null>;
   deleteTaskDefinitionsByPayloadConnectionId(connectionId: string): Promise<string[]>;

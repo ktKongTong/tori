@@ -11,7 +11,7 @@ export interface ManagedBotPluginInstance {
   platform: string;
   namespace: string | null;
   instanceKey: string;
-  displayName: string | null;
+  name: string | null;
   callbackMode: string;
   deliveryEndpointId: string | null;
   status: string;
@@ -28,7 +28,7 @@ export interface ManagedDeliveryEndpoint {
   ownerUserId: string | null;
   platform: string;
   kind: string;
-  displayName: string | null;
+  name: string | null;
   target: string;
   secret: string | null;
   status: string;
@@ -46,7 +46,7 @@ export interface CreateInternalDeliveryEndpointInput {
   platform: string;
   kind: string;
   target: string;
-  displayName?: string | null;
+  name?: string | null;
   secret?: string | null;
   status?: string;
   config?: unknown;
@@ -59,7 +59,7 @@ export interface CreateManagedBotInstanceInput {
   platform: string;
   namespace?: string | null;
   instanceKey: string;
-  displayName?: string | null;
+  name: string;
   callbackMode?: string;
   deliveryEndpointId?: string | null;
   status?: string;
@@ -71,6 +71,10 @@ export interface CreateManagedBotInstanceInput {
 export interface IBotPluginRepository {
   listManagedBotInstances(
     ownerUserId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ManagedBotPluginInstance>>;
+  listVisibleManagedBotInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<ManagedBotPluginInstance>>;
   findActiveMockBotInstance(): Promise<ManagedBotPluginInstance | null>;
@@ -85,14 +89,14 @@ export interface IBotPluginRepository {
   ): Promise<ManagedDeliveryEndpoint>;
   updateManagedBotInstanceRegistration(input: {
     id: string;
-    displayName?: string | null;
+    name?: string | null;
     capabilities?: unknown;
     credentialHash: string;
   }): Promise<ManagedBotPluginInstance>;
   createManagedBotInstance(input: CreateManagedBotInstanceInput): Promise<ManagedBotPluginInstance>;
   updateManagedBotInstance(input: {
     id: string;
-    displayName?: string | null;
+    name?: string | null;
     capabilities?: unknown;
     status?: "active" | "disabled" | null;
   }): Promise<ManagedBotPluginInstance | null>;

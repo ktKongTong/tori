@@ -117,7 +117,7 @@ type Channel = {
   id: string;
   type: string;
   name: string | null;
-  status: "active" | "disabled" | "suspended";
+  status: "active" | "disabled";
   deletedAt: Date | null;
 };
 ```
@@ -139,9 +139,7 @@ type Subscription = {
   topicType: string;
   topicKey: string;
   eventTypes: string[];
-  status: "active" | "disabled" | "suspended";
-  suspendedReason: string | null;
-  suspendedAt: Date | null;
+  status: "active" | "disabled";
   deletedAt: Date | null;
 };
 ```
@@ -189,8 +187,8 @@ type Subscription = {
 生命周期规则：
 
 - owner 是强生命周期依赖。`ownerType=user` 且 user 被删除时，subscription 应软删除或进入不可恢复终止状态；`ownerType=channel` 且 channel 被解散时同理。
-- connection 是数据源依赖。connection 被 revoked/deleted/disabled 时，subscription 不应被删除，而应进入 `suspended`，reason 指向 `connection-unavailable`。
-- channel 是投递目标依赖。channel 被 deleted 时，subscription 不能继续投递；如果 channel 是 owner，则 subscription 删除；如果 owner 是 user，则 subscription 可 `suspended` 并等待用户选择新的 delivery channel。
+- connection 是数据源依赖。connection 被 deleted/disabled 时，subscription 不应被删除，而应进入 `disabled`，并由 subscription lifecycle event 禁用对应 task definition。
+- channel 是投递目标依赖。channel 被 deleted 时，subscription 不能继续投递；如果 channel 是 owner，则 subscription 删除；如果 owner 是 user，则 subscription 可 `disabled` 并等待用户选择新的 delivery channel。
 - channel binding/bot runtime 是投递通道依赖。它们不可用时，不删除也不直接 suspend subscription，失败体现在 delivery attempt 上，dashboard 可以展示 channel 的部分或全部出口不可用。
 
 权限规则：
@@ -213,9 +211,8 @@ type ChannelBinding = {
   externalChannelName: string | null;
   source: "bot-ingress" | "dashboard" | "system";
   assurance: "observed" | "verified" | "admin";
-  status: "active" | "suspended" | "revoked";
+  status: "active" | "suspended";
   suspendedReason: string | null;
-  endedAt: Date | null;
   deletedAt: Date | null;
 
   // 当前物理投递通道。active binding 必须非空；suspended binding 可保留旧值用于诊断。
@@ -267,9 +264,7 @@ type Connection = {
   providerAccountId: string;
   providerAccountName: string | null;
   accessMode: "public-id" | "proxy-token" | "mixed";
-  status: "active" | "disabled" | "suspended";
-  suspendedReason: string | null;
-  suspendedAt: Date | null;
+  status: "active" | "disabled";
   deletedAt: Date | null;
 };
 
@@ -873,9 +868,11 @@ Delete:
 - 表示用户删除一个外部收件地址。
 - subscription 不变，因为 channel 仍然存在。
 
-Revoke:
+Suspended:
 
-- `status = revoked`，`endedAt = now`。
+- `status = suspended`。
+- 表示外部收件地址保留，但当前 bot runtime 不可投递。
+- 新 bot 在同一外部 channel 中上报消息后可恢复为 `active`。
 - 表示这个外部地址绑定关系明确终止。
 
 Suspend:
@@ -900,7 +897,7 @@ Disable:
 Suspend:
 
 - connection 等上游业务依赖不可用。
-- delivery channel 不可用时，按 owner 关系决定：如果 owner 也是该 channel，通常可 deleted/terminated；如果 owner 是 user，则通常 suspended 并要求用户选择新 channel。
+- delivery channel 不可用时，按 owner 关系决定：如果 owner 也是该 channel，通常可 deleted/terminated；如果 owner 是 user，则通常 disabled 并要求用户选择新 channel。
 - bot binding 不可用通常不 suspend subscription，因为 subscription 仍然对 channel 有效；失败发生在 delivery attempt。
 
 ### 11.4 Connection
@@ -908,15 +905,11 @@ Suspend:
 Delete:
 
 - `deletedAt = now`。
-- 订阅引用该 connection 时不能继续运行，可由 subscription module 标记 `suspended`。
+- 订阅引用该 connection 时不能继续运行，由 subscription module 标记 `disabled`。
 
 Disable:
 
 - 用户主动停用 provider account。
-
-Suspend:
-
-- proxy/credential 不可用。
 
 ### 11.5 User / Channel 作为 Owner
 
@@ -932,7 +925,7 @@ Channel 解散：
 - channel 写 `deletedAt`。
 - 该 channel 的 channel_binding 写 `deletedAt`。
 - `ownerType=channel` 且 `ownerId=channelId` 的 subscription 写 `deletedAt`。
-- `ownerType=user` 但 `channelId=deleted channel` 的 subscription 进入 `suspended`，等待用户选择新的 delivery channel，除非产品策略要求随 channel 删除。
+- `ownerType=user` 但 `channelId=deleted channel` 的 subscription 进入 `disabled`，等待用户选择新的 delivery channel，除非产品策略要求随 channel 删除。
 
 ## 12. 迁移计划
 

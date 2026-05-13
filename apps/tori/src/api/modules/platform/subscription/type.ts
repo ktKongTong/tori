@@ -11,6 +11,7 @@ export interface CreateSubscriptionInput {
 
 export const SUBSCRIPTION_CREATED = "SubscriptionCreated";
 export const SUBSCRIPTION_ACTIVATED = "SubscriptionActivated";
+export const SUBSCRIPTION_DISABLED = "SubscriptionDisabled";
 
 export type SubscriptionLifecyclePayload = {
   subscriptionId: string;

@@ -7,10 +7,11 @@ export const botInstanceDtoSchema = z.object({
   platform: z.string(),
   namespace: z.string(),
   instanceKey: z.string(),
-  displayName: z.string().nullable(),
+  name: z.string().nullable(),
   callbackMode: z.string(),
   deliveryEndpointId: z.string().nullable(),
   status: z.string(),
+  canManage: z.boolean().optional(),
   lastSeenAt: z.string().nullable(),
 });
 
@@ -20,13 +21,13 @@ export const createBotInstanceDtoSchema = z.object({
   platform: z.string().min(1),
   namespace: z.string().min(1),
   instanceKey: z.string().min(1),
-  displayName: z.string().nullable().optional(),
+  name: z.string(),
   capabilities: z.record(z.string(), z.unknown()).optional(),
   deliveryEndpoint: z
     .object({
       kind: z.string().min(1),
       target: z.string().min(1),
-      displayName: z.string().nullable().optional(),
+      name: z.string().nullable().optional(),
       secret: z.string().nullable().optional(),
       config: z.record(z.string(), z.unknown()).optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
@@ -36,7 +37,7 @@ export const createBotInstanceDtoSchema = z.object({
 });
 
 export const updateBotInstanceDtoSchema = z.object({
-  displayName: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
   capabilities: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(["active", "disabled"]).optional(),
 });

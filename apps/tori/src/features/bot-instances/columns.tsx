@@ -9,6 +9,7 @@ import {
   statusColumn,
   timeColumn,
   codeColumn,
+  type DataTableActionItem,
 } from "@repo/data-table";
 
 import { BotCredentialDialog } from "./dialogs";
@@ -26,7 +27,7 @@ export const botInstanceColumns: ColumnDef<BotInstanceDto>[] = [
   objectColumn({
     id: "botName",
     header: "Name",
-    title: (row) => row.displayName ?? "Unnamed Bot",
+    title: (row) => row.name ?? "Unnamed Bot",
   }),
   {
     id: "platform",
@@ -108,51 +109,52 @@ function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
       toast.success("Bot instance deleted");
     },
   });
+  const canManage = instance.canManage === true;
+  const items: DataTableActionItem[] = canManage
+    ? [
+        {
+          label: "Rotate",
+          onSelect: () => setRotateOpen(true),
+        },
+        {
+          label: instance.status === "active" ? "Disable" : "Enable",
+          variant: "destructive",
+          onSelect: () => {
+            void (async () => {
+              const status = instance.status === "active" ? "disabled" : "active";
+              if (status === "disabled") {
+                const nextImpact = await checkBotInstanceAction({
+                  id: instance.id,
+                  action: "disable",
+                });
+                setImpact(nextImpact);
+                setPendingAction(() => () => updateInstance.mutate({ id: instance.id, status }));
+                return;
+              }
+              updateInstance.mutate({ id: instance.id, status });
+            })();
+          },
+        },
+        {
+          label: "Delete",
+          variant: "destructive",
+          onSelect: () => {
+            void (async () => {
+              const nextImpact = await checkBotInstanceAction({
+                id: instance.id,
+                action: "delete",
+              });
+              setImpact(nextImpact);
+              setPendingAction(() => () => deleteInstance.mutate(instance.id));
+            })();
+          },
+        },
+      ]
+    : [{ label: "View only", disabled: true }];
 
   return (
     <>
-      <DataTableActions
-        label={`Open actions for ${instance.displayName ?? instance.id}`}
-        items={[
-          {
-            label: "Rotate",
-            onSelect: () => setRotateOpen(true),
-          },
-          {
-            label: instance.status === "active" ? "Disable" : "Enable",
-            variant: "destructive",
-            onSelect: () => {
-              void (async () => {
-                const status = instance.status === "active" ? "disabled" : "active";
-                if (status === "disabled") {
-                  const nextImpact = await checkBotInstanceAction({
-                    id: instance.id,
-                    action: "disable",
-                  });
-                  setImpact(nextImpact);
-                  setPendingAction(() => () => updateInstance.mutate({ id: instance.id, status }));
-                  return;
-                }
-                updateInstance.mutate({ id: instance.id, status });
-              })();
-            },
-          },
-          {
-            label: "Delete",
-            variant: "destructive",
-            onSelect: () => {
-              void (async () => {
-                const nextImpact = await checkBotInstanceAction({
-                  id: instance.id,
-                  action: "delete",
-                });
-                setImpact(nextImpact);
-                setPendingAction(() => () => deleteInstance.mutate(instance.id));
-              })();
-            },
-          },
-        ]}
-      />
+      <DataTableActions label={`Open actions for ${instance.name ?? instance.id}`} items={items} />
       <ConfirmDialog
         title="Rotate bot credential"
         description="The deployed plugin will stop working until it is updated with the new credential."

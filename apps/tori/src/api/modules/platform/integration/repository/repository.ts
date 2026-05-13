@@ -44,6 +44,16 @@ export interface IIntegrationRepository {
   listProxyInstances(
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<ProxyInstance>>;
+  listVisibleProxyInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ProxyInstance>>;
+  findProxyInstanceById(id: string): Promise<ProxyInstance | null>;
+  findVisibleProxyInstance(input: {
+    id: string;
+    ownerUserId: string;
+    includeAll?: boolean;
+  }): Promise<ProxyInstance | null>;
   findProxyInstanceByOwnerAndBaseUrl(input: {
     ownerUserId: string;
     baseUrl: string;

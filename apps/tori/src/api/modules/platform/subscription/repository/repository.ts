@@ -63,7 +63,12 @@ export interface ISubscriptionRepository {
   listSubscriptions(
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<Subscription>>;
+  listSubscriptionsForUser(
+    userId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<Subscription>>;
   findSubscriptionById(id: string): Promise<Subscription>;
+  findSubscriptionByIdForUser(id: string, userId: string): Promise<Subscription>;
 
   listSubscriptionsByConnectionId(
     connectionId: string,
@@ -88,10 +93,8 @@ export interface ISubscriptionRepository {
   }): Promise<Subscription | null>;
   createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
   updateSubscriptionStatus(id: string, status: "active" | "disabled"): Promise<Subscription | null>;
-  disableActiveSubscriptionsByConnectionId(connectionId: string): Promise<number>;
+  disableActiveSubscriptionsByConnectionId(connectionId: string): Promise<Subscription[]>;
   deleteSubscriptionsByConnectionId(connectionId: string): Promise<string[]>;
   deleteNotificationEventsBySubscriptionIds(subscriptionIds: string[]): Promise<number>;
-  deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
   deleteNotificationEventsByDeliveryEndpointId(deliveryEndpointId: string): Promise<number>;
-  disableActiveSubscriptionsByChannelId(channelId: string): Promise<number>;
 }

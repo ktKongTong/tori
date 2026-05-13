@@ -54,14 +54,7 @@ function createConnectionRepository(overrides: Record<string, unknown> = {}) {
 function createContext(
   connectionRepository: ReturnType<typeof createConnectionRepository>,
   subscriptionRepository = {
-    disableActiveSubscriptionsByConnectionId: vi.fn(),
-  },
-  taskRepository: {
-    disableTaskDefinitionsByPayloadConnectionId: ReturnType<typeof vi.fn>;
-    cancelPendingTaskRunsByTaskDefinitionIds: ReturnType<typeof vi.fn>;
-  } = {
-    disableTaskDefinitionsByPayloadConnectionId: vi.fn(async () => []),
-    cancelPendingTaskRunsByTaskDefinitionIds: vi.fn(),
+    disableActiveSubscriptionsByConnectionId: vi.fn(async () => []),
   },
   outboxRepository = {
     insertEvent: vi.fn(),
@@ -72,9 +65,9 @@ function createContext(
     repositories: {
       connection: connectionRepository,
       subscription: subscriptionRepository,
-      task: taskRepository,
       integration: {
         findProxyInstanceForOwner: vi.fn(async () => proxyInstance),
+        findVisibleProxyInstance: vi.fn(async () => proxyInstance),
       },
       outbox: outboxRepository,
     },
@@ -104,14 +97,10 @@ describe("token-proxy connection flow", () => {
       updateConnectionStatus: vi.fn(async () => updatedConnection),
     });
     const subscriptionRepository = {
-      disableActiveSubscriptionsByConnectionId: vi.fn(),
-    };
-    const taskRepository = {
-      disableTaskDefinitionsByPayloadConnectionId: vi.fn(async () => ["task-1"]),
-      cancelPendingTaskRunsByTaskDefinitionIds: vi.fn(),
+      disableActiveSubscriptionsByConnectionId: vi.fn(async () => []),
     };
     const insertEvent = vi.fn();
-    const ctx = createContext(connectionRepository, subscriptionRepository, taskRepository, {
+    const ctx = createContext(connectionRepository, subscriptionRepository, {
       insertEvent,
       batchInsertEvent: vi.fn(),
     });
@@ -128,8 +117,6 @@ describe("token-proxy connection flow", () => {
       connectionRepository.disableActiveConnectionCredentialsByConnectionId,
     ).toHaveBeenCalledWith("conn-1");
     expect(subscriptionRepository.disableActiveSubscriptionsByConnectionId).not.toHaveBeenCalled();
-    expect(taskRepository.disableTaskDefinitionsByPayloadConnectionId).not.toHaveBeenCalled();
-    expect(taskRepository.cancelPendingTaskRunsByTaskDefinitionIds).not.toHaveBeenCalled();
     expect(insertEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "platform.connection.disabled",
@@ -233,7 +220,7 @@ describe("token-proxy connection flow", () => {
             id: "tp-conn-1",
             provider: "steam",
             providerUid: "76561198000000000",
-            displayName: "Steam User",
+            name: "Steam User",
             permissions: ["proxy", "account", "steam-family"],
           },
           apiKey: "tp-api-key",
@@ -359,7 +346,7 @@ describe("token-proxy connection flow", () => {
             id: "tp-conn-2",
             provider: "steam",
             providerUid: "76561198000000000",
-            displayName: "Steam User",
+            name: "Steam User",
             permissions: ["proxy", "account", "steam-family"],
           },
           apiKey: "new-tp-api-key",

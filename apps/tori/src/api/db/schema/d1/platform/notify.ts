@@ -13,7 +13,7 @@ export const deliveryEndpoints = sqliteTable(
     ownerUserId: text("owner_user_id"),
     platform: text("platform").notNull(),
     kind: text("kind").notNull(),
-    displayName: text("display_name"),
+    name: text("name"),
     target: text("target").notNull(),
     secret: text("secret"),
     status: text("status").notNull().default("active"),
@@ -35,7 +35,6 @@ export const subscriptions = sqliteTable("subscription", {
     .primaryKey()
     .$defaultFn(() => uniqueId()),
   channelId: text("channel_id").notNull(),
-  botPluginInstanceId: text("bot_plugin_instance_id"),
   connectionId: text("connection_id").notNull(),
   ownerType: text("owner_type").notNull(),
   ownerId: text("owner_id").notNull(),

@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/components/button";
-import { Link, Navigate, Outlet, useLocation } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState, type ReactNode } from "react";
 import { DataTable, statusColumn, timeColumn, type DataTableStatusTone } from "@repo/data-table";
@@ -12,22 +12,14 @@ import {
   DashboardStatusPill,
 } from "@/components/dashboard-ui";
 import { taskColumns } from "./columns";
-import { useSession } from "@/lib/auth-client";
 import { useTaskDetailQuery, useTaskRuns, useTasksQuery } from "@/features/tasks/query";
 import type { TaskRunDto } from "@/api/modules/platform/task/contract";
 
 export function TasksPage() {
-  const { data: session } = useSession();
   const location = useLocation();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  const isAdmin = role.includes("admin");
   const isTaskChildRoute = location.pathname.startsWith("/tasks/");
   const tasksQuery = useTasksQuery();
   const tasksData = tasksQuery.data;
-
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   if (isTaskChildRoute) {
     return <Outlet />;
@@ -53,15 +45,8 @@ export function TasksPage() {
 export function TaskDetailPage({ taskId }: { taskId: string }) {
   const pageSize = 10;
   const [historyPage, setHistoryPage] = useState(1);
-  const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  const isAdmin = role.includes("admin");
   const taskQuery = useTaskDetailQuery(taskId);
   const { data: taskRuns } = useTaskRuns(taskId, { page: historyPage, pageSize });
-
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <div className="space-y-6">

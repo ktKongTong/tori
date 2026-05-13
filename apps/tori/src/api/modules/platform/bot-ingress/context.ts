@@ -41,13 +41,13 @@ async function resolveContextBotInstanceId(
   options: { botPluginInstance?: ManagedBotPluginInstance | null },
 ) {
   if (options.botPluginInstance) {
-    if (messageContext.platform === "mock" && !options.botPluginInstance.displayName?.trim()) {
+    if (messageContext.platform === "playground" && !options.botPluginInstance.name?.trim()) {
       throw new ParameterError("Mock bot runtime display name is required.");
     }
     return options.botPluginInstance.id;
   }
 
-  if (messageContext.platform !== "mock") {
+  if (messageContext.platform !== "playground") {
     return null;
   }
 
@@ -323,17 +323,12 @@ export async function consumeBindingGrantForContext(
       return grant;
     }
 
-    if (context.userBinding) {
-      await repository.supersedeUserBinding(context.userBinding.id, now);
+    if (!context.userBinding) {
+      throw new ParameterError("User binding context is required.");
     }
 
-    const newBinding = await repository.createConfirmedUserBinding({
-      id: uniqueId(),
+    await repository.updateUserBindingIdentity(context.userBinding.id, {
       userId: grant.subjectId,
-      platform: messageContext.platform,
-      externalUserId: messageContext.observedUserId,
-      externalUserName: requireDisplayName(messageContext.observedUserName, "observedUserName"),
-      namespace: context.namespace,
       source: "binding-grant",
       assurance: "token-confirmed",
       establishedByGrantId: grant.id,
@@ -345,46 +340,6 @@ export async function consumeBindingGrantForContext(
         anonymousUserId: context.anonymousUser.id,
         targetUserId: grant.subjectId,
         now,
-      });
-    }
-
-    if (context.userBinding) {
-      await repository.markUserBindingSupersededBy({
-        id: context.userBinding.id,
-        supersededByBindingId: newBinding.id,
-      });
-    }
-  } else if (grant.subjectType === "channel") {
-    if (context.channelBinding?.channelId === grant.subjectId) {
-      await repository.markBindingGrantConsumed(grant.id, now);
-      return grant;
-    }
-
-    if (context.channelBinding) {
-      await repository.supersedeChannelBinding(context.channelBinding.id, now);
-    }
-
-    const newBinding = await repository.createConfirmedChannelBinding({
-      id: uniqueId(),
-      channelId: grant.subjectId,
-      platform: messageContext.platform,
-      externalChannelId: messageContext.observedChannelId,
-      externalChannelName: requireDisplayName(
-        messageContext.observedChannelName,
-        "observedChannelName",
-      ),
-      namespace: context.namespace,
-      botPluginInstanceId: context.channelBinding.botPluginInstanceId ?? null,
-      source: "binding-grant",
-      assurance: "token-confirmed",
-      establishedByGrantId: grant.id,
-      metadata: messageContext.rawPayload ?? null,
-    });
-
-    if (context.channelBinding) {
-      await repository.markChannelBindingSupersededBy({
-        id: context.channelBinding.id,
-        supersededByBindingId: newBinding.id,
       });
     }
   } else {

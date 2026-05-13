@@ -8,8 +8,8 @@ type NotificationEventListItemDto = {
   event: NotificationEventDto;
   subscription: SubscriptionViewDto | null;
   channel: { id: string; name: string | null } | null;
-  botInstance: { id: string; displayName: string | null } | null;
-  endpoint: { id: string; displayName: string | null } | null;
+  botInstance: { id: string; name: string | null } | null;
+  endpoint: { id: string; name: string | null } | null;
 };
 
 export const notifyEventColumns: ColumnDef<NotificationEventListItemDto>[] = [
@@ -35,13 +35,12 @@ export const notifyEventColumns: ColumnDef<NotificationEventListItemDto>[] = [
     id: "botInstance",
     header: "Bot Instance",
     cell: ({ row }) =>
-      row.original.botInstance?.displayName ?? row.original.event.botPluginInstanceId ?? "—",
+      row.original.botInstance?.name ?? row.original.event.botPluginInstanceId ?? "—",
   },
   {
     id: "deliveryEndpoint",
     header: "Endpoint",
-    cell: ({ row }) =>
-      row.original.endpoint?.displayName ?? row.original.event.deliveryEndpointId ?? "—",
+    cell: ({ row }) => row.original.endpoint?.name ?? row.original.event.deliveryEndpointId ?? "—",
   },
   statusColumn({
     id: "status",

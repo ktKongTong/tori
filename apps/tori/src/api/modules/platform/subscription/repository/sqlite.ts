@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, or } from "drizzle-orm";
 import { channelBindings, notificationEvents, subscriptions } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
 import { NotFoundError } from "@/api/domain/error";
@@ -13,10 +13,30 @@ import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 export class SubscriptionSqliteRepository implements ISubscriptionRepository {
   constructor(private readonly db: SqliteDB) {}
 
+  private visibleToUserWhere(userId: string) {
+    return and(
+      isNull(subscriptions.deletedAt),
+      or(
+        and(eq(subscriptions.ownerType, "USER"), eq(subscriptions.ownerId, userId)),
+        eq(subscriptions.createdByUserId, userId),
+      ),
+    );
+  }
+
   async listSubscriptions(page: PageBasedPaginationParam) {
+    const where = isNull(subscriptions.deletedAt);
     const [data, [{ value: total }]] = await Promise.all([
-      withPagination(this.db.select().from(subscriptions).$dynamic(), page),
-      this.db.select({ value: count() }).from(subscriptions),
+      withPagination(this.db.select().from(subscriptions).where(where).$dynamic(), page),
+      this.db.select({ value: count() }).from(subscriptions).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listSubscriptionsForUser(userId: string, page: PageBasedPaginationParam) {
+    const where = this.visibleToUserWhere(userId);
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(this.db.select().from(subscriptions).where(where).$dynamic(), page),
+      this.db.select({ value: count() }).from(subscriptions).where(where),
     ]);
     return toPageResult(data, total ?? 0, page);
   }
@@ -25,14 +45,27 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
     const [subscription] = await this.db
       .select()
       .from(subscriptions)
-      .where(eq(subscriptions.id, id))
+      .where(and(eq(subscriptions.id, id), isNull(subscriptions.deletedAt)))
+      .limit(1);
+    if (!subscription) throw new NotFoundError(`Subscription ${id} not found`);
+    return subscription;
+  }
+
+  async findSubscriptionByIdForUser(id: string, userId: string) {
+    const [subscription] = await this.db
+      .select()
+      .from(subscriptions)
+      .where(and(eq(subscriptions.id, id), this.visibleToUserWhere(userId)))
       .limit(1);
     if (!subscription) throw new NotFoundError(`Subscription ${id} not found`);
     return subscription;
   }
 
   async listSubscriptionsByConnectionId(connectionId: string, page: PageBasedPaginationParam) {
-    const where = eq(subscriptions.connectionId, connectionId);
+    const where = and(
+      eq(subscriptions.connectionId, connectionId),
+      isNull(subscriptions.deletedAt),
+    );
     const [data, [{ value: total }]] = await Promise.all([
       withPagination(this.db.select().from(subscriptions).where(where).$dynamic(), page),
       this.db.select({ value: count() }).from(subscriptions).where(where),
@@ -114,12 +147,11 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
   }
 
   async disableActiveSubscriptionsByConnectionId(connectionId: string) {
-    const rows = await this.db
+    return this.db
       .update(subscriptions)
       .set({ status: "disabled", updatedAt: new Date() })
       .where(and(eq(subscriptions.connectionId, connectionId), eq(subscriptions.status, "active")))
-      .returning({ id: subscriptions.id });
-    return rows.length;
+      .returning();
   }
 
   async deleteSubscriptionsByConnectionId(connectionId: string) {
@@ -139,28 +171,11 @@ export class SubscriptionSqliteRepository implements ISubscriptionRepository {
     return rows.length;
   }
 
-  async deleteNotificationEventsByBotPluginInstanceId(botPluginInstanceId: string) {
-    const rows = await this.db
-      .delete(notificationEvents)
-      .where(eq(notificationEvents.botPluginInstanceId, botPluginInstanceId))
-      .returning({ id: notificationEvents.id });
-    return rows.length;
-  }
-
   async deleteNotificationEventsByDeliveryEndpointId(deliveryEndpointId: string) {
     const rows = await this.db
       .delete(notificationEvents)
       .where(eq(notificationEvents.deliveryEndpointId, deliveryEndpointId))
       .returning({ id: notificationEvents.id });
-    return rows.length;
-  }
-
-  async disableActiveSubscriptionsByChannelId(channelId: string) {
-    const rows = await this.db
-      .update(subscriptions)
-      .set({ status: "disabled", updatedAt: new Date() })
-      .where(and(eq(subscriptions.channelId, channelId), eq(subscriptions.status, "active")))
-      .returning({ id: subscriptions.id });
     return rows.length;
   }
 }

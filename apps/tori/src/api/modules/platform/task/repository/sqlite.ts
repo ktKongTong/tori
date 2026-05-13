@@ -133,6 +133,15 @@ export class TaskSqliteRepository implements ITaskRepository {
     return taskDefinition ?? null;
   }
 
+  async listTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string) {
+    return this.db
+      .select()
+      .from(taskDefinitions)
+      .where(
+        sql`json_extract(${taskDefinitions.metadata}, '$.subscriptionId') = ${subscriptionId}`,
+      );
+  }
+
   async markTaskRunProcessing(taskRunId: string, startedAt: Date) {
     await this.db
       .update(taskRuns)
@@ -236,7 +245,7 @@ export class TaskSqliteRepository implements ITaskRepository {
       .where(eq(taskDefinitions.id, taskDefinitionId));
   }
 
-  async disableTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+  async disableTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string) {
     const rows = await this.db
       .update(taskDefinitions)
       .set({
@@ -246,7 +255,7 @@ export class TaskSqliteRepository implements ITaskRepository {
       .where(
         and(
           eq(taskDefinitions.enabled, true),
-          sql`json_extract(${taskDefinitions.payload}, '$.connectionId') = ${connectionId}`,
+          sql`json_extract(${taskDefinitions.metadata}, '$.subscriptionId') = ${subscriptionId}`,
         ),
       )
       .returning({ id: taskDefinitions.id });

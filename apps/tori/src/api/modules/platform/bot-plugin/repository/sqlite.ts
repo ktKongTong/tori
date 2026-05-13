@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql, isNull } from "drizzle-orm";
 import { uniqueId } from "@repo/utils/id";
 import { botPluginInstances, deliveryEndpoints } from "@/api/db/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra/db";
@@ -15,7 +15,31 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
   constructor(private readonly db: SqliteDB) {}
 
   async listManagedBotInstances(ownerUserId: string, page: PageBasedPaginationParam) {
-    const where = eq(botPluginInstances.ownerUserId, ownerUserId);
+    const where = and(
+      eq(botPluginInstances.ownerUserId, ownerUserId),
+      isNull(botPluginInstances.deletedAt),
+    );
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(botPluginInstances)
+          .where(where)
+          .orderBy(desc(botPluginInstances.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(botPluginInstances).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listVisibleManagedBotInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
+    page: PageBasedPaginationParam,
+  ) {
+    void input;
+    const where = isNull(botPluginInstances.deletedAt);
     const [data, [{ value: total }]] = await Promise.all([
       withPagination(
         this.db
@@ -35,7 +59,9 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     const [activeMock] = await this.db
       .select()
       .from(botPluginInstances)
-      .where(and(eq(botPluginInstances.platform, "mock"), eq(botPluginInstances.status, "active")))
+      .where(
+        and(eq(botPluginInstances.platform, "playground"), eq(botPluginInstances.status, "active")),
+      )
       .limit(1);
     return activeMock ?? null;
   }
@@ -70,7 +96,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
         platform: input.platform,
         kind: input.kind,
         target: input.target,
-        displayName: input.displayName ?? null,
+        name: input.name ?? null,
         secret: input.secret ?? null,
         status: input.status ?? "active",
         config: input.config ?? null,
@@ -82,7 +108,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
 
   async updateManagedBotInstanceRegistration(input: {
     id: string;
-    displayName?: string | null;
+    name?: string | null;
     capabilities?: Record<string, unknown> | null;
     credentialHash: string;
   }) {
@@ -94,7 +120,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     const [updated] = await this.db
       .update(botPluginInstances)
       .set({
-        displayName: input.displayName ?? existing?.displayName ?? null,
+        name: input.name ?? existing?.name ?? null,
         capabilities: input.capabilities ?? existing?.capabilities,
         metadata: {
           ...Object.assign({}, existing?.metadata),
@@ -117,7 +143,7 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
         platform: input.platform,
         namespace: input.namespace ?? null,
         instanceKey: input.instanceKey,
-        displayName: input.displayName ?? null,
+        name: input.name ?? null,
         callbackMode: input.callbackMode ?? "internal-sse",
         deliveryEndpointId: input.deliveryEndpointId ?? null,
         status: input.status ?? "active",
@@ -131,14 +157,14 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
 
   async updateManagedBotInstance(input: {
     id: string;
-    displayName?: string | null;
+    name?: string | null;
     capabilities?: Record<string, unknown> | null;
     status?: "active" | "disabled" | null;
   }) {
     const [updated] = await this.db
       .update(botPluginInstances)
       .set({
-        displayName: input.displayName,
+        name: input.name,
         capabilities: input.capabilities,
         status: input.status ?? undefined,
         updatedAt: new Date(),

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ne } from "drizzle-orm";
+import { and, count, desc, eq, ne, isNull, getColumns } from "drizzle-orm";
 import { connections, proxyInstances } from "@/api/db/schema/d1";
 import { accountProfiles } from "@/api/modules/steam/core/schema/d1";
 import type { SqliteDB } from "@/api/domain/infra";
@@ -19,12 +19,35 @@ export class ConnectionSqliteRepository implements IConnectionRepository {
   constructor(private readonly db: SqliteDB) {}
 
   async listConnections(page: PageBasedPaginationParam) {
+    const where = isNull(connections.deletedAt);
     const [data, [{ value: total }]] = await Promise.all([
       withPagination(
-        this.db.select().from(connections).orderBy(desc(connections.createdAt)).$dynamic(),
+        this.db
+          .select()
+          .from(connections)
+          .where(where)
+          .orderBy(desc(connections.createdAt))
+          .$dynamic(),
         page,
       ),
-      this.db.select({ value: count() }).from(connections),
+      this.db.select({ value: count() }).from(connections).where(where),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listConnectionsForOwner(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = and(eq(connections.ownerUserId, ownerUserId), isNull(connections.deletedAt));
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(connections)
+          .where(where)
+          .orderBy(desc(connections.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(connections).where(where),
     ]);
     return toPageResult(data, total ?? 0, page);
   }
@@ -36,6 +59,28 @@ export class ConnectionSqliteRepository implements IConnectionRepository {
         page,
       ),
       this.db.select({ value: count() }).from(accountProfiles),
+    ]);
+    return toPageResult(data, total ?? 0, page);
+  }
+
+  async listAccountProfilesForOwner(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = and(
+      eq(connections.id, accountProfiles.connectionId),
+      eq(connections.ownerUserId, ownerUserId),
+      eq(connections.status, "active"),
+      isNull(connections.deletedAt),
+    );
+    const [data, [{ value: total }]] = await Promise.all([
+      withPagination(
+        this.db
+          .select({ ...getColumns(accountProfiles) })
+          .from(accountProfiles)
+          .innerJoin(connections, where)
+          .orderBy(desc(accountProfiles.updatedAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.select({ value: count() }).from(accountProfiles).innerJoin(connections, where),
     ]);
     return toPageResult(data, total ?? 0, page);
   }

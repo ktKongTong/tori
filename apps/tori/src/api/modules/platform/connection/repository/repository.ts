@@ -124,7 +124,15 @@ export interface CreateTokenProxyConnectionSessionInput {
 
 export interface IConnectionRepository {
   listConnections(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<Connection>>;
+  listConnectionsForOwner(
+    ownerUserId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<Connection>>;
   listAccountProfiles(
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<AccountProfileRow>>;
+  listAccountProfilesForOwner(
+    ownerUserId: string,
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<AccountProfileRow>>;
   findConnectionByOwnerAndProviderAccount(input: {

@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { DataTableActions, objectColumn, statusColumn, timeColumn } from "@repo/data-table";
+import { DataTableActions, objectColumn, timeColumn } from "@repo/data-table";
 
-import { revokeUserBinding, type UserBindingListItem } from "@/features/binding/api";
+import { deleteUserBinding, type UserBindingListItem } from "@/features/binding/api";
 import { useToastError } from "@/lib/toast-error";
 
 export const bindingColumns: ColumnDef<UserBindingListItem>[] = [
@@ -16,17 +16,6 @@ export const bindingColumns: ColumnDef<UserBindingListItem>[] = [
     id: "platform",
     header: "Platform",
     cell: ({ row }) => row.original.platform,
-  },
-  statusColumn({
-    id: "status",
-    header: "Status",
-    text: (row) => row.status,
-    tone: (row) => (row.status === "active" ? "success" : "neutral"),
-  }),
-  {
-    id: "assurance",
-    header: "Assurance",
-    cell: ({ row }) => row.original.assurance,
   },
   timeColumn({
     id: "createdAt",
@@ -48,7 +37,7 @@ export const bindingColumns: ColumnDef<UserBindingListItem>[] = [
 function BindingActions({ binding }: { binding: UserBindingListItem }) {
   const queryClient = useQueryClient();
   const removeBinding = useMutation({
-    mutationFn: async (bindingId: string) => revokeUserBinding(bindingId),
+    mutationFn: async (bindingId: string) => deleteUserBinding(bindingId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["binding", "user-bindings"],

@@ -9,13 +9,6 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCell,
@@ -24,9 +17,7 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
-import { Link } from "@tanstack/react-router";
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { IconDots } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 export function DashboardPanel({
@@ -250,61 +241,6 @@ export function DashboardPagination({
           Next
         </Button>
       </div>
-    </div>
-  );
-}
-
-type DashboardTableActionItem = {
-  key?: string;
-  label: string;
-  to?: string;
-  onSelect?: () => void;
-  variant?: "default" | "destructive";
-  disabled?: boolean;
-};
-
-export function DashboardTableActions({
-  label = "Open actions",
-  items,
-}: {
-  label?: string;
-  items: DashboardTableActionItem[];
-}) {
-  const visibleItems = items.filter((item) => !item.disabled);
-
-  if (!visibleItems.length) return null;
-
-  return (
-    <div className="flex justify-end">
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={label} />}>
-          <IconDots data-icon="inline-start" />
-          <span className="sr-only">{label}</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-40">
-          <DropdownMenuGroup>
-            {visibleItems.map((item, index) =>
-              item.to ? (
-                <DropdownMenuItem
-                  key={item.key ?? `${item.label}-${index}`}
-                  render={<Link to={item.to} />}
-                  variant={item.variant}
-                >
-                  {item.label}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  key={item.key ?? `${item.label}-${index}`}
-                  onClick={item.onSelect}
-                  variant={item.variant}
-                >
-                  {item.label}
-                </DropdownMenuItem>
-              ),
-            )}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }

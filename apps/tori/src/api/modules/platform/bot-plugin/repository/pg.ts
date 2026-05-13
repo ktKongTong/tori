@@ -34,13 +34,34 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     return toPageResult(data, total, page);
   }
 
+  async listVisibleManagedBotInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
+    page: PageBasedPaginationParam,
+  ) {
+    void input;
+    const where = isNull(botPluginInstances.deletedAt);
+    const [data, total] = await Promise.all([
+      withPagination(
+        this.db
+          .select()
+          .from(botPluginInstances)
+          .where(where)
+          .orderBy(desc(botPluginInstances.createdAt))
+          .$dynamic(),
+        page,
+      ),
+      this.db.$count(botPluginInstances, where),
+    ]);
+    return toPageResult(data, total, page);
+  }
+
   async findActiveMockBotInstance() {
     const [activeMock] = await this.db
       .select()
       .from(botPluginInstances)
       .where(
         and(
-          eq(botPluginInstances.platform, "mock"),
+          eq(botPluginInstances.platform, "playground"),
           eq(botPluginInstances.status, "active"),
           isNull(botPluginInstances.deletedAt),
         ),
@@ -78,7 +99,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
       platform: input.platform,
       kind: input.kind,
       target: input.target,
-      displayName: input.displayName ?? null,
+      name: input.name ?? null,
       secret: input.secret ?? null,
       status: input.status ?? "active",
       config: input.config ?? null,
@@ -90,7 +111,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
 
   async updateManagedBotInstanceRegistration(input: {
     id: string;
-    displayName?: string | null;
+    name?: string | null;
     capabilities?: Record<string, unknown> | null;
     credentialHash: string;
   }) {
@@ -102,7 +123,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     const [updated] = await this.db
       .update(botPluginInstances)
       .set({
-        displayName: input.displayName ?? existing?.displayName ?? null,
+        name: input.name ?? existing?.name ?? null,
         capabilities: input.capabilities ?? existing?.capabilities,
         metadata: {
           ...Object.assign({}, existing?.metadata),
@@ -123,7 +144,7 @@ export class BotPluginPgRepository implements IBotPluginRepository {
       platform: input.platform,
       namespace: input.namespace ?? null,
       instanceKey: input.instanceKey,
-      displayName: input.displayName ?? null,
+      name: input.name,
       callbackMode: input.callbackMode ?? "internal-sse",
       deliveryEndpointId: input.deliveryEndpointId ?? null,
       status: input.status ?? "active",
@@ -137,14 +158,14 @@ export class BotPluginPgRepository implements IBotPluginRepository {
 
   async updateManagedBotInstance(input: {
     id: string;
-    displayName?: string | null;
+    name: string;
     capabilities?: Record<string, unknown> | null;
     status?: "active" | "disabled" | null;
   }) {
     const [updated] = await this.db
       .update(botPluginInstances)
       .set({
-        displayName: input.displayName,
+        name: input.name,
         capabilities: input.capabilities,
         status: input.status ?? undefined,
         updatedAt: new Date(),

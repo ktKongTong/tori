@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { proxyInstances } from "@/api/db/schema/pg";
 import type { PGDB } from "@/api/domain/infra";
 import type {
@@ -14,12 +14,59 @@ import type { PageBasedPaginationParam } from "@repo/utils/schema/paging";
 export class IntegrationPgRepository implements IIntegrationRepository {
   constructor(private readonly db: PGDB) {}
 
+  private publicProxyWhere() {
+    return sql`(${proxyInstances.metadata}->>'visibility' = 'public' or ${proxyInstances.metadata}->>'public' = 'true')`;
+  }
+
   async listProxyInstances(page: PageBasedPaginationParam) {
     return list(this.db, proxyInstances, {
       orderBy: [{ column: "createdAt", direction: "desc" }],
       page,
       where: isNull(proxyInstances.deletedAt),
     });
+  }
+
+  async listVisibleProxyInstances(
+    input: { ownerUserId: string; includeAll?: boolean },
+    page: PageBasedPaginationParam,
+  ) {
+    const where = input.includeAll
+      ? isNull(proxyInstances.deletedAt)
+      : and(
+          isNull(proxyInstances.deletedAt),
+          or(eq(proxyInstances.ownerUserId, input.ownerUserId), this.publicProxyWhere()),
+        );
+    return list(this.db, proxyInstances, {
+      orderBy: [{ column: "createdAt", direction: "desc" }],
+      page,
+      where,
+    });
+  }
+
+  async findProxyInstanceById(id: string) {
+    const [proxyInstance] = await this.db
+      .select()
+      .from(proxyInstances)
+      .where(and(eq(proxyInstances.id, id), isNull(proxyInstances.deletedAt)))
+      .limit(1);
+    return proxyInstance ?? null;
+  }
+
+  async findVisibleProxyInstance(input: { id: string; ownerUserId: string; includeAll?: boolean }) {
+    const [proxyInstance] = await this.db
+      .select()
+      .from(proxyInstances)
+      .where(
+        and(
+          eq(proxyInstances.id, input.id),
+          isNull(proxyInstances.deletedAt),
+          input.includeAll
+            ? undefined
+            : or(eq(proxyInstances.ownerUserId, input.ownerUserId), this.publicProxyWhere()),
+        ),
+      )
+      .limit(1);
+    return proxyInstance ?? null;
   }
 
   async findProxyInstanceByOwnerAndBaseUrl(input: { ownerUserId: string; baseUrl: string }) {

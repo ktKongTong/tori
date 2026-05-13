@@ -29,7 +29,16 @@ export type { ManagedBotPluginInstance };
 
 export async function listManagedBotInstances(ctx: ServiceContext, page: PageBasedPaginationParam) {
   const userId = ctx.userId!;
-  return getBotPluginRepository(ctx).listManagedBotInstances(userId, page);
+  return getBotPluginRepository(ctx).listVisibleManagedBotInstances({ ownerUserId: userId }, page);
+}
+
+async function findManageableBotInstance(ctx: ServiceContext, id: string) {
+  const instance = await getBotPluginRepository(ctx).findManagedBotInstanceById(id);
+  if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
+  if (!ctx.isAdmin()) {
+    throw new UnauthorizedError("Only admins can manage bot instances");
+  }
+  return instance;
 }
 
 export async function createManagedBotInstance(ctx: ServiceContext, body: CreateBotInstanceInput) {
@@ -38,10 +47,10 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
   const credential = createPlaintextCredential();
   const credentialHash = await hashCredential(credential);
 
-  if (body.platform === "mock") {
+  if (body.platform === "playground") {
     const activeMock = await repository.findActiveMockBotInstance();
     if (activeMock)
-      throw new StatusConflictError("platform default mock bot instance already exists");
+      throw new StatusConflictError("platform default playground bot instance already exists");
   }
 
   const existing = await repository.findManagedBotInstanceIdentity({
@@ -59,7 +68,7 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
       platform: body.platform,
       kind: body.deliveryEndpoint.kind,
       target: body.deliveryEndpoint.target,
-      displayName: body.deliveryEndpoint.displayName ?? body.displayName ?? null,
+      name: body.deliveryEndpoint.name ?? body.name ?? null,
       secret: body.deliveryEndpoint.secret ?? null,
       config: body.deliveryEndpoint.config ?? null,
       metadata: body.deliveryEndpoint.metadata ?? { source: "bot-instance-create" },
@@ -70,7 +79,7 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
   if (existing) {
     const updated = await repository.updateManagedBotInstanceRegistration({
       id: existing.id,
-      displayName: body.displayName ?? existing.displayName ?? null,
+      name: body.name ?? existing.name ?? null,
       capabilities: body.capabilities ?? (existing.capabilities as Record<string, unknown> | null),
       credentialHash,
     });
@@ -83,7 +92,7 @@ export async function createManagedBotInstance(ctx: ServiceContext, body: Create
     platform: body.platform,
     namespace: body.namespace,
     instanceKey: body.instanceKey,
-    displayName: body.displayName ?? null,
+    name: body.name,
     deliveryEndpointId: endpointId,
     capabilities: body.capabilities ?? null,
     metadata: {
@@ -100,9 +109,10 @@ export async function updateManagedBotInstance(
   id: string,
   body: UpdateBotInstanceInput,
 ) {
+  await findManageableBotInstance(ctx, id);
   const updated = await getBotPluginRepository(ctx).updateManagedBotInstance({
     id,
-    displayName: body.displayName,
+    name: body.name,
     capabilities: body.capabilities,
     status: body.status,
   });
@@ -115,8 +125,7 @@ export async function updateManagedBotInstance(
 
 export async function rotateManagedBotInstanceCredential(ctx: ServiceContext, id: string) {
   const repository = getBotPluginRepository(ctx);
-  const instance = await repository.findManagedBotInstanceById(id);
-  if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
+  await findManageableBotInstance(ctx, id);
   const credential = createPlaintextCredential();
   const credentialHash = await hashCredential(credential);
   await repository.rotateManagedBotInstanceCredential({ id, credentialHash });
@@ -138,8 +147,7 @@ export async function authenticateManagedBotInstance(
 
 export async function revokeManagedBotInstance(ctx: ServiceContext, id: string) {
   const repository = getBotPluginRepository(ctx);
-  const instance = await repository.findManagedBotInstanceById(id);
-  if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
+  await findManageableBotInstance(ctx, id);
   const revoked = await repository.revokeManagedBotInstance(id);
   await ctx.sendEvent(createBotInstanceLifecycleEvent(ctx, BOT_INSTANCE_DELETED, revoked.id));
   return revoked;
@@ -147,8 +155,7 @@ export async function revokeManagedBotInstance(ctx: ServiceContext, id: string) 
 
 export async function deleteManagedBotInstance(ctx: ServiceContext, id: string) {
   const repository = getBotPluginRepository(ctx);
-  const instance = await repository.findManagedBotInstanceById(id);
-  if (!instance) throw new UnauthorizedError("Bot plugin instance not found");
+  await findManageableBotInstance(ctx, id);
 
   const deleted = await repository.deleteManagedBotInstance(id);
   if (!deleted) throw new UnauthorizedError("Bot plugin instance not found");
@@ -166,6 +173,7 @@ export async function attachManagedBotInstanceEndpoint(
   id: string,
   body: AttachEndpointInput,
 ) {
+  await findManageableBotInstance(ctx, id);
   const updated = await getBotPluginRepository(ctx).attachManagedBotInstanceEndpoint({
     id,
     deliveryEndpointId: body.deliveryEndpointId,

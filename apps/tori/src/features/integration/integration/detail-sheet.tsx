@@ -46,7 +46,7 @@ export function ConnectionDetailSheet({
   useToastError(fetchProfile.error, { title: "Failed to fetch account profile" });
   useToastError(refreshFamily.error, { title: "Failed to refresh family" });
 
-  const displayName = connection.providerAccountName ?? connection.providerAccountId;
+  const name = connection.providerAccountName ?? connection.providerAccountId;
 
   const copyToClipboard = (text: string) => {
     void navigator.clipboard.writeText(text);
@@ -64,7 +64,7 @@ export function ConnectionDetailSheet({
     >
       <SheetContent className="w-full sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>{displayName}</SheetTitle>
+          <SheetTitle>{name}</SheetTitle>
           <SheetDescription>{connection.provider} connection details and actions.</SheetDescription>
         </SheetHeader>
 

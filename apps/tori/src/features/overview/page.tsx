@@ -58,7 +58,7 @@ export function DashboardOverviewPage() {
             };
 
   const watchouts = [
-    activeUserBindings === 0 ? "No active user binding yet." : null,
+    activeUserBindings === 0 ? "No user binding yet." : null,
     activeConnections === 0 ? "No active provider connection yet." : null,
     activeSubscriptions === 0 ? "No active subscription yet." : null,
     failedNotifications > 0
@@ -74,8 +74,8 @@ export function DashboardOverviewPage() {
           value={activeUserBindings > 0 ? "Ready" : "Needs setup"}
           detail={
             activeUserBindings > 0
-              ? `${activeUserBindings} active user binding${activeUserBindings > 1 ? "s" : ""}.`
-              : "No active user binding yet."
+              ? `${activeUserBindings} user binding${activeUserBindings > 1 ? "s" : ""}.`
+              : "No user binding yet."
           }
         />
         <DashboardMetric

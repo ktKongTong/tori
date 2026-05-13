@@ -21,7 +21,7 @@ const tokenProxyExchangeResponseSchema = z.object({
     id: z.string(),
     provider: z.string(),
     providerUid: z.string(),
-    displayName: z.string().nullable(),
+    name: z.string().nullable(),
     permissions: z.array(z.string()).default([]),
   }),
   apiKey: z.string().min(1),
@@ -72,6 +72,18 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
   if (input.accessMode !== "public-id" && !input.proxyInstanceId) {
     throw new ParameterError("proxy-backed connection requires proxyInstanceId");
   }
+  if (input.proxyInstanceId) {
+    const proxyInstance = await ctx.repositories.integration.findVisibleProxyInstance({
+      id: input.proxyInstanceId,
+      ownerUserId: userId,
+      includeAll: ctx.isAdmin(),
+    });
+    if (!proxyInstance) throw new NotFoundError("proxy instance not found");
+    if (proxyInstance.status !== "active") throw new ParameterError("proxy instance is not active");
+    if (!proxySupportsProvider(proxyInstance.capabilities, input.provider)) {
+      throw new ParameterError("proxy instance does not support provider");
+    }
+  }
 
   const row = await ctx.repositories.connection.createConnection({
     id: uniqueId(),
@@ -85,6 +97,9 @@ export async function createConnection(ctx: ServiceContext, input: CreateConnect
 export async function resolveConnectionAccess(ctx: ServiceContext, connectionId: string) {
   const connection = await ctx.repositories.connection.findConnectionById(connectionId);
   if (!connection) throw new NotFoundError("connection not found");
+  if (!ctx.isAdmin() && connection.ownerUserId !== ctx.userId) {
+    throw new NotFoundError("connection not found");
+  }
 
   return {
     connection,
@@ -175,9 +190,10 @@ export async function startTokenProxyConnection(
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
 
-  const proxyInstance = await ctx.repositories.integration.findProxyInstanceForOwner({
+  const proxyInstance = await ctx.repositories.integration.findVisibleProxyInstance({
     id: proxyInstanceId,
     ownerUserId: userId,
+    includeAll: ctx.isAdmin(),
   });
   if (!proxyInstance) throw new NotFoundError("proxy instance not found");
   if (proxyInstance.status !== "active") throw new ParameterError("proxy instance is not active");
@@ -270,9 +286,10 @@ export async function completeTokenProxyConnectionCallback(
     return fail("token-proxy callback is missing exchange code");
   }
 
-  const proxyInstance = await ctx.repositories.integration.findProxyInstanceForOwner({
+  const proxyInstance = await ctx.repositories.integration.findVisibleProxyInstance({
     id: session.proxyInstanceId,
     ownerUserId: userId,
+    includeAll: ctx.isAdmin(),
   });
   if (!proxyInstance || proxyInstance.status !== "active") {
     return fail("proxy instance is not active");
@@ -296,7 +313,7 @@ export async function completeTokenProxyConnectionCallback(
 
   const providerAccountId = exchange.account?.providerAccountId ?? exchange.connection.providerUid;
   const providerAccountName =
-    exchange.account?.providerAccountName ?? exchange.connection.displayName ?? null;
+    exchange.account?.providerAccountName ?? exchange.connection.name ?? null;
   const providerAccountAvatar = exchange.account?.providerAccountAvatar ?? null;
 
   let connection =
@@ -322,7 +339,7 @@ export async function completeTokenProxyConnectionCallback(
         source: "token-proxy-connect",
         tokenProxyConnectionId: exchange.connection.id,
         tokenProxyProvider: exchange.connection.provider,
-        tokenProxyDisplayName: exchange.connection.displayName,
+        tokenProxyDisplayName: exchange.connection.name,
         tokenProxyPermissions: exchange.connection.permissions,
       },
     });

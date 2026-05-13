@@ -14,7 +14,7 @@ export const deliveryEndpoints = pgTable(
     ownerUserId: text("owner_user_id"),
     platform: text("platform").notNull(),
     kind: text("kind").notNull(),
-    displayName: text("display_name"),
+    name: text("name"),
     target: text("target").notNull(),
     secret: text("secret"),
     status: text("status").notNull().default("active"),

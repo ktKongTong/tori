@@ -20,7 +20,7 @@ export const connectionSummaryDtoSchema = z.object({
 
 export const botInstanceSummaryDtoSchema = z.object({
   id: z.string(),
-  displayName: z.string().nullable(),
+  name: z.string().nullable(),
 });
 
 export const subscriptionDtoSchema = z.object({

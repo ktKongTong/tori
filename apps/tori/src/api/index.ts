@@ -3,10 +3,11 @@ import {
   registerTaskHandlers,
   scanDueTaskCron,
 } from "@/api/modules/platform/task/index.ts";
-import { platformBindingConsumers } from "@/api/modules/platform/binding/event.ts";
 import { platformBotInstanceConsumers } from "@/api/modules/platform/bot-plugin/event.ts";
 import { platformConnectionConsumers } from "@/api/modules/platform/connection/event.ts";
 import { platformProxyInstanceConsumers } from "@/api/modules/platform/integration/event.ts";
+import { platformSubscriptionConsumers } from "@/api/modules/platform/subscription/event.ts";
+import { registerSubscriptionTaskDefinitions } from "@/api/modules/platform/subscription/task-definition.ts";
 import { registerBotCommandDefinitions } from "@/api/modules/platform/bot-ingress/command.ts";
 import { registerSubscriptionTargets } from "@/api/modules/platform/bot-ingress/commands/subscription-targets.ts";
 import { registerIntegrationProviderHandlers } from "@/api/modules/platform/integration/provider-registry.ts";
@@ -14,6 +15,7 @@ import {
   steamBotCommandDefinitions,
   steamEventConsumers,
   steamIntegrationProviderHandlers,
+  steamSubscriptionTaskDefinitions,
   steamSubscriptionTargetDefinitions,
   steamTaskHandlers,
 } from "@/api/modules/steam/index.ts";
@@ -34,14 +36,15 @@ export function registerApiV2Runtime() {
   registerTaskHandlers(...steamTaskHandlers);
   eventRouter.registerConsumer(
     ...platformTaskConsumers,
-    ...platformBindingConsumers,
     ...platformBotInstanceConsumers,
     ...platformConnectionConsumers,
     ...platformProxyInstanceConsumers,
+    ...platformSubscriptionConsumers,
     ...steamEventConsumers,
   );
   registerBotCommandDefinitions(...steamBotCommandDefinitions);
   registerSubscriptionTargets(...steamSubscriptionTargetDefinitions);
+  registerSubscriptionTaskDefinitions(...steamSubscriptionTaskDefinitions);
   registerIntegrationProviderHandlers(steamIntegrationProviderHandlers);
   registered = true;
 }

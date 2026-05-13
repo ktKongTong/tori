@@ -4,7 +4,7 @@ import { timestamps } from "../utils";
 
 export const userProfiles = sqliteTable("user_profile", {
   userId: text("user_id").primaryKey(),
-  displayName: text("display_name"),
+  name: text("name"),
   avatarUrl: text("avatar_url"),
   locale: text("locale"),
   timezone: text("timezone"),

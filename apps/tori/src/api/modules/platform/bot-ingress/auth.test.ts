@@ -24,7 +24,7 @@ function createBotPluginInstance(
     platform: "discord",
     namespace: "managed",
     instanceKey: "primary",
-    displayName: "Discord Bot",
+    name: "Discord Bot",
     callbackMode: "internal-sse",
     deliveryEndpointId: "endpoint-1",
     status: "active",

@@ -1,27 +1,18 @@
 import { Button } from "@repo/ui/components/button";
-import { Navigate } from "@tanstack/react-router";
 import { DataTable } from "@repo/data-table";
 
 import { DashboardActionBar } from "@/components/dashboard-ui";
 import { integrationProxyColumns } from "./columns";
 import { TokenProxyDialog } from "./proxy-dialogs";
-import { useSession } from "@/lib/auth-client";
 import { useModal } from "@/lib/modal";
 import { useProxyInstancesQuery } from "@/features/integration/query";
 import { useToastError } from "@/lib/toast-error";
 
 export function IntegrationProxiesPage() {
   const modal = useModal();
-  const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  const isAdmin = role.includes("admin");
   const integrationQuery = useProxyInstancesQuery();
   const integrationData = integrationQuery.data;
   useToastError(integrationQuery.error, { title: "Failed to load token proxies" });
-
-  if (!isAdmin) {
-    return <Navigate to="/integration" replace />;
-  }
 
   return (
     <div className="space-y-6">

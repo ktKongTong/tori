@@ -9,6 +9,7 @@ import {
   statusColumn,
   metadataColumn,
   type DataTableStatusTone,
+  type DataTableActionItem,
 } from "@repo/data-table";
 
 import { InspectTokenProxyDialog } from "./proxy-dialogs";
@@ -120,59 +121,64 @@ function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
     },
   });
 
+  const canManage = proxy.canManage ?? true;
+  const manageItems: DataTableActionItem[] = canManage
+    ? [
+        {
+          label: "Refresh Capabilities",
+          onSelect: () => probeProxy.mutate(proxy.id),
+        },
+        {
+          label: proxy.status === "active" ? "Disable" : "Enable",
+          variant: proxy.status === "active" ? "destructive" : "default",
+          onSelect: () => {
+            void (async () => {
+              const status = proxy.status === "active" ? "disabled" : "active";
+              if (status === "disabled") {
+                const nextImpact = await checkProxyAction({ id: proxy.id, action: "disable" });
+                setImpact(nextImpact);
+                setPendingAction(() => () => updateProxyStatus.mutate({ id: proxy.id, status }));
+                return;
+              }
+              updateProxyStatus.mutate({ id: proxy.id, status });
+            })();
+          },
+        },
+        {
+          label: "Delete",
+          variant: "destructive",
+          onSelect: () => {
+            void (async () => {
+              const nextImpact = await checkProxyAction({ id: proxy.id, action: "delete" });
+              setImpact(nextImpact);
+              setPendingAction(() => () => deleteProxy.mutate(proxy.id));
+            })();
+          },
+        },
+      ]
+    : [];
+  const items: DataTableActionItem[] = [
+    {
+      label: "Inspect",
+      onSelect: () => {
+        modal.open(
+          <InspectTokenProxyDialog
+            proxy={{
+              baseUrl: proxy.baseUrl,
+              healthStatus: proxy.healthStatus,
+              name: proxy.name ?? proxy.baseUrl,
+              providers: proxy.providers,
+            }}
+          />,
+        );
+      },
+    },
+    ...manageItems,
+  ];
+
   return (
     <>
-      <DataTableActions
-        label={`Open actions for ${proxy.name}`}
-        items={[
-          {
-            label: "Inspect",
-            onSelect: () => {
-              modal.open(
-                <InspectTokenProxyDialog
-                  proxy={{
-                    baseUrl: proxy.baseUrl,
-                    healthStatus: proxy.healthStatus,
-                    name: proxy.name ?? proxy.baseUrl,
-                    providers: proxy.providers,
-                  }}
-                />,
-              );
-            },
-          },
-          {
-            label: "Refresh Capabilities",
-            onSelect: () => probeProxy.mutate(proxy.id),
-          },
-          {
-            label: proxy.status === "active" ? "Disable" : "Enable",
-            variant: proxy.status === "active" ? "destructive" : "default",
-            onSelect: () => {
-              void (async () => {
-                const status = proxy.status === "active" ? "disabled" : "active";
-                if (status === "disabled") {
-                  const nextImpact = await checkProxyAction({ id: proxy.id, action: "disable" });
-                  setImpact(nextImpact);
-                  setPendingAction(() => () => updateProxyStatus.mutate({ id: proxy.id, status }));
-                  return;
-                }
-                updateProxyStatus.mutate({ id: proxy.id, status });
-              })();
-            },
-          },
-          {
-            label: "Delete",
-            variant: "destructive",
-            onSelect: () => {
-              void (async () => {
-                const nextImpact = await checkProxyAction({ id: proxy.id, action: "delete" });
-                setImpact(nextImpact);
-                setPendingAction(() => () => deleteProxy.mutate(proxy.id));
-              })();
-            },
-          },
-        ]}
-      />
+      <DataTableActions label={`Open actions for ${proxy.name}`} items={items} />
       <ActionImpactDialog
         impact={impact}
         open={Boolean(impact)}

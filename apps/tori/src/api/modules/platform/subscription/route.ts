@@ -11,7 +11,7 @@ import {
 } from "@/api/modules/platform/subscription/contract";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
 import { createSubscription, updateSubscriptionStatus } from "@/api/modules/platform/subscription";
-import { requireAdmin, requireAuth } from "@/api/server/middleware/auth.ts";
+import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { z } from "zod";
 import {
   mapNotificationEventPage,
@@ -39,7 +39,10 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    const items = await c.get("serviceContext").repositories.subscription.listSubscriptions(page);
+    const ctx = c.get("serviceContext");
+    const items = ctx.isAdmin()
+      ? await ctx.repositories.subscription.listSubscriptions(page)
+      : await ctx.repositories.subscription.listSubscriptionsForUser(ctx.userId!, page);
     return c.json(mapSubscriptionPage(items));
   },
 );
@@ -59,9 +62,10 @@ app.get(
   }),
   async (c) => {
     const { id } = c.req.valid("param");
-    const subscription = await c
-      .get("serviceContext")
-      .repositories.subscription.findSubscriptionById(id);
+    const ctx = c.get("serviceContext");
+    const subscription = ctx.isAdmin()
+      ? await ctx.repositories.subscription.findSubscriptionById(id)
+      : await ctx.repositories.subscription.findSubscriptionByIdForUser(id, ctx.userId!);
     return c.json(toSubscriptionViewDto(subscription));
   },
 );
@@ -83,10 +87,18 @@ app.get(
   async (c) => {
     const { id } = c.req.valid("param");
     const page = c.req.valid("query");
+    const ctx = c.get("serviceContext");
 
-    const eventResult = await c
-      .get("serviceContext")
-      .repositories.subscription.listNotificationEventBySubscriptionId(id, page);
+    if (ctx.isAdmin()) {
+      await ctx.repositories.subscription.findSubscriptionById(id);
+    } else {
+      await ctx.repositories.subscription.findSubscriptionByIdForUser(id, ctx.userId!);
+    }
+
+    const eventResult = await ctx.repositories.subscription.listNotificationEventBySubscriptionId(
+      id,
+      page,
+    );
 
     return c.json(mapNotificationEventPage(eventResult));
   },
@@ -119,7 +131,6 @@ app.post(
 
 app.patch(
   "/subscription/:id",
-  requireAdmin(),
   describeRoute({
     tags: ["Subscription"],
     summary: "Update subscription status",

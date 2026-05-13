@@ -41,6 +41,27 @@ export class ConnectionPgRepository implements IConnectionRepository {
     return toPageResult(result, total, page);
   }
 
+  async listConnectionsForOwner(ownerUserId: string, page: PageBasedPaginationParam) {
+    const where = and(eq(connections.ownerUserId, ownerUserId), isNull(connections.deletedAt));
+    const query = this.db
+      .select({
+        ...getColumns(connections),
+        proxy: proxyInstances,
+      })
+      .from(connections)
+      .leftJoin(proxyInstances, eq(proxyInstances.id, connections.proxyInstanceId))
+      .where(where);
+
+    const [result, total] = await Promise.all([
+      dynamicQuery(query.$dynamic(), connections, {
+        orderBy: [{ column: "createdAt", direction: "desc" }],
+        page,
+      }),
+      this.db.$count(connections, where),
+    ]);
+    return toPageResult(result, total, page);
+  }
+
   async listAccountProfiles(page: PageBasedPaginationParam) {
     const query = this.db
       .select({
@@ -64,6 +85,33 @@ export class ConnectionPgRepository implements IConnectionRepository {
       this.db.$count(
         accountProfiles,
         sql`exists (select 1 from ${connections} where ${connections.id} = ${accountProfiles.connectionId} and ${connections.status} = 'active' and ${connections.deletedAt} is null)`,
+      ),
+    ]);
+    return toPageResult(result, total, page);
+  }
+
+  async listAccountProfilesForOwner(ownerUserId: string, page: PageBasedPaginationParam) {
+    const activeOwnedConnection = and(
+      eq(connections.id, accountProfiles.connectionId),
+      eq(connections.ownerUserId, ownerUserId),
+      eq(connections.status, "active"),
+      isNull(connections.deletedAt),
+    );
+    const query = this.db
+      .select({
+        ...getColumns(accountProfiles),
+      })
+      .from(accountProfiles)
+      .innerJoin(connections, activeOwnedConnection);
+
+    const [result, total] = await Promise.all([
+      dynamicQuery(query.$dynamic(), accountProfiles, {
+        orderBy: [{ column: "updatedAt", direction: "desc" }],
+        page,
+      }),
+      this.db.$count(
+        accountProfiles,
+        sql`exists (select 1 from ${connections} where ${connections.id} = ${accountProfiles.connectionId} and ${connections.ownerUserId} = ${ownerUserId} and ${connections.status} = 'active' and ${connections.deletedAt} is null)`,
       ),
     ]);
     return toPageResult(result, total, page);

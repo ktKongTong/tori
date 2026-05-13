@@ -88,6 +88,18 @@ export class TaskPgRepository implements ITaskRepository {
     return taskDefinition ?? null;
   }
 
+  async listTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string) {
+    return this.db
+      .select()
+      .from(taskDefinitions)
+      .where(
+        and(
+          isNull(taskDefinitions.deletedAt),
+          sql`${taskDefinitions.metadata}->>'subscriptionId' = ${subscriptionId}`,
+        ),
+      );
+  }
+
   async markTaskRunProcessing(taskRunId: string, startedAt: Date) {
     await this.db
       .update(taskRuns)
@@ -182,7 +194,7 @@ export class TaskPgRepository implements ITaskRepository {
       .where(and(eq(taskDefinitions.id, taskDefinitionId), isNull(taskDefinitions.deletedAt)));
   }
 
-  async disableTaskDefinitionsByPayloadConnectionId(connectionId: string) {
+  async disableTaskDefinitionsByMetadataSubscriptionId(subscriptionId: string) {
     const rows = await this.db
       .update(taskDefinitions)
       .set({
@@ -193,7 +205,7 @@ export class TaskPgRepository implements ITaskRepository {
         and(
           eq(taskDefinitions.enabled, true),
           isNull(taskDefinitions.deletedAt),
-          sql`${taskDefinitions.payload}->>'connectionId' = ${connectionId}`,
+          sql`${taskDefinitions.metadata}->>'subscriptionId' = ${subscriptionId}`,
         ),
       )
       .returning({ id: taskDefinitions.id });

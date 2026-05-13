@@ -5,9 +5,9 @@ import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
 import {
   consumeAnonymousClaim,
+  deleteChannelBinding,
+  deleteUserBinding,
   issueBindingToken,
-  revokeChannelBinding,
-  revokeUserBinding,
 } from "./index.js";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
 import {
@@ -38,7 +38,8 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    return c.json(await c.get("serviceContext").repositories.binding.listUserBindings(page));
+    const ctx = c.get("serviceContext");
+    return c.json(await ctx.repositories.binding.listUserBindingsByUserId(ctx.userId!, page));
   },
 );
 
@@ -55,7 +56,11 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    return c.json(await c.get("serviceContext").repositories.binding.listChannelBindings(page));
+    const ctx = c.get("serviceContext");
+    const items = ctx.isAdmin()
+      ? await ctx.repositories.binding.listChannelBindings(page)
+      : await ctx.repositories.binding.listChannelBindingsForUser(ctx.userId!, page);
+    return c.json(items);
   },
 );
 
@@ -131,13 +136,13 @@ app.post(
   },
 );
 
-app.post(
-  "/user-bindings/:id/revoke",
+app.delete(
+  "/user-bindings/:id",
   describeRoute({
     tags: ["Binding"],
-    summary: "Revoke user binding",
+    summary: "Remove user binding",
     response: {
-      description: "Revoked binding",
+      description: "Removed binding",
       body: bindingStatusResponseDtoSchema,
     },
   }),
@@ -145,22 +150,22 @@ app.post(
     const id = c.req.param("id");
     if (!id) throw new ParameterError("User binding id is required");
 
-    const revoked = await revokeUserBinding(c.get("serviceContext"), id);
+    const deleted = await deleteUserBinding(c.get("serviceContext"), id);
 
     return c.json({
-      id: revoked.id,
-      status: revoked.status,
+      id: deleted.id,
+      status: "deleted",
     });
   },
 );
 
-app.post(
-  "/channel-bindings/:id/revoke",
+app.delete(
+  "/channel-bindings/:id",
   describeRoute({
     tags: ["Binding"],
-    summary: "Revoke channel binding",
+    summary: "Remove channel binding",
     response: {
-      description: "Revoked channel binding",
+      description: "Removed channel binding",
       body: bindingStatusResponseDtoSchema,
     },
   }),
@@ -168,11 +173,11 @@ app.post(
     const id = c.req.param("id");
     if (!id) throw new ParameterError("Channel binding id is required");
 
-    const revoked = await revokeChannelBinding(c.get("serviceContext"), id);
+    const deleted = await deleteChannelBinding(c.get("serviceContext"), id);
 
     return c.json({
-      id: revoked.id,
-      status: revoked.status,
+      id: deleted.id,
+      status: "deleted",
     });
   },
 );

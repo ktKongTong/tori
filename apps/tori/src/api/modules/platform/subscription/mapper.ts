@@ -11,8 +11,7 @@ import type { NotificationEventDto } from "@/api/modules/platform/notify/contrac
 
 type NamedEntity = {
   id: string;
-  name?: string | null;
-  displayName?: string | null;
+  name: string;
   provider?: string;
   providerAccountName?: string | null;
 };
@@ -62,7 +61,7 @@ export function toSubscriptionViewDto(subscription: Subscription): SubscriptionV
           providerAccountName: connection.providerAccountName ?? null,
         }
       : null,
-    owner: owner ? { id: owner.id, name: owner.name ?? owner.displayName ?? owner.id } : null,
+    owner: owner ? { id: owner.id, name: owner.name ?? owner.name ?? owner.id } : null,
     ownerChannel: ownerChannel ? { id: ownerChannel.id, name: ownerChannel.name ?? null } : null,
   };
 }

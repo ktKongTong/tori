@@ -92,7 +92,6 @@ const WORKSPACE_ITEMS: NavTreeItem[] = [
       {
         to: "/integration/proxies",
         label: "Proxy Registry",
-        adminOnly: true,
       },
     ],
   },
@@ -217,12 +216,8 @@ export function DashboardSidebar({ isAdmin, sessionLabel, onSignOut }: Dashboard
       <SidebarSeparator className={"mx-0"} />
       <SidebarContent>
         <SidebarNavSection label="My Workspace" items={WORKSPACE_ITEMS} isAdmin={isAdmin} />
-        {isAdmin ? (
-          <>
-            <SidebarSeparator />
-            <SidebarNavSection label="Ops" items={OPS_ITEMS} isAdmin={isAdmin} />
-          </>
-        ) : null}
+        <SidebarSeparator />
+        <SidebarNavSection label="Ops" items={OPS_ITEMS} isAdmin={isAdmin} />
       </SidebarContent>
 
       <SidebarSeparator className={"mx-0"} />

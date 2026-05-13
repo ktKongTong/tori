@@ -30,9 +30,11 @@ export class BotIngressPgRepository implements IBotIngressRepository {
     const rows = await this.db
       .select()
       .from(botPluginInstances)
-      .where(and(eq(botPluginInstances.platform, "mock"), eq(botPluginInstances.status, "active")))
+      .where(
+        and(eq(botPluginInstances.platform, "playground"), eq(botPluginInstances.status, "active")),
+      )
       .limit(50);
-    return rows.filter((item) => item.displayName?.trim());
+    return rows.filter((item) => item.name?.trim());
   }
 
   async findActiveUserBindingIdentity(input: {
@@ -48,7 +50,7 @@ export class BotIngressPgRepository implements IBotIngressRepository {
           eq(userBindings.platform, input.platform),
           eq(userBindings.externalUserId, input.externalUserId),
           eq(userBindings.namespace, input.namespace),
-          eq(userBindings.status, "active"),
+          isNull(userBindings.deletedAt),
         ),
       )
       .limit(1);
@@ -114,6 +116,31 @@ export class BotIngressPgRepository implements IBotIngressRepository {
     return binding;
   }
 
+  async updateUserBindingIdentity(
+    id: string,
+    input: {
+      userId: string;
+      source: string;
+      assurance: string;
+      establishedByGrantId: string;
+      metadata?: unknown;
+    },
+  ) {
+    const [binding] = await this.db
+      .update(userBindings)
+      .set({
+        userId: input.userId,
+        source: input.source,
+        assurance: input.assurance,
+        establishedByGrantId: input.establishedByGrantId,
+        metadata: input.metadata ?? null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(userBindings.id, id), isNull(userBindings.deletedAt)))
+      .returning();
+    return binding;
+  }
+
   async updateUserBindingName(id: string, externalUserName: string) {
     const [binding] = await this.db
       .update(userBindings)
@@ -150,11 +177,8 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       assurance: input.assurance,
       establishedByGrantId: input.establishedByGrantId ?? null,
       status: input.status ?? "active",
-      supersededByBindingId: input.supersededByBindingId ?? null,
-      revokedReason: input.revokedReason ?? null,
       suspendedReason: input.suspendedReason ?? null,
       metadata: input.metadata ?? null,
-      endedAt: input.endedAt ?? undefined,
     };
     const [binding] = await this.db.insert(channelBindings).values(values).returning();
     return binding;
@@ -309,17 +333,6 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       .where(eq(bindingGrants.id, grantId));
   }
 
-  async supersedeUserBinding(id: string, now = new Date()) {
-    await this.db
-      .update(userBindings)
-      .set({ status: "superseded", endedAt: now, updatedAt: now })
-      .where(eq(userBindings.id, id));
-  }
-
-  async createConfirmedUserBinding(input: CreateBotIngressUserBindingInput) {
-    return this.createUserBinding(input);
-  }
-
   async markAnonymousUserMerged(input: {
     anonymousUserId: string;
     targetUserId: string;
@@ -330,31 +343,6 @@ export class BotIngressPgRepository implements IBotIngressRepository {
       .update(user)
       .set({ mergedIntoUserId: input.targetUserId, claimedAt: now, updatedAt: now })
       .where(eq(user.id, input.anonymousUserId));
-  }
-
-  async markUserBindingSupersededBy(input: { id: string; supersededByBindingId: string }) {
-    await this.db
-      .update(userBindings)
-      .set({ supersededByBindingId: input.supersededByBindingId })
-      .where(eq(userBindings.id, input.id));
-  }
-
-  async supersedeChannelBinding(id: string, now = new Date()) {
-    await this.db
-      .update(channelBindings)
-      .set({ status: "superseded", endedAt: now, updatedAt: now })
-      .where(eq(channelBindings.id, id));
-  }
-
-  async createConfirmedChannelBinding(input: CreateBotIngressChannelBindingInput) {
-    return this.createChannelBinding(input);
-  }
-
-  async markChannelBindingSupersededBy(input: { id: string; supersededByBindingId: string }) {
-    await this.db
-      .update(channelBindings)
-      .set({ supersededByBindingId: input.supersededByBindingId })
-      .where(eq(channelBindings.id, input.id));
   }
 
   async findActiveConnectionForOwnerProvider(input: { ownerUserId: string; provider: string }) {

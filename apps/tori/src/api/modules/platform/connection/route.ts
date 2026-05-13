@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
 import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import { NotFoundError } from "@/api/domain/error/index.ts";
+import { NotFoundError, UnauthorizedError } from "@/api/domain/error/index.ts";
 import {
   accountProfileListDtoSchema,
   accountProfileResponseDtoSchema,
@@ -45,7 +45,11 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    return c.json(await c.get("serviceContext").repositories.connection.listConnections(page));
+    const ctx = c.get("serviceContext");
+    const items = ctx.isAdmin()
+      ? await ctx.repositories.connection.listConnections(page)
+      : await ctx.repositories.connection.listConnectionsForOwner(ctx.userId!, page);
+    return c.json(items);
   },
 );
 
@@ -62,7 +66,11 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    return c.json(await c.get("serviceContext").repositories.connection.listAccountProfiles(page));
+    const ctx = c.get("serviceContext");
+    const items = ctx.isAdmin()
+      ? await ctx.repositories.connection.listAccountProfiles(page)
+      : await ctx.repositories.connection.listAccountProfilesForOwner(ctx.userId!, page);
+    return c.json(items);
   },
 );
 
@@ -164,8 +172,12 @@ app.post(
   async (c) => {
     const { id } = c.req.valid("param");
     const { action } = c.req.valid("json");
-    const connection = await c.get("serviceContext").repositories.connection.findConnectionById(id);
+    const ctx = c.get("serviceContext");
+    const connection = await ctx.repositories.connection.findConnectionById(id);
     if (!connection) throw new NotFoundError("connection not found");
+    if (!ctx.isAdmin() && connection.ownerUserId !== ctx.userId) {
+      throw new UnauthorizedError("connection is not owned by current user");
+    }
     return c.json(
       createActionCheckResponse({
         resource: {
@@ -178,7 +190,7 @@ app.post(
         summary:
           action === "delete"
             ? "This connection will be hidden from normal lists. Credentials and temporary proxy sessions may be cleaned up; notification and task history is retained."
-            : "This connection will stop runtime access immediately. Related subscriptions and task definitions are disabled asynchronously.",
+            : "This connection will stop runtime access immediately. Related subscriptions are disabled asynchronously; subscription lifecycle disables derived task definitions.",
         affected: [
           {
             type: "subscription",
@@ -190,7 +202,7 @@ app.post(
             type: "task_definition",
             action: "async-disable",
             reason:
-              "Tasks using this connection stop after the background worker processes the event.",
+              "Task definitions derived from disabled subscriptions stop after subscription lifecycle processing.",
           },
         ],
         retained: [

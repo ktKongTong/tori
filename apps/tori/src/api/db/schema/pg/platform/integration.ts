@@ -40,14 +40,13 @@ export const botPluginInstances = pgTable(
     platform: text("platform").notNull(),
     namespace: text("namespace"),
     instanceKey: text("instance_key").notNull(),
-    displayName: text("display_name"),
+    name: text("name").notNull(),
     callbackMode: text("callback_mode").notNull().default("internal-sse"),
     deliveryEndpointId: text("delivery_endpoint_id"),
     status: text("status").notNull().default("active"),
     capabilities: jsonb("capabilities"),
     metadata: jsonb("metadata"),
     lastSeenAt: timestamptz("last_seen_at"),
-    // soft delete
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
   },
@@ -55,8 +54,8 @@ export const botPluginInstances = pgTable(
     uniqueIndex("uq_bot_plugin_instance_identity")
       .on(table.ownerUserId, table.platform, table.namespace, table.instanceKey)
       .where(sql`${table.deletedAt} IS NULL`),
-    uniqueIndex("uq_mock_bot_singleton")
+    uniqueIndex("uq_playground_bot_singleton")
       .on(table.platform)
-      .where(sql`${table.platform} = 'mock' and ${table.deletedAt} IS NULL`),
+      .where(sql`${table.platform} = 'playground' and ${table.deletedAt} IS NULL`),
   ],
 );

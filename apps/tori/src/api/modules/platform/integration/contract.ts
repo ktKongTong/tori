@@ -17,6 +17,7 @@ export const proxyInstanceDtoSchema = z.object({
   healthStatus: z.string(),
   capabilities: z.unknown().nullable(),
   metadata: z.unknown().nullable(),
+  canManage: z.boolean().optional(),
   lastSeenAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),

@@ -7,7 +7,7 @@ describe("bot-plugin claim command rules", () => {
   it("allows claims in direct messages", () => {
     expect(() =>
       assertClaimSupportedMessageContext({
-        platform: "mock",
+        platform: "playground",
         observedUserId: "user-1",
         observedUserName: "User One",
         observedChannelId: "channel-1",
@@ -21,7 +21,7 @@ describe("bot-plugin claim command rules", () => {
   it("rejects claims outside direct messages", () => {
     expect(() =>
       assertClaimSupportedMessageContext({
-        platform: "mock",
+        platform: "playground",
         observedUserId: "user-1",
         observedUserName: "User One",
         observedChannelId: "channel-1",
@@ -34,7 +34,7 @@ describe("bot-plugin claim command rules", () => {
 
   it("rejects message contexts without observed names", () => {
     const result = messageContextSchema.safeParse({
-      platform: "mock",
+      platform: "playground",
       observedUserId: "user-1",
       observedChannelId: "channel-1",
       channelType: "dm",

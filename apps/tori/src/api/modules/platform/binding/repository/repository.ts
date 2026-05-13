@@ -14,14 +14,10 @@ export interface UserBinding {
   source: string;
   assurance: string;
   establishedByGrantId: string | null;
-  status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
   metadata: unknown;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  endedAt: Date | null;
 }
 
 export interface ChannelBinding {
@@ -36,15 +32,35 @@ export interface ChannelBinding {
   assurance: string;
   establishedByGrantId: string | null;
   status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
   suspendedReason: string | null;
   metadata: unknown;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  endedAt: Date | null;
 }
+
+export interface ChannelBindingChannelSummary {
+  id: string;
+  type: string;
+  name: string | null;
+  status: string;
+  createdByUserId?: string | null;
+}
+
+export interface ChannelBindingBotInstanceSummary {
+  id: string;
+  platform: string;
+  namespace: string | null;
+  instanceKey: string;
+  name: string | null;
+  status: string;
+  lastSeenAt: Date | null;
+}
+
+export type ChannelBindingWithRelations = ChannelBinding & {
+  channel?: ChannelBindingChannelSummary | null;
+  botInstance?: ChannelBindingBotInstanceSummary | null;
+};
 
 export interface BindingGrant {
   id: string;
@@ -112,9 +128,17 @@ export interface CreateBindingGrantInput {
 
 export interface IBindingRepository {
   listUserBindings(page: PageBasedPaginationParam): Promise<PageBasedPaginationResult<UserBinding>>;
+  listUserBindingsByUserId(
+    userId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<UserBinding>>;
   listChannelBindings(
     page: PageBasedPaginationParam,
-  ): Promise<PageBasedPaginationResult<ChannelBinding>>;
+  ): Promise<PageBasedPaginationResult<ChannelBindingWithRelations>>;
+  listChannelBindingsForUser(
+    userId: string,
+    page: PageBasedPaginationParam,
+  ): Promise<PageBasedPaginationResult<ChannelBindingWithRelations>>;
   listClaimSessions(
     page: PageBasedPaginationParam,
   ): Promise<PageBasedPaginationResult<ClaimSession>>;
@@ -130,12 +154,14 @@ export interface IBindingRepository {
     resolution: string;
   }): Promise<void>;
   findUserBindingById(bindingId: string): Promise<UserBinding | null>;
-  revokeUserBinding(bindingId: string): Promise<UserBinding | null>;
+  deleteUserBinding(bindingId: string): Promise<UserBinding | null>;
   findChannelBindingById(bindingId: string): Promise<ChannelBinding | null>;
-  revokeChannelBinding(bindingId: string): Promise<ChannelBinding | null>;
+  findChannelBindingWithRelationsById(
+    bindingId: string,
+  ): Promise<ChannelBindingWithRelations | null>;
+  deleteChannelBinding(bindingId: string): Promise<ChannelBinding | null>;
   suspendActiveChannelBindingsByBotPluginInstanceId(
     botPluginInstanceId: string,
     reason: string,
   ): Promise<number>;
-  deleteChannelBindingsByBotPluginInstanceId(botPluginInstanceId: string): Promise<number>;
 }

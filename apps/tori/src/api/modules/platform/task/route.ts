@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { NotFoundError } from "@/api/domain/error";
 import { createOutboxEventFromCtx } from "@/api/domain/infra";
-import { requireAuth, requireAdmin } from "@/api/server/middleware/auth.ts";
+import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
+import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
 import { uniqueId } from "@repo/utils/id";
 import { TASK_RUN_REQUESTED } from "./type.js";
@@ -22,9 +23,17 @@ const app = new Hono();
 
 app.use("*", requireAuth());
 
+async function getVisibleTask(ctx: ServiceContext, taskId: string) {
+  const task = await ctx.repositories.task.getTaskDefinitionById(taskId);
+  if (!task) throw new NotFoundError("task definition not found");
+  if (!ctx.isAdmin() && task.ownerUserId !== ctx.userId) {
+    throw new NotFoundError("task definition not found");
+  }
+  return task;
+}
+
 app.get(
   "/",
-  requireAdmin(),
   describeRoute({
     tags: ["Tasks"],
     summary: "List task definitions",
@@ -39,14 +48,15 @@ app.get(
   async (c) => {
     const ctx = c.get("serviceContext");
     const page = c.req.valid("query");
-    const items = await ctx.repositories.task.listTaskDefinitionsByOwner(ctx.userId!, page);
+    const items = ctx.isAdmin()
+      ? await ctx.repositories.task.listTasks(page)
+      : await ctx.repositories.task.listTaskDefinitionsByOwner(ctx.userId!, page);
     return c.json(mapTaskDefinitionPage(items));
   },
 );
 
 app.get(
   "/:id",
-  requireAdmin(),
   describeRoute({
     tags: ["Tasks"],
     summary: "Get task definition",
@@ -63,11 +73,7 @@ app.get(
       throw new NotFoundError("task definition not found");
     }
 
-    const task = await ctx.repositories.task.getTaskDefinitionById(taskDefinitionId);
-
-    if (!task) {
-      throw new NotFoundError("task definition not found");
-    }
+    const task = await getVisibleTask(ctx, taskDefinitionId);
 
     return c.json(toTaskDefinitionDto(task));
   },
@@ -75,7 +81,6 @@ app.get(
 
 app.get(
   "/:id/runs",
-  requireAdmin(),
   describeRoute({
     tags: ["Tasks"],
     summary: "List task runs",
@@ -94,6 +99,7 @@ app.get(
     if (!taskDefinitionId) {
       throw new NotFoundError("task definition not found");
     }
+    await getVisibleTask(ctx, taskDefinitionId);
 
     const runs = await ctx.repositories.task.getTaskRunByTaskDefinitionId(taskDefinitionId, {
       page,
@@ -140,7 +146,9 @@ app.patch(
   async (c) => {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
-    const result = await c.get("serviceContext").repositories.task.updateTaskDefinition(id, body);
+    const ctx = c.get("serviceContext");
+    await getVisibleTask(ctx, id);
+    const result = await ctx.repositories.task.updateTaskDefinition(id, body);
 
     if (!result) {
       throw new NotFoundError("task definition not found");
@@ -152,7 +160,6 @@ app.patch(
 
 app.delete(
   "/:id",
-  requireAdmin(),
   describeRoute({
     tags: ["Tasks"],
     summary: "Delete task definition",
@@ -164,7 +171,9 @@ app.delete(
   }),
   async (c) => {
     const { id } = c.req.valid("param");
-    const deleted = await c.get("serviceContext").repositories.task.deleteTaskDefinition(id);
+    const ctx = c.get("serviceContext");
+    await getVisibleTask(ctx, id);
+    const deleted = await ctx.repositories.task.deleteTaskDefinition(id);
     if (!deleted) {
       throw new NotFoundError("task definition not found");
     }
@@ -187,10 +196,7 @@ app.post(
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     const ctx = c.get("serviceContext");
-    const task = await ctx.repositories.task.getTaskDefinitionById(id);
-    if (!task) {
-      throw new NotFoundError("task definition not found");
-    }
+    const task = await getVisibleTask(ctx, id);
 
     const taskRunId = uniqueId();
 

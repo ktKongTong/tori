@@ -105,10 +105,12 @@ export async function probeProxyInstance(ctx: ServiceContext, proxyInstanceId: s
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
 
-  const proxyInstance = await ctx.repositories.integration.findProxyInstanceForOwner({
-    id: proxyInstanceId,
-    ownerUserId: userId,
-  });
+  const proxyInstance = ctx.isAdmin()
+    ? await ctx.repositories.integration.findProxyInstanceById(proxyInstanceId)
+    : await ctx.repositories.integration.findProxyInstanceForOwner({
+        id: proxyInstanceId,
+        ownerUserId: userId,
+      });
 
   if (!proxyInstance) throw new NotFoundError("proxy instance not found");
 
@@ -131,9 +133,17 @@ export async function updateProxyInstanceStatus(
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
 
+  const proxyInstance = ctx.isAdmin()
+    ? await ctx.repositories.integration.findProxyInstanceById(proxyInstanceId)
+    : await ctx.repositories.integration.findProxyInstanceForOwner({
+        id: proxyInstanceId,
+        ownerUserId: userId,
+      });
+  if (!proxyInstance) throw new NotFoundError("proxy instance not found");
+
   const updated = await ctx.repositories.integration.updateProxyInstanceStatus({
     id: proxyInstanceId,
-    ownerUserId: userId,
+    ownerUserId: proxyInstance.ownerUserId,
     status,
   });
 
@@ -152,17 +162,19 @@ export async function deleteProxyInstance(ctx: ServiceContext, proxyInstanceId: 
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
 
-  const proxy = await ctx.repositories.integration.findProxyInstanceForOwner({
-    id: proxyInstanceId,
-    ownerUserId: userId,
-  });
+  const proxy = ctx.isAdmin()
+    ? await ctx.repositories.integration.findProxyInstanceById(proxyInstanceId)
+    : await ctx.repositories.integration.findProxyInstanceForOwner({
+        id: proxyInstanceId,
+        ownerUserId: userId,
+      });
   if (!proxy) throw new NotFoundError("proxy instance not found");
 
   await ctx.repositories.connection.deleteTokenProxyConnectionSessionsByProxyInstanceId(proxy.id);
 
   const deleted = await ctx.repositories.integration.deleteProxyInstance({
     id: proxy.id,
-    ownerUserId: userId,
+    ownerUserId: proxy.ownerUserId,
   });
   if (!deleted) throw new NotFoundError("proxy instance not found");
 

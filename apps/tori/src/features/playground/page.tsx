@@ -11,6 +11,11 @@ import { z } from "zod";
 import { DashboardNotice } from "@/components/dashboard-ui";
 import { useSession } from "@/lib/auth-client";
 import { renderBotResult } from "@/lib/bot-command-renderer";
+import {
+  DEFAULT_PLAYGROUND_PLATFORM,
+  createPlaygroundChannelExternalId,
+  createPlaygroundUserExternalId,
+} from "@/shared/platform/playground";
 import { sendBotIngressRequest } from "./api";
 
 type NotificationStreamEnvelope =
@@ -54,7 +59,7 @@ type TranscriptNotificationEntry = {
 type TranscriptEntry = TranscriptTextEntry | TranscriptNotificationEntry;
 
 const DASHBOARD_SYNC_CHANNEL = "dashboard-sync";
-const MOCK_SURFACE_STORAGE_PREFIX = "steam-bot.mock-surface";
+const PLAYGROUND_SURFACE_STORAGE_PREFIX = "steam-bot.playground-surface";
 
 const QUICK_COMMANDS = [
   "/help",
@@ -213,11 +218,15 @@ function emitBindingUpdated() {
   channel.close();
 }
 
-function createDefaultMockSurface(baseName: string) {
+function createDefaultMockSurface(baseName: string, userId?: string | null) {
   return {
-    platform: "mock",
-    observedUserId: `mock-user-${uniqueId().slice(0, 8)}`,
-    observedChannelId: `mock-channel-${uniqueId().slice(0, 8)}`,
+    platform: DEFAULT_PLAYGROUND_PLATFORM,
+    observedUserId: userId
+      ? createPlaygroundUserExternalId(userId)
+      : `playground-user-${uniqueId().slice(0, 8)}`,
+    observedChannelId: userId
+      ? createPlaygroundChannelExternalId(userId)
+      : `playground-channel-${uniqueId().slice(0, 8)}`,
     observedUserName: `${baseName} Trial User`,
     observedChannelName: `${baseName} Trial Channel`,
     mockClientId: uniqueId(),
@@ -255,9 +264,12 @@ export function DashboardBotPage() {
     prefill.message ||
     prefill.bindingToken,
   );
-  const storageKey = session?.user?.id ? `${MOCK_SURFACE_STORAGE_PREFIX}.${session.user.id}` : null;
+  const storageKey = session?.user?.id
+    ? `${PLAYGROUND_SURFACE_STORAGE_PREFIX}.${session.user.id}`
+    : null;
   const mockBaseName = session?.user?.name?.trim() || "Playground";
-  const [platform, setPlatform] = useState("mock");
+  const mockUserId = session?.user?.id ?? null;
+  const [platform, setPlatform] = useState("playground");
   const [observedUserId, setObservedUserId] = useState("");
   const [observedChannelId, setObservedChannelId] = useState("");
   const [observedUserName, setObservedUserName] = useState("");
@@ -275,7 +287,7 @@ export function DashboardBotPage() {
   useEffect(() => {
     if (!storageKey || didHydrateSurfaceRef.current) return;
 
-    const fallback = createDefaultMockSurface(mockBaseName);
+    const fallback = createDefaultMockSurface(mockBaseName, mockUserId);
 
     if (typeof window === "undefined") {
       setPlatform(fallback.platform);
@@ -316,7 +328,7 @@ export function DashboardBotPage() {
     }
 
     didHydrateSurfaceRef.current = true;
-  }, [mockBaseName, storageKey]);
+  }, [mockBaseName, mockUserId, storageKey]);
 
   useEffect(() => {
     if (
@@ -505,7 +517,7 @@ export function DashboardBotPage() {
       commandMutation.mutate({
         message: sentMessage,
         rawPayload: {
-          surface: "mock-bot-client",
+          surface: "playground-bot-client",
           mockClientId,
         },
       });
@@ -526,7 +538,7 @@ export function DashboardBotPage() {
   };
 
   const handleResetMockSurface = () => {
-    const next = createDefaultMockSurface(mockBaseName);
+    const next = createDefaultMockSurface(mockBaseName, mockUserId);
     setPlatform(next.platform);
     setObservedUserId(next.observedUserId);
     setObservedChannelId(next.observedChannelId);

@@ -29,7 +29,7 @@ export interface BotIngressBotPluginInstanceRow {
   platform: string;
   namespace: string | null;
   instanceKey: string;
-  displayName: string | null;
+  name: string | null;
   callbackMode: string;
   deliveryEndpointId: string | null;
   status: string;
@@ -52,13 +52,10 @@ export interface BotIngressChannelBindingRow {
   assurance: string;
   establishedByGrantId: string | null;
   status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
   suspendedReason: string | null;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
-  endedAt: Date | null;
 }
 
 export interface BotIngressChannelRow {
@@ -161,13 +158,9 @@ export interface BotIngressUserBindingRow {
   source: string;
   assurance: string;
   establishedByGrantId: string | null;
-  status: string;
-  supersededByBindingId: string | null;
-  revokedReason: string | null;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
-  endedAt: Date | null;
 }
 
 export interface CreateBotIngressUserInput {
@@ -198,9 +191,6 @@ export interface CreateBotIngressUserBindingInput {
   source: string;
   assurance: string;
   establishedByGrantId?: string | null;
-  status?: string;
-  supersededByBindingId?: string | null;
-  revokedReason?: string | null;
   metadata?: unknown;
 }
 
@@ -225,11 +215,8 @@ export interface CreateBotIngressChannelBindingInput {
   assurance: string;
   establishedByGrantId?: string | null;
   status?: string;
-  supersededByBindingId?: string | null;
-  revokedReason?: string | null;
   suspendedReason?: string | null;
   metadata?: unknown;
-  endedAt?: Date | null;
 }
 
 export interface CreateBotIngressClaimSessionInput {
@@ -288,6 +275,16 @@ export interface IBotIngressRepository {
   createAnonymousUser(input: CreateBotIngressUserInput): Promise<BotIngressUserRow>;
   createUserBinding(input: CreateBotIngressUserBindingInput): Promise<BotIngressUserBindingRow>;
   updateUserBindingName(id: string, externalUserName: string): Promise<BotIngressUserBindingRow>;
+  updateUserBindingIdentity(
+    id: string,
+    input: {
+      userId: string;
+      source: string;
+      assurance: string;
+      establishedByGrantId: string;
+      metadata?: unknown;
+    },
+  ): Promise<BotIngressUserBindingRow>;
   updateAnonymousUserName(id: string, name: string): Promise<BotIngressUserRow>;
   createChannel(input: CreateBotIngressChannelInput): Promise<BotIngressChannelRow>;
   createChannelBinding(
@@ -319,23 +316,10 @@ export interface IBotIngressRepository {
   }): Promise<BotIngressClaimSessionRow | null>;
   findPendingBindingGrantByTokenHash(tokenHash: string): Promise<BotIngressBindingGrantRow | null>;
   markBindingGrantConsumed(grantId: string, now?: Date): Promise<void>;
-  supersedeUserBinding(id: string, now?: Date): Promise<void>;
-  createConfirmedUserBinding(
-    input: CreateBotIngressUserBindingInput,
-  ): Promise<BotIngressUserBindingRow>;
   markAnonymousUserMerged(input: {
     anonymousUserId: string;
     targetUserId: string;
     now?: Date;
-  }): Promise<void>;
-  markUserBindingSupersededBy(input: { id: string; supersededByBindingId: string }): Promise<void>;
-  supersedeChannelBinding(id: string, now?: Date): Promise<void>;
-  createConfirmedChannelBinding(
-    input: CreateBotIngressChannelBindingInput,
-  ): Promise<BotIngressChannelBindingRow>;
-  markChannelBindingSupersededBy(input: {
-    id: string;
-    supersededByBindingId: string;
   }): Promise<void>;
   findActiveConnectionForOwnerProvider(input: {
     ownerUserId: string;

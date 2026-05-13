@@ -70,16 +70,12 @@ export const consumeAnonymousClaim = (token: string) =>
     { schema: consumeAnonymousClaimResponseDtoSchema },
   );
 
-export const revokeUserBinding = (bindingId: string) =>
-  bindingRequest.post(
-    `/api/binding/user-bindings/${encodeURIComponent(bindingId)}/revoke`,
-    undefined,
-    { schema: bindingStatusResponseDtoSchema },
-  );
+export const deleteUserBinding = (bindingId: string) =>
+  bindingRequest.delete(`/api/binding/user-bindings/${encodeURIComponent(bindingId)}`, {
+    schema: bindingStatusResponseDtoSchema,
+  });
 
-export const revokeChannelBinding = (bindingId: string) =>
-  bindingRequest.post(
-    `/api/binding/channel-bindings/${encodeURIComponent(bindingId)}/revoke`,
-    undefined,
-    { schema: bindingStatusResponseDtoSchema },
-  );
+export const deleteChannelBinding = (bindingId: string) =>
+  bindingRequest.delete(`/api/binding/channel-bindings/${encodeURIComponent(bindingId)}`, {
+    schema: bindingStatusResponseDtoSchema,
+  });

@@ -35,7 +35,6 @@ app.use("*", requireAuth());
 
 app.get(
   "/instances",
-  requireAdmin(),
   describeRoute({
     tags: ["BotPlugin"],
     summary: "List managed bot instances",
@@ -47,7 +46,8 @@ app.get(
   }),
   async (c) => {
     const page = c.req.valid("query");
-    const items = await listManagedBotInstances(c.get("serviceContext"), page);
+    const ctx = c.get("serviceContext");
+    const items = await listManagedBotInstances(ctx, page);
     return c.json({
       ...items,
       data: items.data.map((row) => ({
@@ -56,10 +56,11 @@ app.get(
         platform: row.platform,
         namespace: row.namespace ?? "managed",
         instanceKey: row.instanceKey,
-        displayName: row.displayName ?? null,
+        name: row.name ?? null,
         callbackMode: row.callbackMode,
         deliveryEndpointId: row.deliveryEndpointId ?? null,
         status: row.status,
+        canManage: ctx.isAdmin(),
         lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
       })),
     });
@@ -135,33 +136,30 @@ app.post(
   async (c) => {
     const { id } = c.req.valid("param");
     const { action } = c.req.valid("json");
-    const instance = await getBotPluginRepository(
-      c.get("serviceContext"),
-    ).findManagedBotInstanceById(id);
+    const ctx = c.get("serviceContext");
+    const instance = await getBotPluginRepository(ctx).findManagedBotInstanceById(id);
     if (!instance) throw new NotFoundError("Bot plugin instance not found");
+    if (!ctx.isAdmin() && instance.ownerUserId !== ctx.userId) {
+      throw new NotFoundError("Bot plugin instance not found");
+    }
     return c.json(
       createActionCheckResponse({
         resource: {
           type: "bot_instance",
           id: instance.id,
-          label: instance.displayName ?? instance.instanceKey,
+          label: instance.name ?? instance.instanceKey,
           currentStatus: instance.status,
         },
         action,
         summary:
           action === "delete"
-            ? "This bot instance will be hidden from normal lists and runtime credentials are invalidated. Channel bindings and subscriptions are handled asynchronously."
+            ? "This bot instance will be hidden from normal lists and runtime credentials are invalidated. Related channel bindings are suspended asynchronously; subscriptions are retained."
             : "This bot instance stops runtime credential auth and notification delivery immediately.",
         affected: [
           {
             type: "channel_binding",
             action: action === "delete" ? "async-disable" : "none",
-            reason: "Deleted bot instances revoke channel bindings asynchronously.",
-          },
-          {
-            type: "subscription",
-            action: "async-disable",
-            reason: "Subscriptions using this bot are disabled asynchronously.",
+            reason: "Deleted bot instances suspend related channel bindings asynchronously.",
           },
         ],
         retained: [

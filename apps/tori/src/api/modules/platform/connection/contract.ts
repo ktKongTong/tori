@@ -81,7 +81,7 @@ export const tokenProxyConnectionCallbackQuerySchema = z.object({
 export const accountProfileResponseDtoSchema = z.object({
   connectionId: z.string().optional(),
   externalAccountId: z.string(),
-  displayName: z.string().nullish(),
+  name: z.string().nullish(),
   avatarUrl: z.string().nullish(),
   profileUrl: z.string().nullish(),
   lastSyncedAt: z.string().nullable().optional(),

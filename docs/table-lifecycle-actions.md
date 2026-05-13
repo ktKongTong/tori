@@ -98,12 +98,12 @@ Dashboard 的普通 `Delete` 是软删除。
 
 ### Revoke
 
-撤销用于绑定、授权、runtime credential 等关系终止。
+撤销只用于授权、runtime credential、bot runtime 等需要表达“凭证已被撤回”的关系终止。user binding 和 channel binding 不使用 revoke；用户移除它们时写 `deletedAt`。
 
 - DB 记录保留。
-- 普通 active 查询不返回 revoked 对象。
+- 普通 active 查询不返回 revoked runtime 对象。
 - 写入 `endedAt`、`revokedReason` 或等价 metadata。
-- action 同步更新当前关系，设置 `deletedAt` 并写 outbox。
+- action 同步更新当前关系，并按资源语义写 outbox。
 
 ### Internal Cleanup
 
@@ -174,7 +174,6 @@ type LifecycleEvent =
   | { type: "proxy.deleted"; proxyInstanceId: string }
   | { type: "connection.disabled"; connectionId: string }
   | { type: "connection.deleted"; connectionId: string }
-  | { type: "binding.revoked"; bindingType: "user" | "channel"; bindingId: string }
   | { type: "subscription.disabled"; subscriptionId: string }
   | { type: "subscription.deleted"; subscriptionId: string }
   | { type: "task_definition.disabled"; taskDefinitionId: string }
@@ -214,7 +213,7 @@ Disable：
 
 - 同步：`proxy_instance.status = disabled`，写 `proxy.disabled` event。
 - 可同步安全处理：禁用直接 credential access。
-- 异步：consumer 禁用该 proxy 下 active connections、相关 subscriptions、相关 task definitions。
+- 异步：consumer 禁用该 proxy 下 active connections；connection lifecycle 再禁用相关 subscriptions；subscription lifecycle 负责停用由 subscription 派生的 task definitions。
 - 运行时：token-proxy connect 和 provider access resolver 必须立即排除 disabled proxy。
 
 Delete：
@@ -231,7 +230,7 @@ Delete：
 Disable：
 
 - 同步：`connection.status = disabled`，禁用 active credential，写 `connection.disabled` event。
-- 异步：consumer 禁用相关 subscriptions、task definitions，取消 pending task runs。
+- 异步：consumer 禁用相关 subscriptions，并为每个被禁用的 subscription 发出 lifecycle event；subscription lifecycle 负责停用派生 task definitions 并取消 pending task runs。
 - 运行时：Steam access resolver、subscription matching、task runner 必须立即排除 disabled connection。
 
 Delete：
@@ -246,9 +245,9 @@ Delete：
 
 业务含义：平台用户和外部 provider identity 的绑定关系。
 
-操作是 revoke，属于软删除。
+操作是 remove/delete，属于软删除。
 
-- 同步：`user_binding.status = revoked`，写 ended/reason，设置 `deletedAt`，写 `binding.revoked` event。
+- 同步：设置 `deletedAt`。
 - 不级联删除 connection。
 - claim session 和历史记录保留。
 
@@ -256,11 +255,11 @@ Delete：
 
 业务含义：外部 channel 的投递绑定关系。
 
-操作是 revoke，属于软删除。
+操作是 remove/delete，属于软删除。`status` 只表达 `active` 或 `suspended`。
 
-- 同步：`channel_binding.status = revoked`，写 ended/reason，设置 `deletedAt`，写 `binding.revoked` event。
-- 异步：consumer 禁用该 channel 下 active subscriptions。
-- 运行时：notification delivery 和 bot ingress 必须排除 revoked channel binding。
+- 同步：设置 `deletedAt`。
+- 异步：不禁用该 channel 下的 subscriptions，因为内部 channel 仍然存在。
+- 运行时：notification delivery 排除 deleted/suspended channel binding；bot ingress 可用 suspended binding 做接管恢复。
 - notification events 保留。
 
 ### Subscription
@@ -308,13 +307,13 @@ Disable：
 - 同步：`bot_plugin_instance.status = disabled`，写 `bot_instance.disabled` event。
 - runtime credential auth 必须立即不通过。
 - notification candidate generation 必须检查 bot instance status。
-- 是否异步禁用 subscriptions 由 consumer 策略决定；无论是否禁用，runtime delivery 必须立即阻断 disabled bot。
+- 不异步禁用 subscriptions；bot 不可用只影响相关 channel binding / delivery line。runtime delivery 必须立即阻断 disabled bot。
 
 Delete：
 
-- Dashboard delete 为软删除或 revoke，不硬删 bot instance。
-- 同步：bot instance 标记 deleted/revoked，runtime credential 失效，写 `bot_instance.deleted` event。
-- 异步：consumer revoke channel bindings、disable subscriptions、disable delivery endpoint。
+- Dashboard delete 为软删除，不硬删 bot instance。
+- 同步：bot instance 标记 deleted，runtime credential 失效，写 `bot_instance.deleted` event。
+- 异步：consumer 将相关 channel bindings 标记为 suspended；不删除或禁用 subscriptions。delivery endpoint 是否停用由 bot instance / endpoint 自身生命周期处理。
 - 保留：notification events、task runs、channel binding history。
 
 ### Delivery Endpoint
@@ -368,13 +367,13 @@ connection disable 不删除 cache，只让 runtime resolver 不再使用该 con
 
 管理列表：
 
-- 可以返回 active、disabled、deleted、revoked 对象，但必须显示 status。
-- 默认 tab 可以只展示 active/disabled，历史 tab 展示 deleted/revoked。
+- 可以返回 active、disabled、deleted 对象；存在 revoke 语义的 runtime 资源也可以返回 revoked，但必须显示 status。
+- 默认 tab 可以只展示 active/disabled，历史 tab 展示 deleted，以及存在 revoke 语义资源的 revoked。
 
 普通业务 resolver：
 
 - 只返回 active/enabled 对象。
-- 不返回 disabled、deleted、revoked 对象。
+- 不返回 disabled、deleted，以及存在 revoke 语义资源的 revoked 对象。
 
 运行时 resolver：
 
@@ -396,6 +395,6 @@ connection disable 不删除 cache，只让 runtime resolver 不再使用该 con
 - proxy / connection / bot / task 的 delete 当前包含过多同步 hard delete。
 - notification event 和 task run 不应该被上游 delete 硬删。
 - task definition delete 当前硬删 task runs，应该改为软删除 definition 并保留 runs。
-- channel/user binding UI 不应叫 Remove，应叫 Revoke。
+- channel/user binding UI 可以叫 Remove。
 - subscription UI 不应叫 Remove，应叫 Disable 或 Pause。
 - 多表同步级联应改为 outbox/MQ consumer 异步处理。

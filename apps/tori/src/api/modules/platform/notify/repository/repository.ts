@@ -8,7 +8,7 @@ export interface DeliveryEndpoint {
   ownerUserId: string | null;
   platform: string;
   kind: string;
-  displayName: string | null;
+  name: string | null;
   target: string;
   secret: string | null;
   status: string;

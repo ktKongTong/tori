@@ -13,7 +13,7 @@ interface AuthFormProps {
 
 export function AuthForm({ mode, onSubmit, error, loading }: AuthFormProps) {
   const authFormSchema = z.object({
-    email: z.string().email("Enter a valid email address"),
+    email: z.email("Enter a valid email address"),
     name: z.string().superRefine((value, context) => {
       if (mode === "register" && !value.trim()) {
         context.addIssue({

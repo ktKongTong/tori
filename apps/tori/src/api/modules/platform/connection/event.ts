@@ -1,6 +1,7 @@
 import { createEventConsumer, createOutboxEventFromCtx } from "@/api/domain/infra";
 import type { ServiceContext } from "@/api/domain/infra/service-context.ts";
 import type { EventEnvelope } from "@/api/domain/infra/eventing/message.ts";
+import { SUBSCRIPTION_DISABLED } from "@/api/modules/platform/subscription/type.ts";
 
 export const CONNECTION_DISABLED = "platform.connection.disabled";
 export const CONNECTION_DELETED = "platform.connection.deleted";
@@ -25,10 +26,27 @@ export async function disableConnectionRuntimeDependents(
   ctx: ServiceContext,
   connectionId: string,
 ) {
-  await ctx.repositories.subscription.disableActiveSubscriptionsByConnectionId(connectionId);
-  const disabledTaskIds =
-    await ctx.repositories.task.disableTaskDefinitionsByPayloadConnectionId(connectionId);
-  await ctx.repositories.task.cancelPendingTaskRunsByTaskDefinitionIds(disabledTaskIds);
+  const disabledSubscriptions =
+    await ctx.repositories.subscription.disableActiveSubscriptionsByConnectionId(connectionId);
+
+  for (const subscription of disabledSubscriptions) {
+    await ctx.sendEvent(
+      createOutboxEventFromCtx(ctx, {
+        type: SUBSCRIPTION_DISABLED,
+        subject: `subscription:${subscription.id}`,
+        payload: {
+          subscriptionId: subscription.id,
+          channelId: subscription.channelId,
+          connectionId: subscription.connectionId,
+          ownerType: subscription.ownerType,
+          ownerId: subscription.ownerId,
+          topicType: subscription.topicType,
+          topicKey: subscription.topicKey,
+          eventTypes: subscription.eventTypes,
+        },
+      }),
+    );
+  }
 }
 
 export const disableDependentsForConnection = createEventConsumer<ConnectionLifecyclePayload>(

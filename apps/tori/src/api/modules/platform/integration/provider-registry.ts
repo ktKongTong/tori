@@ -5,7 +5,7 @@ import { resolveConnectionAccess } from "@/api/modules/platform/connection/comma
 export type ConnectionAccountProfileResult = {
   connectionId: string;
   externalAccountId: string;
-  displayName: string | null;
+  name: string | null;
   avatarUrl: string | null;
   profileUrl: string | null;
   lastSyncedAt: string | null;

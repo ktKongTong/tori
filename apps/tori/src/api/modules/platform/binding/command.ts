@@ -4,7 +4,6 @@ import { randomCode } from "@repo/utils/random";
 import { sha256Hash } from "@repo/utils/encoding/hash";
 
 import { getBindingRepository } from "./repository/index.js";
-import { createChannelBindingRevokedEvent } from "@/api/modules/platform/binding/event.ts";
 import type {
   BindingGrantPurpose,
   BindingGrantSubjectType,
@@ -171,44 +170,35 @@ export async function consumeAnonymousClaim(
   };
 }
 
-export async function revokeUserBinding(ctx: ServiceContext, bindingId: string) {
+export async function deleteUserBinding(ctx: ServiceContext, bindingId: string) {
   const repository = getBindingRepository(ctx);
   const binding = await repository.findUserBindingById(bindingId);
 
   if (!binding) throw new NotFoundError("User binding not found");
-  if (binding.status !== "active") throw new ParameterError("User binding is already inactive");
 
   if (!ctx.userId) throw new UnauthorizedError("Authenticated user required");
   if (!ctx.isAdmin() && binding.userId !== ctx.userId) {
     throw new UnauthorizedError("You can only remove your own user binding");
   }
 
-  const revoked = await repository.revokeUserBinding(binding.id);
-  if (!revoked) throw new NotFoundError("User binding not found");
+  const deleted = await repository.deleteUserBinding(binding.id);
+  if (!deleted) throw new NotFoundError("User binding not found");
 
-  return revoked;
+  return deleted;
 }
 
-export async function revokeChannelBinding(ctx: ServiceContext, bindingId: string) {
+export async function deleteChannelBinding(ctx: ServiceContext, bindingId: string) {
   const repository = getBindingRepository(ctx);
-  const binding = await repository.findChannelBindingById(bindingId);
+  const binding = await repository.findChannelBindingWithRelationsById(bindingId);
 
   if (!binding) throw new NotFoundError("Channel binding not found");
-  if (binding.status !== "active") throw new ParameterError("Channel binding is already inactive");
   if (!ctx.userId) throw new UnauthorizedError("Authenticated user required");
-  if (!ctx.isAdmin()) {
-    throw new UnauthorizedError("Only admins can remove channel bindings");
+  if (!ctx.isAdmin() && binding.channel?.createdByUserId !== ctx.userId) {
+    throw new UnauthorizedError("You can only remove channel bindings for your own channels");
   }
 
-  const revoked = await repository.revokeChannelBinding(binding.id);
-  if (!revoked) throw new NotFoundError("Channel binding not found");
+  const deleted = await repository.deleteChannelBinding(binding.id);
+  if (!deleted) throw new NotFoundError("Channel binding not found");
 
-  await ctx.sendEvent(
-    createChannelBindingRevokedEvent(ctx, {
-      channelBindingId: revoked.id,
-      channelId: revoked.channelId,
-    }),
-  );
-
-  return revoked;
+  return deleted;
 }
