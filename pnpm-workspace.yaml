@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - bots/*
 
 catalog:
   "@better-auth/api-key": 1.6.8

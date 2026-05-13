@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bot:dev": "vp exec tsx src/index.ts",
+    "bot:dev": "node src/index.ts",
     "start": "node dist/index.mjs",
     "build": "vp pack",
     "check": "vp check",
@@ -16,7 +16,6 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsx": "^4.21.0",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }
