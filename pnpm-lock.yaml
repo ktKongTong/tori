@@ -390,9 +390,9 @@ importers:
       ofetch:
         specifier: 2.0.0-alpha.3
         version: 2.0.0-alpha.3
-      postgres:
-        specifier: ^3.4.9
-        version: 3.4.9
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       qrcode.react:
         specifier: ^4.2.0
         version: 4.2.0(react@19.2.5)
@@ -11522,7 +11522,8 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres@3.4.9: {}
+  postgres@3.4.9:
+    optional: true
 
   powershell-utils@0.1.0: {}
 
