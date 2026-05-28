@@ -1,8 +1,6 @@
 # Lifecycle Events Constraint
 
-本文档定义 Tori 内部 owner module 之间的 lifecycle event 语义。
-
-Lifecycle event 是 Tori 内部模块事件，不属于跨 Tori、Tori Proxy、Bot、Browser 的 protocol design。
+本文档定义 Tori 内部 owner module 之间的事件。
 
 ## Principles
 

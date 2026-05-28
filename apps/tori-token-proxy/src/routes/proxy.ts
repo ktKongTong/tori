@@ -129,7 +129,14 @@ export function proxyRoutes(deps: ProxyDeps) {
     const headers = new Headers();
 
     // Forward select headers from client
-    const forwardHeaders = ["content-type", "accept", "accept-language"];
+    const forwardHeaders = [
+      "content-type",
+      "accept",
+      "accept-language",
+      "origin",
+      "referer",
+      "user-agent",
+    ];
     for (const name of forwardHeaders) {
       const val = c.req.header(name);
       if (val) headers.set(name, val);

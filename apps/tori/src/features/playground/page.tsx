@@ -5,10 +5,7 @@ import { useForm } from "@tanstack/react-form";
 import { useLocation } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type {
-  NotificationBody,
-  NotificationBodyBlock,
-} from "@/api/modules/platform/notification/notification/body.ts";
+import type { NotificationBody } from "@/api/modules/platform/notification/notification/body.ts";
 import { z } from "zod";
 
 import { DashboardNotice } from "@/components/dashboard-ui";
@@ -106,93 +103,6 @@ function TranscriptBubble({ entry }: { entry: TranscriptEntry }) {
   );
 }
 
-function NotificationBodyBlockView({ block }: { block: NotificationBodyBlock }) {
-  switch (block.type) {
-    case "heading":
-      return <p className="text-base font-semibold leading-6">{block.text}</p>;
-    case "text":
-      return <p className="whitespace-pre-wrap leading-6">{block.text}</p>;
-    case "stats":
-      return (
-        <div className="grid gap-2 sm:grid-cols-3">
-          {block.items.map((item) => (
-            <div
-              key={`${item.label}-${item.value}`}
-              className="border border-border/70 bg-background/60 px-3 py-3"
-            >
-              <p className="text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
-                {item.label}
-              </p>
-              <p className="mt-2 text-sm font-medium">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      );
-    case "list":
-      return block.style === "ordered" ? (
-        <ol className="ml-5 list-decimal space-y-1">
-          {block.items.map((item, index) => (
-            <li key={`${item}-${index}`} className="leading-6">
-              {item}
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <ul className="ml-5 list-disc space-y-1">
-          {block.items.map((item, index) => (
-            <li key={`${item}-${index}`} className="leading-6">
-              {item}
-            </li>
-          ))}
-        </ul>
-      );
-    case "game-grid":
-      return (
-        <div className="space-y-3">
-          {block.title ? <p className="font-medium">{block.title}</p> : null}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {block.items.map((item) => (
-              <article
-                key={item.appId}
-                className="overflow-hidden border border-border/70 bg-background/60"
-              >
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.title} className="h-28 w-full object-cover" />
-                ) : null}
-                <div className="px-3 py-3">
-                  <p className="font-medium leading-5">{item.title}</p>
-                  {item.subtitle ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{item.subtitle}</p>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      );
-    case "image":
-      return (
-        <figure className="space-y-2">
-          <img src={block.url} alt={block.alt ?? ""} className="max-h-80 rounded border" />
-          {block.caption ? (
-            <figcaption className="text-xs text-muted-foreground">{block.caption}</figcaption>
-          ) : null}
-        </figure>
-      );
-    case "audio":
-      return (
-        <div className="space-y-2">
-          {block.title ? <p className="font-medium">{block.title}</p> : null}
-          <audio controls className="w-full">
-            <source src={block.url} type={block.mimeType ?? undefined} />
-          </audio>
-        </div>
-      );
-    default:
-      return null;
-  }
-}
-
 function NotificationBodyView({
   title,
   body,
@@ -205,11 +115,9 @@ function NotificationBodyView({
   return (
     <div className={className}>
       {title ? <p className="font-medium">{title}</p> : null}
-      <div className={title ? "mt-2 space-y-3" : "space-y-3"}>
-        {body.blocks.map((block, index) => (
-          <NotificationBodyBlockView key={`${block.type}-${index}`} block={block} />
-        ))}
-      </div>
+      <pre className="mt-2 max-h-80 overflow-auto border border-border/70 bg-background/60 p-3 text-xs leading-5">
+        {JSON.stringify(body, null, 2)}
+      </pre>
     </div>
   );
 }

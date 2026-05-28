@@ -5,7 +5,6 @@ import { uniqueId } from "@repo/utils/id";
 import { TASK_RUN_REQUESTED } from "./type.js";
 
 export const scanDueTaskCron = createCronHandler("platform.task.scan-due", async (ctx) => {
-  ctx.logger.debug("handling due task");
   const now = normalizeCronDate(new Date());
 
   const definitions = await ctx.repositories.task.listEnabledTaskDefinitions({

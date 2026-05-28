@@ -16,10 +16,6 @@ import {
   proxyProbeResponseDtoSchema,
   type RegisterProxyInstanceDto,
 } from "@/api/modules/platform/integration/proxy-instance/contract";
-import {
-  actionCheckResponseSchema,
-  type ActionCheckAction,
-} from "@/api/modules/platform/shared/action-check";
 
 const integrationRequest = createRequestClient({
   credentials: "include",
@@ -96,13 +92,6 @@ export const deleteProxyInstance = (id: string) =>
     schema: integrationStatusResponseDtoSchema,
   });
 
-export const checkProxyAction = (input: { id: string; action: ActionCheckAction }) =>
-  integrationRequest.post(
-    `/api/integration/proxy-instances/${encodeURIComponent(input.id)}/action-check`,
-    { action: input.action },
-    { schema: actionCheckResponseSchema },
-  );
-
 export const updateConnectionStatus = (input: { id: string; status: "active" | "disabled" }) =>
   integrationRequest.patch(
     `/api/integration/connections/${encodeURIComponent(input.id)}`,
@@ -114,13 +103,6 @@ export const deleteConnection = (id: string) =>
   integrationRequest.delete(`/api/integration/connections/${encodeURIComponent(id)}`, {
     schema: connectionStatusResponseDtoSchema,
   });
-
-export const checkConnectionAction = (input: { id: string; action: ActionCheckAction }) =>
-  integrationRequest.post(
-    `/api/integration/connections/${encodeURIComponent(input.id)}/action-check`,
-    { action: input.action },
-    { schema: actionCheckResponseSchema },
-  );
 
 export const fetchIntegrationAccountProfile = (connectionId: string) =>
   integrationRequest.get(

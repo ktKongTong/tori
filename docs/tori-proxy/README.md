@@ -1,6 +1,6 @@
 # Tori Proxy
 
-Tori Proxy 是 token-proxy 组件，负责 provider credential 和 provider data-plane。
+Tori Proxy 是 token-proxy 组件，负责 provider credential、provider auth 和通用 provider proxy。
 
 ## Owned Scope
 
@@ -9,10 +9,12 @@ Tori Proxy 是 token-proxy 组件，负责 provider credential 和 provider data
 - Existing token selection
 - Provider token refresh
 - API keys and permissions
-- Provider data-plane proxy
+- Generic provider proxy
 - Request logs
 - Refresh logs
 - System tasks inside token-proxy
+
+Tori Proxy 只允许 provider auth/refresh 代码具备 provider-specific 知识。Provider 业务 API 的编排和响应解释属于 Tori。
 
 ## Local Docs
 

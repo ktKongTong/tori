@@ -1,4 +1,3 @@
-import { ofetch } from "ofetch";
 import { ParameterError } from "@/api/domain/error";
 import { createOutboxEventFromCtx } from "@/api/domain/infra";
 import type { ServiceContext } from "@/api/domain/infra/service-context";
@@ -14,7 +13,6 @@ import type {
   RefreshSteamFamilyInput,
   SteamFamilyLibraryChangedPayload,
   TokenProxySteamFamilyLibraryResponse,
-  TokenProxySteamFamilyResponse,
   TokenProxySteamItemsResponse,
 } from "./types";
 import {
@@ -23,8 +21,14 @@ import {
   toDateFromUnixSeconds,
   toJsonRecord,
 } from "@/api/modules/steam/core/shared/utils";
+import {
+  getSteamFamilyForConnection,
+  getSteamFamilySharedLibrary,
+  getSteamItemsByAppIds,
+} from "./steam-web-api";
 
 export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshSteamFamilyInput) {
+  console.log("Refreshing Steam family");
   const catalogRepository = getSteamCatalogRepository(ctx);
   const familyRepository = getSteamFamilyRepository(ctx);
   const access = await resolveSteamFamilyAccess(ctx, input.connectionId, input.ownerUserId);
@@ -33,22 +37,8 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
     ? await familyRepository.listFamilyLibraryItemsByFamilyId(existingFamily.id)
     : [];
 
-  const familyPayload = await ofetch<TokenProxySteamFamilyResponse>(
-    `${access.proxyBaseUrl}/steam-family/family`,
-    {
-      headers: access.proxyHeaders,
-      retry: 0,
-      timeout: 20000,
-    },
-  );
-  const libraryPayload = await ofetch<TokenProxySteamFamilyLibraryResponse>(
-    `${access.proxyBaseUrl}/steam-family/family/shared/${encodeURIComponent(familyPayload.familyId)}`,
-    {
-      headers: access.proxyHeaders,
-      retry: 0,
-      timeout: 30000,
-    },
-  );
+  const familyPayload = await getSteamFamilyForConnection(access);
+  const libraryPayload = await getSteamFamilySharedLibrary(access, familyPayload.familyId);
 
   const syncedAt = new Date();
   const previousByAppId = new Map(
@@ -62,6 +52,8 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
           imageUrl: typeof metadata?.imageUrl === "string" ? metadata.imageUrl : null,
           headerImageUrl:
             typeof metadata?.headerImageUrl === "string" ? metadata.headerImageUrl : null,
+          ownerSteamIds:
+            "ownerSteamIds" in item && Array.isArray(item.ownerSteamIds) ? item.ownerSteamIds : [],
         },
       ];
     }),
@@ -77,16 +69,7 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
   }
 
   const itemResponses = await Promise.all(
-    itemChunks.map((chunk) =>
-      ofetch<TokenProxySteamItemsResponse>(
-        `${access.proxyBaseUrl}/steam-family/items/${chunk.join(",")}`,
-        {
-          headers: access.proxyHeaders,
-          retry: 0,
-          timeout: 30000,
-        },
-      ),
-    ),
+    itemChunks.map((chunk) => getSteamItemsByAppIds(access, chunk)),
   );
 
   const itemCatalog = new Map(
@@ -102,13 +85,14 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
         name: itemCatalog.get(app.appId)?.name ?? app.name ?? null,
         imageUrl: itemCatalog.get(app.appId)?.imageUrl ?? null,
         headerImageUrl: itemCatalog.get(app.appId)?.headerImageUrl ?? null,
+        ownerSteamIds: app.ownerSteamIds,
       },
     ]),
   );
-  const addedGames = [...currentByAppId.values()].filter(
+  const addedGameRows = [...currentByAppId.values()].filter(
     (item) => !previousByAppId.has(item.appId),
   );
-  const removedGames = [...previousByAppId.values()].filter(
+  const removedGameRows = [...previousByAppId.values()].filter(
     (item) => !currentByAppId.has(item.appId),
   );
 
@@ -132,6 +116,27 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
       lastSyncedAt: syncedAt,
     })),
   });
+  const memberProfiles = familyPayload.members.map((member) => ({
+    steamId: member.steamId,
+    role: member.role ?? null,
+    personaName: member.personaName ?? null,
+    avatarUrl: buildSteamAvatarUrl(member.avatarHash ?? null),
+  }));
+  const memberProfileBySteamId = new Map(memberProfiles.map((member) => [member.steamId, member]));
+  const withGameOwners = <T extends { ownerSteamIds: string[] }>(game: T) => ({
+    ...game,
+    owners: game.ownerSteamIds.map(
+      (steamId) =>
+        memberProfileBySteamId.get(steamId) ?? {
+          steamId,
+          role: null,
+          personaName: null,
+          avatarUrl: null,
+        },
+    ),
+  });
+  const addedGames = addedGameRows.map(withGameOwners);
+  const removedGames = removedGameRows.map(withGameOwners);
 
   await catalogRepository.upsertAppCatalogEntries({
     items: visibleApps.map((app) => {
@@ -142,7 +147,7 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
         imageUrl: catalogItem?.imageUrl ?? null,
         headerImageUrl: catalogItem?.headerImageUrl ?? null,
         metadata: catalogItem?.metadata ?? {
-          source: "token-proxy-steam-family",
+          source: "tori-steam-family",
         },
         updatedAt: syncedAt,
       };
@@ -158,7 +163,7 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
         ownerSteamIds: app.ownerSteamIds,
         acquiredAt: toDateFromUnixSeconds(app.acquiredAt ?? null),
         metadata: {
-          source: "token-proxy-steam-family",
+          source: "tori-steam-family",
           name: app.name ?? catalogItem?.name ?? null,
           imageUrl: catalogItem?.imageUrl ?? null,
           headerImageUrl: catalogItem?.headerImageUrl ?? null,
@@ -175,6 +180,7 @@ export async function refreshSteamFamily(ctx: ServiceContext, input: RefreshStea
       familyName: family.name ?? null,
       librarySize: familyLibrary.length,
       syncedAt: syncedAt.toISOString(),
+      members: memberProfiles,
       addedGames,
       removedGames,
     };
@@ -263,16 +269,7 @@ export async function querySteamFamilyLibrary(
     }
 
     const itemResponses = await Promise.all(
-      itemChunks.map((chunk) =>
-        ofetch<TokenProxySteamItemsResponse>(
-          `${access.proxyBaseUrl}/steam-family/items/${chunk.join(",")}`,
-          {
-            headers: access.proxyHeaders,
-            retry: 0,
-            timeout: 30000,
-          },
-        ),
-      ),
+      itemChunks.map((chunk) => getSteamItemsByAppIds(access, chunk)),
     );
 
     const updatedAt = new Date();
@@ -284,7 +281,7 @@ export async function querySteamFamilyLibrary(
           imageUrl: item.imageUrl ?? null,
           headerImageUrl: item.headerImageUrl ?? null,
           metadata: item.metadata ?? {
-            source: "token-proxy-steam-family",
+            source: "tori-steam-family",
           },
           updatedAt,
         })),

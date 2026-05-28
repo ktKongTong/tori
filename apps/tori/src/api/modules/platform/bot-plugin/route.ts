@@ -2,14 +2,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireAdmin, requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import { NotFoundError } from "@/api/domain/error/index.ts";
 
 import {
   attachManagedBotInstanceEndpoint,
   createManagedBotInstance,
   deleteManagedBotInstance,
   listManagedBotInstances,
-  revokeManagedBotInstance,
   rotateManagedBotInstanceCredential,
   updateManagedBotInstance,
 } from "./instance.js";
@@ -22,12 +20,6 @@ import {
   createBotInstanceResponseDtoSchema,
   rotateBotInstanceCredentialResponseDtoSchema,
 } from "@/api/modules/platform/bot-plugin/contract";
-import {
-  createActionCheckResponse,
-  actionCheckRequestSchema,
-  actionCheckResponseSchema,
-} from "@/api/modules/platform/shared/action-check.ts";
-import { getBotPluginRepository } from "./repository/index.js";
 
 const app = new Hono();
 
@@ -119,62 +111,6 @@ app.patch(
 );
 
 app.post(
-  "/instances/:id/action-check",
-  requireAdmin(),
-  describeRoute({
-    tags: ["BotPlugin"],
-    summary: "Check bot instance action impact",
-    request: {
-      param: z.object({ id: z.string() }),
-      body: actionCheckRequestSchema,
-    },
-    response: {
-      description: "Bot action impact",
-      body: actionCheckResponseSchema,
-    },
-  }),
-  async (c) => {
-    const { id } = c.req.valid("param");
-    const { action } = c.req.valid("json");
-    const ctx = c.get("serviceContext");
-    const instance = await getBotPluginRepository(ctx).findManagedBotInstanceById(id);
-    if (!instance) throw new NotFoundError("Bot plugin instance not found");
-    if (!ctx.isAdmin() && instance.ownerUserId !== ctx.userId) {
-      throw new NotFoundError("Bot plugin instance not found");
-    }
-    return c.json(
-      createActionCheckResponse({
-        resource: {
-          type: "bot_instance",
-          id: instance.id,
-          label: instance.name ?? instance.instanceKey,
-          currentStatus: instance.status,
-        },
-        action,
-        summary:
-          action === "delete"
-            ? "This bot instance will be hidden from normal lists and runtime credentials are invalidated. Related channel bindings are suspended asynchronously; subscriptions are retained."
-            : "This bot instance stops runtime credential auth and notification delivery immediately.",
-        affected: [
-          {
-            type: "channel_binding",
-            action: action === "delete" ? "async-disable" : "none",
-            reason: "Deleted bot instances suspend related channel bindings asynchronously.",
-          },
-        ],
-        retained: [
-          { type: "notification_event", action: "retain", reason: "Delivery history is retained." },
-        ],
-        runtimeEffects: [
-          "Runtime credential auth rejects disabled, deleted, or revoked bot instances.",
-          "Notification candidate generation rejects disabled, deleted, or revoked bot instances.",
-        ],
-      }),
-    );
-  },
-);
-
-app.post(
   "/instances/:id/rotate-credential",
   requireAdmin(),
   describeRoute({
@@ -190,27 +126,6 @@ app.post(
     c.json(
       await rotateManagedBotInstanceCredential(c.get("serviceContext"), c.req.valid("param").id),
     ),
-);
-
-app.post(
-  "/instances/:id/revoke",
-  requireAdmin(),
-  describeRoute({
-    tags: ["BotPlugin"],
-    summary: "Revoke managed bot instance",
-    request: { param: z.object({ id: z.string() }) },
-    response: {
-      description: "Revoked bot instance",
-      body: botInstanceStatusResponseDtoSchema,
-    },
-  }),
-  async (c) => {
-    const updated = await revokeManagedBotInstance(
-      c.get("serviceContext"),
-      c.req.valid("param").id,
-    );
-    return c.json({ id: updated.id, status: updated.status });
-  },
 );
 
 app.delete(

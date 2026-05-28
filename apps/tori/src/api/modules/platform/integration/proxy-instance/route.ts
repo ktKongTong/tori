@@ -10,12 +10,6 @@ import {
   registerProxyInstanceDtoSchema,
   updateProxyInstanceDtoSchema,
 } from "@/api/modules/platform/integration/proxy-instance/contract";
-import { NotFoundError } from "@/api/domain/error/index.ts";
-import {
-  createActionCheckResponse,
-  actionCheckRequestSchema,
-  actionCheckResponseSchema,
-} from "@/api/modules/platform/shared/action-check.ts";
 import {
   startTokenProxyConnectionDtoSchema,
   tokenProxyConnectionStartResponseDtoSchema,
@@ -176,85 +170,6 @@ app.patch(
     const body = c.req.valid("json");
     const updated = await updateProxyInstanceStatus(c.get("serviceContext"), id, body.status);
     return c.json({ id: updated.id, status: updated.status });
-  },
-);
-
-app.post(
-  "/proxy-instances/:id/action-check",
-  describeRoute({
-    tags: ["Integration"],
-    summary: "Check proxy instance action impact",
-    request: {
-      param: z.object({ id: z.string() }),
-      body: actionCheckRequestSchema,
-    },
-    response: {
-      description: "Proxy action impact",
-      body: actionCheckResponseSchema,
-    },
-  }),
-  async (c) => {
-    const { id } = c.req.valid("param");
-    const { action } = c.req.valid("json");
-    const userId = c.get("serviceContext").userId;
-    if (!userId) throw new NotFoundError("user not found");
-    const ctx = c.get("serviceContext");
-    const proxy = ctx.isAdmin()
-      ? await ctx.repositories.integration.findProxyInstanceById(id)
-      : await ctx.repositories.integration.findProxyInstanceForOwner({
-          id,
-          ownerUserId: userId,
-        });
-    if (!proxy) throw new NotFoundError("proxy instance not found");
-
-    return c.json(
-      createActionCheckResponse({
-        resource: {
-          type: "proxy_instance",
-          id: proxy.id,
-          label: proxy.name ?? proxy.baseUrl,
-          currentStatus: proxy.status,
-        },
-        action,
-        summary:
-          action === "delete"
-            ? "This proxy instance will be hidden from normal lists. Existing connection history remains; active connections should be disabled or deleted separately."
-            : "This proxy instance will stop new token-proxy flows immediately. Related connections and subscriptions are disabled asynchronously; subscription lifecycle disables derived tasks.",
-        affected: [
-          {
-            type: "connection",
-            action: "async-disable",
-            reason: "Active connections using this proxy are disabled by the background worker.",
-          },
-          {
-            type: "subscription",
-            action: "async-disable",
-            reason: "Subscriptions affected through those connections are disabled asynchronously.",
-          },
-          {
-            type: "task_definition",
-            action: "async-disable",
-            reason:
-              "Task definitions derived from affected subscriptions stop after subscription lifecycle processing.",
-          },
-        ],
-        retained: [
-          { type: "notification_event", action: "retain", reason: "Delivery history is retained." },
-          { type: "task_run", action: "retain", reason: "Run history is retained." },
-        ],
-        internalCleanup:
-          action === "delete"
-            ? [
-                {
-                  type: "token_proxy_connection_session",
-                  action: "internal-cleanup",
-                  reason: "Incomplete connection sessions for this proxy may be removed.",
-                },
-              ]
-            : [],
-        runtimeEffects: ["Token-proxy connection start rejects disabled or deleted proxies."],
-      }),
-    );
   },
 );
 

@@ -229,24 +229,6 @@ export class BotPluginPgRepository implements IBotPluginRepository {
     return updated;
   }
 
-  async revokeManagedBotInstance(id: string) {
-    const instance = await this.findManagedBotInstanceById(id);
-    const [updated] = await this.db
-      .update(botPluginInstances)
-      .set({
-        status: "revoked",
-        deletedAt: new Date(),
-        metadata: {
-          ...Object.assign({}, instance?.metadata),
-          revokedAt: new Date().toISOString(),
-        },
-        updatedAt: new Date(),
-      })
-      .where(and(eq(botPluginInstances.id, id), isNull(botPluginInstances.deletedAt)))
-      .returning();
-    return updated;
-  }
-
   async deleteManagedBotInstance(id: string) {
     const [deleted] = await this.db
       .update(botPluginInstances)

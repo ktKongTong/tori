@@ -216,9 +216,9 @@ function createAuthFlowSessionView(
   });
 }
 
-function parsePermissions(value: string | undefined, provider: string) {
+function parsePermissions(value: string | undefined) {
   if (!value) {
-    return provider === "steam" ? ["proxy", "account", "steam-family"] : ["proxy", "account"];
+    return ["proxy", "account"];
   }
 
   const permissions = value
@@ -226,11 +226,7 @@ function parsePermissions(value: string | undefined, provider: string) {
     .map((item) => item.trim())
     .filter(Boolean);
 
-  return permissions.length
-    ? permissions
-    : provider === "steam"
-      ? ["proxy", "account", "steam-family"]
-      : ["proxy", "account"];
+  return permissions.length ? permissions : ["proxy", "account"];
 }
 
 export function adminRoutes(deps: AdminDeps) {
@@ -311,7 +307,7 @@ export function adminRoutes(deps: AdminDeps) {
       const sessionId = randomCode("external_connect", 12);
       const expiresIn = 300;
       const expiresAt = Date.now() + expiresIn * 1000;
-      const permissions = parsePermissions(query.permissions, query.provider);
+      const permissions = parsePermissions(query.permissions);
 
       await repo.setAuthSession(
         sessionId,

@@ -227,23 +227,6 @@ export class BotPluginSqliteRepository implements IBotPluginRepository {
     return updated;
   }
 
-  async revokeManagedBotInstance(id: string) {
-    const instance = await this.findManagedBotInstanceById(id);
-    const [updated] = await this.db
-      .update(botPluginInstances)
-      .set({
-        status: "revoked",
-        metadata: {
-          ...Object.assign({}, instance?.metadata),
-          revokedAt: new Date().toISOString(),
-        },
-        updatedAt: new Date(),
-      })
-      .where(eq(botPluginInstances.id, id))
-      .returning();
-    return updated;
-  }
-
   async deleteManagedBotInstance(id: string) {
     const [deleted] = await this.db
       .delete(botPluginInstances)

@@ -6,16 +6,20 @@
   "keywords": [],
   "type": "module",
   "scripts": {
-    "ready": "vp check && vp run -r test && vp run -r build",
+    "on:ready": "vp check && vp run -r test && vp run -r build",
+    "ins": "npx pnpm@10.33.2 install",
+    "build:proxy:node": "vp run -v -t token-proxy#build",
+    "build:proxy:deno": "RUNTIME=deno vp run -v -t token-proxy#build",
+    "migrate:proxy": "vp run -v --filter=token-proxy db:migrate:pg",
     "dev": "vp run website#dev",
     "prepare": "vp config",
-    "build": "pnpm run -r build",
     "check": "vp check .",
     "check:write": "vp check --fix .",
-    "lint:write": "vp lint --fix ."
+    "lint:write": "vp lint --fix .",
+    "b": "vp run build"
   },
   "dependencies": {
-    "srvx": "^0.11.15"
+    "srvx": "^0.11.16"
   },
   "devDependencies": {
     "@types/bun": "catalog:",

@@ -75,11 +75,7 @@ export class PgRepository implements Repository {
     updatedAt: number | null;
     lastUsedAt: number | null;
   }): Connection {
-    const basePermissions = parseJsonArray(row.permissions);
-    const permissions =
-      row.provider === "steam" && !basePermissions.includes("steam-family")
-        ? [...basePermissions, "steam-family"]
-        : basePermissions;
+    const permissions = parseJsonArray(row.permissions);
 
     return {
       id: row.id,
@@ -160,9 +156,7 @@ export class PgRepository implements Repository {
     const id = generateId("conn");
     const apiKey = generateId("ak");
     const now = Math.floor(Date.now() / 1000);
-    const permissions =
-      params.permissions ??
-      (params.provider === "steam" ? ["proxy", "account", "steam-family"] : ["proxy", "account"]);
+    const permissions = params.permissions ?? ["proxy", "account"];
 
     await this.db.insert(schema.connections).values({
       id,

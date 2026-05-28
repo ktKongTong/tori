@@ -6,38 +6,26 @@ const toriTestPath = fileURLToPath(new URL("./apps/tori/src/api/test", import.me
 const packagesPath = fileURLToPath(new URL("./packages", import.meta.url));
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "@": toriSrcPath,
-      "@test": toriTestPath,
-      "@repo/api-kit": `${packagesPath}/api-kit/src/index.ts`,
-      "@repo/auth": `${packagesPath}/auth/src`,
-      "@repo/core": `${packagesPath}/core/src`,
-      "@repo/observability": `${packagesPath}/observability/src`,
-      "@repo/protocol": `${packagesPath}/protocol/src`,
-      "@repo/request": `${packagesPath}/request/src/index.ts`,
-      "@repo/storage": `${packagesPath}/storage/src`,
-      "@repo/task": `${packagesPath}/task/src`,
+  run: {
+    cache: false,
+    tasks: {
+      build: {
+        command: "vp build",
+        env: ["RUNTIME"],
+      },
     },
+  },
+  resolve: {
     tsconfigPaths: true,
   },
   staged: {
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: [
-      "apps/tori/src/routeTree.gen.ts",
-      "apps/tori-token-proxy/app/routeTree.gen.ts",
-    ],
+    ignorePatterns: ["**/*.gen.ts"],
   },
   lint: {
-    ignorePatterns: [
-      "apps/tori/src/routeTree.gen.ts",
-      "apps/tori-token-proxy/app/routeTree.gen.ts",
-    ],
+    ignorePatterns: ["**/*.gen.ts"],
     options: { typeAware: true, typeCheck: true },
-  },
-  run: {
-    cache: true,
   },
 });

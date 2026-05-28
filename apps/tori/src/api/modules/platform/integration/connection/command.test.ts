@@ -143,6 +143,7 @@ describe("token-proxy connection flow", () => {
     expect(connectUrl.origin).toBe("https://proxy.example.com");
     expect(connectUrl.pathname).toBe("/admin/external-connect");
     expect(connectUrl.searchParams.get("provider")).toBe("steam");
+    expect(connectUrl.searchParams.get("sessionId")).toBe(result.sessionId);
     expect(connectUrl.searchParams.get("state")).toBe(result.state);
     expect(connectUrl.searchParams.get("permissions")).toBe("proxy,account,steam-family");
 
@@ -268,6 +269,16 @@ describe("token-proxy connection flow", () => {
       expect(fetchMock.mock.calls[0]?.[0]).toBe(
         "https://proxy.example.com/admin/external-connect/exchange",
       );
+      const exchangeRequestBody = fetchMock.mock.calls[0]?.[1]?.body;
+      if (typeof exchangeRequestBody !== "string") {
+        throw new Error("Expected JSON string exchange request body");
+      }
+      const exchangeBody = JSON.parse(exchangeRequestBody);
+      expect(exchangeBody).toMatchObject({
+        sessionId: "session-1",
+        state: "state-1",
+        code: "code-1",
+      });
     } finally {
       fetchMock.mockRestore();
     }

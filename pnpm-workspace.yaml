@@ -24,7 +24,7 @@ catalog:
   defu: ^6.1.7
   loglayer: ^9.1.0
   microdiff: ^1.5.0
-  nitro: latest
+  nitro: ^v3.0.260522-beta
   pino: ^10.3.1
   react-router-hono-server: 2.26.0
   sonner: ^2.0.7
@@ -85,9 +85,6 @@ catalogs:
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
-
-patchedDependencies:
-  srvx@0.11.15: patches/srvx@0.11.15.patch
 
 peerDependencyRules:
   allowAny:

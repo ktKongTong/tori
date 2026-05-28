@@ -14,12 +14,11 @@ import {
 
 import { BotCredentialDialog } from "./dialogs";
 import {
-  checkBotInstanceAction,
   deleteBotInstance,
   rotateBotInstanceCredential,
   updateBotInstance,
 } from "@/features/bot-instances/api";
-import { ActionImpactDialog, ConfirmDialog } from "@/features/action-check/confirm-dialog";
+import { ConfirmDialog } from "@/features/common/confirm-dialog";
 import { useModal } from "@/lib/modal";
 import type { BotInstanceDto } from "@/api/modules/platform/bot-plugin/contract";
 
@@ -72,10 +71,11 @@ export const botInstanceColumns: ColumnDef<BotInstanceDto>[] = [
 function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
   const modal = useModal();
   const queryClient = useQueryClient();
-  const [impact, setImpact] = useState<Awaited<ReturnType<typeof checkBotInstanceAction>> | null>(
-    null,
-  );
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [rotateOpen, setRotateOpen] = useState(false);
   const rotateCredential = useMutation({
     mutationFn: async (id: string) => rotateBotInstanceCredential(id),
@@ -120,33 +120,29 @@ function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
           label: instance.status === "active" ? "Disable" : "Enable",
           variant: "destructive",
           onSelect: () => {
-            void (async () => {
-              const status = instance.status === "active" ? "disabled" : "active";
-              if (status === "disabled") {
-                const nextImpact = await checkBotInstanceAction({
-                  id: instance.id,
-                  action: "disable",
-                });
-                setImpact(nextImpact);
-                setPendingAction(() => () => updateInstance.mutate({ id: instance.id, status }));
-                return;
-              }
-              updateInstance.mutate({ id: instance.id, status });
-            })();
+            const status = instance.status === "active" ? "disabled" : "active";
+            if (status === "disabled") {
+              setConfirm({
+                title: `Disable ${instance.name ?? instance.instanceKey}`,
+                description:
+                  "This stops runtime credential authentication and notification delivery for this bot instance.",
+                onConfirm: () => updateInstance.mutate({ id: instance.id, status }),
+              });
+              return;
+            }
+            updateInstance.mutate({ id: instance.id, status });
           },
         },
         {
           label: "Delete",
           variant: "destructive",
           onSelect: () => {
-            void (async () => {
-              const nextImpact = await checkBotInstanceAction({
-                id: instance.id,
-                action: "delete",
-              });
-              setImpact(nextImpact);
-              setPendingAction(() => () => deleteInstance.mutate(instance.id));
-            })();
+            setConfirm({
+              title: `Delete ${instance.name ?? instance.instanceKey}`,
+              description:
+                "This removes the bot instance from normal use and suspends related channel bindings asynchronously. Delivery history is retained.",
+              onConfirm: () => deleteInstance.mutate(instance.id),
+            });
           },
         },
       ]
@@ -162,15 +158,16 @@ function BotInstanceActions({ instance }: { instance: BotInstanceDto }) {
         onOpenChange={setRotateOpen}
         onConfirm={() => rotateCredential.mutate(instance.id)}
       />
-      <ActionImpactDialog
-        impact={impact}
-        open={Boolean(impact)}
+      <ConfirmDialog
+        title={confirm?.title ?? "Confirm action"}
+        description={confirm?.description ?? "Confirm this operation."}
+        open={Boolean(confirm)}
         onOpenChange={(open) => {
-          if (!open) setImpact(null);
+          if (!open) setConfirm(null);
         }}
         onConfirm={() => {
-          pendingAction?.();
-          setPendingAction(null);
+          confirm?.onConfirm();
+          setConfirm(null);
         }}
       />
     </>

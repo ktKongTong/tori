@@ -12,12 +12,11 @@ import {
 } from "@repo/data-table";
 
 import {
-  checkConnectionAction,
   deleteConnection,
   updateConnectionStatus,
   type IntegrationConnectionListItem,
 } from "@/features/integration/api";
-import { ActionImpactDialog } from "@/features/action-check/confirm-dialog";
+import { ConfirmDialog } from "@/features/common/confirm-dialog";
 import { useToastError } from "@/lib/toast-error";
 
 export function createIntegrationConnectionColumns(input?: {
@@ -98,10 +97,11 @@ function IntegrationConnectionActions({
   onOpenDetails?: (connection: IntegrationConnectionListItem) => void;
 }) {
   const queryClient = useQueryClient();
-  const [impact, setImpact] = useState<Awaited<ReturnType<typeof checkConnectionAction>> | null>(
-    null,
-  );
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
   const updateStatus = useMutation({
     mutationFn: async (input: { id: string; status: "active" | "disabled" }) =>
       updateConnectionStatus(input),
@@ -141,46 +141,43 @@ function IntegrationConnectionActions({
             label: connection.status === "active" ? "Disable" : "Enable",
             variant: connection.status === "active" ? "destructive" : "default",
             onSelect: () => {
-              void (async () => {
-                const status = connection.status === "active" ? "disabled" : "active";
-                if (status === "disabled") {
-                  const nextImpact = await checkConnectionAction({
-                    id: connection.id,
-                    action: "disable",
-                  });
-                  setImpact(nextImpact);
-                  setPendingAction(() => () => updateStatus.mutate({ id: connection.id, status }));
-                  return;
-                }
-                updateStatus.mutate({ id: connection.id, status });
-              })();
+              const status = connection.status === "active" ? "disabled" : "active";
+              if (status === "disabled") {
+                setConfirm({
+                  title: `Disable ${accountName}`,
+                  description:
+                    "This stops provider access for this connection. Dependent subscription tasks are disabled by lifecycle processing.",
+                  onConfirm: () => updateStatus.mutate({ id: connection.id, status }),
+                });
+                return;
+              }
+              updateStatus.mutate({ id: connection.id, status });
             },
           },
           {
             label: "Delete",
             variant: "destructive",
             onSelect: () => {
-              void (async () => {
-                const nextImpact = await checkConnectionAction({
-                  id: connection.id,
-                  action: "delete",
-                });
-                setImpact(nextImpact);
-                setPendingAction(() => () => deleteConnectionMutation.mutate(connection.id));
-              })();
+              setConfirm({
+                title: `Delete ${accountName}`,
+                description:
+                  "This removes the connection and provider cache. Notification and task history are retained.",
+                onConfirm: () => deleteConnectionMutation.mutate(connection.id),
+              });
             },
           },
         ]}
       />
-      <ActionImpactDialog
-        impact={impact}
-        open={Boolean(impact)}
+      <ConfirmDialog
+        title={confirm?.title ?? "Confirm action"}
+        description={confirm?.description ?? "Confirm this operation."}
+        open={Boolean(confirm)}
         onOpenChange={(open) => {
-          if (!open) setImpact(null);
+          if (!open) setConfirm(null);
         }}
         onConfirm={() => {
-          pendingAction?.();
-          setPendingAction(null);
+          confirm?.onConfirm();
+          setConfirm(null);
         }}
       />
     </>

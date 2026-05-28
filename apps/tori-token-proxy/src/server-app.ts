@@ -17,6 +17,7 @@ export interface TokenProxyServerApp {
 export function createTokenProxyServerApp(
   readEnv: EnvReader = readProcessEnv,
 ): TokenProxyServerApp {
+  console.log("[token-proxy] starting");
   const databaseUrl = readEnv("DATABASE_URL");
   const secret = readEnv("PROXY_SECRET") || createDevSecret(readEnv);
   const adminKey = readEnv("PROXY_ADMIN_KEY") || undefined;

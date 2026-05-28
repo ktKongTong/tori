@@ -3,7 +3,6 @@ import { z } from "zod";
 import { PageBasedPaginationParamSchema } from "@repo/utils/schema/paging";
 import { requireAuth } from "@/api/server/middleware/auth.ts";
 import { describeRoute } from "@/api/server/middleware/openapi/index.ts";
-import { NotFoundError, UnauthorizedError } from "@/api/domain/error/index.ts";
 import {
   accountProfileListDtoSchema,
   accountProfileResponseDtoSchema,
@@ -21,11 +20,6 @@ import {
   renderTokenProxyConnectionCallbackPage,
   updateConnectionStatus,
 } from "./command.ts";
-import {
-  createActionCheckResponse,
-  actionCheckRequestSchema,
-  actionCheckResponseSchema,
-} from "@/api/modules/platform/shared/action-check.ts";
 import { getConnectionAccountProfile } from "@/api/modules/platform/integration/proxy-instance/provider-registry.ts";
 
 const app = new Hono();
@@ -152,81 +146,6 @@ app.patch(
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     return c.json(await updateConnectionStatus(c.get("serviceContext"), id, body));
-  },
-);
-
-app.post(
-  "/connections/:id/action-check",
-  describeRoute({
-    tags: ["Connection"],
-    summary: "Check connection action impact",
-    request: {
-      param: z.object({ id: z.string() }),
-      body: actionCheckRequestSchema,
-    },
-    response: {
-      description: "Connection action impact",
-      body: actionCheckResponseSchema,
-    },
-  }),
-  async (c) => {
-    const { id } = c.req.valid("param");
-    const { action } = c.req.valid("json");
-    const ctx = c.get("serviceContext");
-    const connection = await ctx.repositories.connection.findConnectionById(id);
-    if (!connection) throw new NotFoundError("connection not found");
-    if (!ctx.isAdmin() && connection.ownerUserId !== ctx.userId) {
-      throw new UnauthorizedError("connection is not owned by current user");
-    }
-    return c.json(
-      createActionCheckResponse({
-        resource: {
-          type: "connection",
-          id: connection.id,
-          label: connection.providerAccountName ?? connection.providerAccountId,
-          currentStatus: connection.status,
-        },
-        action,
-        summary:
-          action === "delete"
-            ? "This connection will be hidden from normal lists. Credentials and temporary proxy sessions may be cleaned up; notification and task history is retained."
-            : "This connection will stop runtime access immediately. Related subscriptions are disabled asynchronously; subscription lifecycle disables derived task definitions.",
-        affected: [
-          {
-            type: "subscription",
-            action: "async-disable",
-            reason:
-              "Subscriptions using this connection stop after the background worker processes the event.",
-          },
-          {
-            type: "task_definition",
-            action: "async-disable",
-            reason:
-              "Task definitions derived from disabled subscriptions stop after subscription lifecycle processing.",
-          },
-        ],
-        retained: [
-          { type: "notification_event", action: "retain", reason: "Delivery history is retained." },
-          { type: "task_run", action: "retain", reason: "Run history is retained." },
-        ],
-        internalCleanup:
-          action === "delete"
-            ? [
-                {
-                  type: "connection_credential",
-                  action: "internal-cleanup",
-                  reason: "Credential references are removed when the connection is deleted.",
-                },
-                {
-                  type: "steam_cache",
-                  action: "internal-cleanup",
-                  reason: "Provider cache is reproducible and can be removed.",
-                },
-              ]
-            : [],
-        runtimeEffects: ["Provider access resolvers reject disabled or deleted connections."],
-      }),
-    );
   },
 );
 

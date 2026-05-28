@@ -13,6 +13,7 @@
     "build:deno": "RUNTIME=deno vp build",
     "build:worker": "RUNTIME=workerd vp build",
     "preview": "vp preview",
+    "s": "deno -A .output/server/index.mjs",
     "preview:bun": "RUNTIME=bun bun --bun run vp preview",
     "preview:deno": "RUNTIME=deno deno run --unstable-cron -A vite preview",
     "preview:worker": "RUNTIME=workerd vp preview",
@@ -29,7 +30,8 @@
     "db:up:sqlite": "vp exec drizzle-kit up --config drizzle.config.sqlite.ts",
     "deploy:worker": "vp run build:worker && wrangler deploy",
     "cf-typegen": "wrangler types",
-    "typecheck": "wrangler types && tsgo --noEmit"
+    "typecheck": "wrangler types && tsgo --noEmit",
+    "deploy:deno": "deno deploy"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
@@ -45,7 +47,6 @@
     "drizzle-orm": "catalog:drizzle",
     "hono": "catalog:hono",
     "nitro": "catalog:",
-    "node-steam-family-group-api": "0.0.4-dev.patch04",
     "ofetch": "2.0.0-alpha.3",
     "pg": "^8.20.0",
     "qrcode.react": "^4.2.0",

@@ -14,12 +14,11 @@ import {
 
 import { InspectTokenProxyDialog } from "./proxy-dialogs";
 import {
-  checkProxyAction,
   deleteProxyInstance,
   probeProxyInstance,
   updateProxyStatus as updateProxyInstanceStatus,
 } from "@/features/integration/api";
-import { ActionImpactDialog } from "@/features/action-check/confirm-dialog";
+import { ConfirmDialog } from "@/features/common/confirm-dialog";
 import { useModal } from "@/lib/modal";
 import type { ProxyInstanceDto } from "@/api/modules/platform/integration/proxy-instance/contract";
 
@@ -89,8 +88,11 @@ export const integrationProxyColumns: ColumnDef<ProxyInstanceDto>[] = [
 function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
   const modal = useModal();
   const queryClient = useQueryClient();
-  const [impact, setImpact] = useState<Awaited<ReturnType<typeof checkProxyAction>> | null>(null);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
   const probeProxy = useMutation({
     mutationFn: async (proxyId: string) => probeProxyInstance(proxyId),
     onSuccess: async (data) => {
@@ -132,27 +134,29 @@ function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
           label: proxy.status === "active" ? "Disable" : "Enable",
           variant: proxy.status === "active" ? "destructive" : "default",
           onSelect: () => {
-            void (async () => {
-              const status = proxy.status === "active" ? "disabled" : "active";
-              if (status === "disabled") {
-                const nextImpact = await checkProxyAction({ id: proxy.id, action: "disable" });
-                setImpact(nextImpact);
-                setPendingAction(() => () => updateProxyStatus.mutate({ id: proxy.id, status }));
-                return;
-              }
-              updateProxyStatus.mutate({ id: proxy.id, status });
-            })();
+            const status = proxy.status === "active" ? "disabled" : "active";
+            if (status === "disabled") {
+              setConfirm({
+                title: `Disable ${proxy.name ?? proxy.baseUrl}`,
+                description:
+                  "This stops new token-proxy connection flows through this proxy instance.",
+                onConfirm: () => updateProxyStatus.mutate({ id: proxy.id, status }),
+              });
+              return;
+            }
+            updateProxyStatus.mutate({ id: proxy.id, status });
           },
         },
         {
           label: "Delete",
           variant: "destructive",
           onSelect: () => {
-            void (async () => {
-              const nextImpact = await checkProxyAction({ id: proxy.id, action: "delete" });
-              setImpact(nextImpact);
-              setPendingAction(() => () => deleteProxy.mutate(proxy.id));
-            })();
+            setConfirm({
+              title: `Delete ${proxy.name ?? proxy.baseUrl}`,
+              description:
+                "This removes the proxy instance from normal lists. Existing connection history is retained.",
+              onConfirm: () => deleteProxy.mutate(proxy.id),
+            });
           },
         },
       ]
@@ -179,15 +183,16 @@ function IntegrationProxyActions({ proxy }: { proxy: ProxyInstanceDto }) {
   return (
     <>
       <DataTableActions label={`Open actions for ${proxy.name}`} items={items} />
-      <ActionImpactDialog
-        impact={impact}
-        open={Boolean(impact)}
+      <ConfirmDialog
+        title={confirm?.title ?? "Confirm action"}
+        description={confirm?.description ?? "Confirm this operation."}
+        open={Boolean(confirm)}
         onOpenChange={(open) => {
-          if (!open) setImpact(null);
+          if (!open) setConfirm(null);
         }}
         onConfirm={() => {
-          pendingAction?.();
-          setPendingAction(null);
+          confirm?.onConfirm();
+          setConfirm(null);
         }}
       />
     </>

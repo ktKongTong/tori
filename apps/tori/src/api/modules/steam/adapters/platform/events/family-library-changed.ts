@@ -1,65 +1,58 @@
 import { createEventConsumer } from "@/api/domain/infra/eventing";
-import {
-  createNotificationBody,
-  type NotificationBody,
-} from "@/api/modules/platform/notification/notification/body";
+import { createNotificationBody } from "@/api/modules/platform/notification/notification/body";
 import { deliverNotificationCandidate } from "@/api/modules/platform/notification/notification/delivery";
 import type { SteamFamilyLibraryChangedPayload } from "@/api/modules/steam/core/family/types";
 
 export const STEAM_FAMILY_LIBRARY_CHANGED = "SteamFamilyLibraryChanged";
 
 function createSteamFamilyChangeBody(payload: SteamFamilyLibraryChangedPayload) {
-  const blocks: NotificationBody["blocks"] = [
-    {
-      type: "heading" as const,
-      text: `${payload.familyName ?? "Steam family"} library changed.`,
-    },
-    {
-      type: "stats" as const,
-      items: [
-        {
-          label: "Added",
-          value: String(payload.addedGames.length),
-        },
-        {
-          label: "Removed",
-          value: String(payload.removedGames.length),
-        },
-        {
-          label: "Library Size",
-          value: String(payload.librarySize),
-        },
-      ],
-    },
-  ];
-
-  if (payload.addedGames.length > 0) {
-    blocks.push({
-      type: "game-grid" as const,
-      title: "Added games",
-      items: payload.addedGames.slice(0, 12).map((game) => ({
-        appId: String(game.appId),
-        title: String(game.name ?? game.appId),
-        imageUrl: game.headerImageUrl ?? game.imageUrl ?? null,
-        subtitle: `App ${game.appId}`,
+  return createNotificationBody({
+    eventType: "steam.family.library.updated",
+    subject: payload.familyId ?? payload.connectionId,
+    data: {
+      connectionId: payload.connectionId,
+      familyId: payload.familyId,
+      familyName: payload.familyName ?? null,
+      librarySize: payload.librarySize,
+      syncedAt: payload.syncedAt,
+      members: payload.members.map((member) => ({
+        steamId: member.steamId,
+        role: member.role ?? null,
+        personaName: member.personaName ?? null,
+        avatarUrl: member.avatarUrl ?? null,
       })),
-    });
-  }
-
-  if (payload.removedGames.length > 0) {
-    blocks.push({
-      type: "game-grid" as const,
-      title: "Removed games",
-      items: payload.removedGames.slice(0, 12).map((game) => ({
-        appId: String(game.appId),
-        title: String(game.name ?? game.appId),
-        imageUrl: game.headerImageUrl ?? game.imageUrl ?? null,
-        subtitle: `App ${game.appId}`,
+      counts: {
+        added: payload.addedGames.length,
+        removed: payload.removedGames.length,
+      },
+      addedGames: payload.addedGames.map((game) => ({
+        appId: game.appId,
+        name: game.name ?? null,
+        imageUrl: game.imageUrl ?? null,
+        headerImageUrl: game.headerImageUrl ?? null,
+        ownerSteamIds: game.ownerSteamIds,
+        owners: game.owners.map((owner) => ({
+          steamId: owner.steamId,
+          role: owner.role ?? null,
+          personaName: owner.personaName ?? null,
+          avatarUrl: owner.avatarUrl ?? null,
+        })),
       })),
-    });
-  }
-
-  return createNotificationBody(blocks);
+      removedGames: payload.removedGames.map((game) => ({
+        appId: game.appId,
+        name: game.name ?? null,
+        imageUrl: game.imageUrl ?? null,
+        headerImageUrl: game.headerImageUrl ?? null,
+        ownerSteamIds: game.ownerSteamIds,
+        owners: game.owners.map((owner) => ({
+          steamId: owner.steamId,
+          role: owner.role ?? null,
+          personaName: owner.personaName ?? null,
+          avatarUrl: owner.avatarUrl ?? null,
+        })),
+      })),
+    },
+  });
 }
 
 export const steamFamilyLibraryChangedConsumer =

@@ -1,53 +1,29 @@
 # Tori 架构设计
 
+tori 的目标是实现一个 http server，为 Bot Runtime 提供确定性的业务 SOP，但同时避免与 BotRuntime 的深度绑定。通过标准的 http 能力，为 agent/bot 场景下的 im chat 提供数据查询能力。
+
 本文档从 high level 描述 Tori 控制平面如何运作：运行时入口、模块组织、同步请求路径、异步事件路径、任务执行路径，以及它和 Tori Proxy、Bot、Browser 的边界。
 
 具体资源、命令和状态细节见各模块 design 文档。
 
+## 基本分层
+
+Tori 架构上为三层：
+
+1. infra，比如 DB，MQ，S3 等。
+2. platform，提供平台能力，比如定时任务，通知订阅，消息收发等。
+3. biz，业务层，依托平台层，有许多biz单元，每个单元面向某一个具体业务，比如订阅 steam 的价格信息，查询 steam 信息，单元与单元之前相互隔离。
+
 ## 运行时角色
 
-Tori 是系统的控制平面。
+Tori 是系统的控制平面。只是一个简单的 HTTP Server，提供主要的业务处理能力。
 
-它负责：
+具体来说：
 
 - 提供 Dashboard 和 HTTP API。
 - 维护 Tori 业务资源和资源关系。
 - 记录 provider connection、bot instance、subscription、notification event、task 等控制面数据。
-- 通过 Tori Proxy 使用 provider data-plane，但不保存 provider token 明文。
-- 通过 Bot runtime 接收外部平台命令和投递通知，但不把 Tori 业务资源 ownership 交给 Bot。
-- 通过 outbox/inbox 和 task runner 处理异步资源影响。
-
-Tori 不是 provider credential store，也不是 Bot runtime。Tori 只保存 credential reference、runtime registry 和业务配置。
-
-## 入口
-
-### Bot Runtime
-
-Bot runtime 通过 bot-ingress 调用 Tori：
-
-```txt
-External platform
-  -> Bot runtime
-  -> Tori /api/bot-ingress/*
-  -> Tori command/query
-  -> Bot response
-```
-
-Bot runtime 只能通过协议入口影响 Tori，不能直接拥有 connection、subscription、task 等 Tori 资源。
-
-### Tori Proxy
-
-Tori 通过 token-proxy external connect 和 provider data-plane 使用 Tori Proxy：
-
-```txt
-Tori Dashboard
-  -> Browser popup
-  -> Tori Proxy external connect
-  -> Tori callback
-  -> Tori connection / credential reference
-```
-
-Tori Proxy 拥有 provider credential 和 provider data-plane。Tori 只保存 proxy instance、connection 和 credential reference。
+- 通过 Bot runtime 接收外部平台命令和投递通知。
 
 ### Internal Workers
 

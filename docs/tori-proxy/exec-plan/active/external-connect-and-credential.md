@@ -1,6 +1,6 @@
 # Tori Proxy Plan
 
-本计划只记录 Tori Proxy domain 当前仍需处理的 external connect、credential 和 data-plane 文档缺口。已经完成的迁移和补写记录不放在 active plan 中。
+本计划只记录 Tori Proxy domain 当前仍需处理的 external connect、credential 和通用 proxy 文档缺口。已经完成的迁移和补写记录不放在 active plan 中。
 
 ## Active
 
@@ -23,13 +23,14 @@ Validation:
 Scope:
 
 - API key permission model。
+- Proxy rule model。
 - Provider credential status model。
 - Refresh log 和 request log。
-- Data-plane route authorization。
+- Generic proxy route authorization。
 - Provider token refresh failure handling。
 
 Validation:
 
 - Tori 只保存 credential reference。
 - Tori Proxy 保存 provider credential。
-- data-plane 权限不能绕过 API key permission。
+- proxy 权限不能绕过 API key permission 和 proxy rule。

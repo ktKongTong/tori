@@ -49,7 +49,10 @@ function createCandidate(): NotificationDeliveryCandidate {
       deliveryEndpointId: "endpoint-1",
       channelBindingId: "binding-1",
       title: "Changed",
-      body: createNotificationBody([{ type: "text", text: "Hello" }]),
+      body: createNotificationBody({
+        eventType: "test.notification",
+        data: { message: "Hello" },
+      }),
       payload: {},
       status: "pending",
       sentAt: null,

@@ -48,9 +48,8 @@ export async function resolveSteamFamilyAccess(
     connection,
     proxyInstance,
     proxyBaseUrl: proxyInstance.baseUrl.replace(/\/+$/, ""),
-    proxyHeaders: {
-      accept: "application/json",
-      "X-API-KEY": credential.credentialRef,
-    },
+    apiKey: credential.credentialRef,
   };
 }
+
+export type SteamFamilyAccess = Awaited<ReturnType<typeof resolveSteamFamilyAccess>>;

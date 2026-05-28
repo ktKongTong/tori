@@ -15,7 +15,7 @@ export class SteamProvider implements Provider {
   name = "steam";
   displayName = "Steam";
   flow = "poll" as const;
-  tokenInjectMethod = "bearer";
+  tokenInjectMethod = "query:access_token";
   refreshPolicy = {
     intervalSec: 6 * 60 * 60,
   };

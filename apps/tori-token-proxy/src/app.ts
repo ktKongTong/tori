@@ -14,7 +14,6 @@ import { adminRoutes } from "./routes/admin.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { oauthRoutes } from "./routes/oauth.ts";
 import { proxyRoutes } from "./routes/proxy.ts";
-import { steamFamilyRoutes } from "./routes/steam-family.ts";
 
 export interface AppDeps {
   repo: Repository;
@@ -95,10 +94,6 @@ export function createApp(deps: AppDeps) {
       status: conn.status,
     });
   });
-
-  // ─── Data plane: Steam Family helper endpoints ───
-  app.use("/steam-family/*", apiKeyAuth(repo), connectionPermission("steam-family"));
-  app.route("/steam-family", steamFamilyRoutes({ repo, secret }));
 
   return app;
 }

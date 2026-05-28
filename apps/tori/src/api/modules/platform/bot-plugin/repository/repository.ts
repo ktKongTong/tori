@@ -106,7 +106,6 @@ export interface IBotPluginRepository {
     credentialHash: string,
   ): Promise<ManagedBotPluginInstance | null>;
   markManagedBotInstanceSeen(id: string): Promise<ManagedBotPluginInstance>;
-  revokeManagedBotInstance(id: string): Promise<ManagedBotPluginInstance>;
   deleteManagedBotInstance(id: string): Promise<ManagedBotPluginInstance | null>;
   deleteDeliveryEndpoint(id: string): Promise<ManagedDeliveryEndpoint | null>;
   attachManagedBotInstanceEndpoint(input: {

@@ -145,14 +145,6 @@ export async function authenticateManagedBotInstance(
   return repository.markManagedBotInstanceSeen(instance.id);
 }
 
-export async function revokeManagedBotInstance(ctx: ServiceContext, id: string) {
-  const repository = getBotPluginRepository(ctx);
-  await findManageableBotInstance(ctx, id);
-  const revoked = await repository.revokeManagedBotInstance(id);
-  await ctx.sendEvent(createBotInstanceLifecycleEvent(ctx, BOT_INSTANCE_DELETED, revoked.id));
-  return revoked;
-}
-
 export async function deleteManagedBotInstance(ctx: ServiceContext, id: string) {
   const repository = getBotPluginRepository(ctx);
   await findManageableBotInstance(ctx, id);

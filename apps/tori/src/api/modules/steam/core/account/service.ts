@@ -31,9 +31,6 @@ export async function fetchSteamPublicProfile(
   if (connection.provider !== "steam") {
     throw new ParameterError("Only Steam public profile fetching is supported");
   }
-  if (connection.accessMode === "proxy-token") {
-    throw new ParameterError("Connection does not support public profile access");
-  }
 
   const xml = await ofetch(buildSteamProfileFetchUrl(connection.providerAccountId), {
     responseType: "text",
@@ -68,7 +65,7 @@ export async function querySteamUserLibrary(
   if (connection.provider !== "steam") {
     throw new ParameterError("Only Steam user library query is supported");
   }
-  if (connection.accessMode === "proxy-token") {
+  if (connection.accessMode !== "proxy-token") {
     throw new ParameterError("Connection does not support public Steam library access");
   }
 

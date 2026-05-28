@@ -23,17 +23,37 @@ export interface SteamFamilyLibraryChangedPayload {
   familyName?: string | null;
   librarySize: number;
   syncedAt: string;
+  members: Array<{
+    steamId: string;
+    role?: string | null;
+    personaName?: string | null;
+    avatarUrl?: string | null;
+  }>;
   addedGames: Array<{
     appId: number;
     name?: string | null;
     imageUrl?: string | null;
     headerImageUrl?: string | null;
+    ownerSteamIds: string[];
+    owners: Array<{
+      steamId: string;
+      role?: string | null;
+      personaName?: string | null;
+      avatarUrl?: string | null;
+    }>;
   }>;
   removedGames: Array<{
     appId: number;
     name?: string | null;
     imageUrl?: string | null;
     headerImageUrl?: string | null;
+    ownerSteamIds: string[];
+    owners: Array<{
+      steamId: string;
+      role?: string | null;
+      personaName?: string | null;
+      avatarUrl?: string | null;
+    }>;
   }>;
 }
 

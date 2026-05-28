@@ -33,9 +33,7 @@ export class MemoryRepository implements Repository {
     const id = generateId("conn");
     const apiKey = generateId("ak");
     const now = Math.floor(Date.now() / 1000);
-    const permissions =
-      params.permissions ??
-      (params.provider === "steam" ? ["proxy", "account", "steam-family"] : ["proxy", "account"]);
+    const permissions = params.permissions ?? ["proxy", "account"];
     const conn = {
       id,
       provider: params.provider,

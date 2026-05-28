@@ -84,9 +84,9 @@ export class CronRouter<TScheduledContext, TContext> implements ICronHandlerRegi
     const handlers = Object.entries(this.handlers).flatMap(([cron, handlers]) =>
       isCronDueAt(cron, now) ? handlers : [],
     );
-
     await Promise.all(
       handlers.map(async (handler) => {
+        console.log("handing cron", handler.id);
         const scheduleCtx = this.createContext({ ctx, handler, now });
         try {
           await (this.runHandler

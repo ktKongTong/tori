@@ -49,10 +49,10 @@ export function startNodeCronRuntime(deps: NodeCronRuntimeDeps) {
         "node cron runtime tick failed",
       );
     } finally {
-      setTimeout(tick, millisecondsUntilNextMinute());
+      setTimeout(tick, 10_000);
     }
   };
 
   pinoLogger.info("node cron runtime started");
-  setTimeout(tick, millisecondsUntilNextMinute());
+  setTimeout(tick, 10_000);
 }

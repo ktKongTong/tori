@@ -1,7 +1,7 @@
 import { ParameterError } from "@/api/domain/error/index.ts";
 import { defineTaskHandler } from "@/api/modules/platform/task/registry.ts";
 
-import { refreshSteamFamily } from "../../../core/family/service.js";
+import { refreshSteamFamily } from "../../../core/family/service.ts";
 
 export const steamFamilyRefreshConnectionTaskHandler = defineTaskHandler(
   "steam.family.refresh_connection",

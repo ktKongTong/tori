@@ -1,4 +1,4 @@
-const API_PATH_PREFIXES = ["/admin", "/oauth", "/proxy", "/steam-family"] as const;
+const API_PATH_PREFIXES = ["/admin", "/oauth", "/proxy"] as const;
 
 export function isApiRequestPath(pathname: string) {
   return (

@@ -21,7 +21,7 @@ const tokenProxyExchangeResponseSchema = z.object({
     id: z.string(),
     provider: z.string(),
     providerUid: z.string(),
-    name: z.string().nullable(),
+    name: z.string().nullish(),
     permissions: z.array(z.string()).default([]),
   }),
   apiKey: z.string().min(1),
@@ -207,6 +207,7 @@ export async function startTokenProxyConnection(
   const callbackUrl = createCallbackUrl(origin, sessionId, state);
   const connectUrl = new URL("/admin/external-connect", proxyInstance.baseUrl);
   connectUrl.searchParams.set("provider", input.provider);
+  connectUrl.searchParams.set("sessionId", sessionId);
   connectUrl.searchParams.set("state", state);
   connectUrl.searchParams.set("callback", callbackUrl.toString());
   connectUrl.searchParams.set("label", "Tori");
@@ -295,17 +296,20 @@ export async function completeTokenProxyConnectionCallback(
     return fail("proxy instance is not active");
   }
 
-  const exchange = tokenProxyExchangeResponseSchema.parse(
-    await ofetch(`${proxyInstance.baseUrl.replace(/\/+$/, "")}/admin/external-connect/exchange`, {
+  const result = await ofetch(
+    `${proxyInstance.baseUrl.replace(/\/+$/, "")}/admin/external-connect/exchange`,
+    {
       method: "POST",
       retry: 0,
       timeout: 15_000,
       body: {
+        sessionId: session.id,
         code: input.code,
         state: session.state,
       },
-    }),
+    },
   );
+  const exchange = tokenProxyExchangeResponseSchema.parse(result);
 
   if (exchange.connection.provider !== session.provider) {
     return fail("token-proxy provider does not match session");

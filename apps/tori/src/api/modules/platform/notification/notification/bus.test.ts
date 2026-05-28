@@ -34,7 +34,10 @@ describe("notifyBus", () => {
       namespace: "managed",
       status: "sent",
       title: null,
-      body: createNotificationBody([{ type: "text", text: "other endpoint" }]),
+      body: createNotificationBody({
+        eventType: "test.notification",
+        data: { message: "other endpoint" },
+      }),
       payload: {},
       createdAt: new Date().toISOString(),
     });
@@ -54,7 +57,10 @@ describe("notifyBus", () => {
       namespace: "managed",
       status: "sent",
       title: null,
-      body: createNotificationBody([{ type: "text", text: "expected endpoint" }]),
+      body: createNotificationBody({
+        eventType: "test.notification",
+        data: { message: "expected endpoint" },
+      }),
       payload: {},
       createdAt: new Date().toISOString(),
     });

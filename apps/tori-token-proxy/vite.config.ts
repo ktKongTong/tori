@@ -10,6 +10,7 @@ export default defineConfig(() => {
   let plugins = [] as any[];
 
   let runtime = process.env?.RUNTIME ?? "node";
+  console.log("build for:", runtime);
   if (runtime === "workerd") {
     plugins.push(cloudflare({ viteEnvironment: { name: "ssr" } }));
   } else {
@@ -17,7 +18,7 @@ export default defineConfig(() => {
 
     switch (runtime) {
       case "deno":
-        preset = "deno_server";
+        preset = "node-server";
         break;
       case "bun":
         preset = "bun";
@@ -39,20 +40,6 @@ export default defineConfig(() => {
         prerender: {
           enabled: false,
           filter: () => false,
-        },
-        pages: [
-          {
-            path: "/",
-            prerender: {
-              enabled: false,
-            },
-          },
-        ],
-        spa: {
-          enabled: true,
-          prerender: {
-            enabled: false,
-          },
         },
         router: {
           routesDirectory: "../app/routes",
