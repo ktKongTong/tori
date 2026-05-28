@@ -38,6 +38,17 @@ export const authSessions = pgTable("auth_sessions", {
   expiresAt: integer("expires_at").notNull(),
 });
 
+// ─── OAuth Clients ───
+
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientSecret: text("client_secret").notNull(),
+  name: text("name").notNull(),
+  redirectUris: jsonb("redirect_uris").notNull(),
+  scopes: jsonb("scopes").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 // ─── Proxy Rules ───
 
 export const proxyRules = pgTable("proxy_rules", {

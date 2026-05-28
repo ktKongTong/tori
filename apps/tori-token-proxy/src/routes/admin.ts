@@ -10,6 +10,10 @@ import {
 } from "../admin-session.ts";
 import { encrypt } from "../crypto/index.ts";
 import { adminSessionAuth } from "../middleware/auth.ts";
+import {
+  externalConnectOAuthError,
+  validateExternalConnectAuthorizationRequest,
+} from "../oauth/external-connect-server.ts";
 import type { ProviderRegistry } from "../provider/registry.ts";
 import type { Repository } from "../repository/types.ts";
 import {
@@ -234,6 +238,18 @@ function parsePermissions(value: string | undefined) {
   return permissions.length ? permissions : ["proxy", "account"];
 }
 
+function parseLimit(value: string | undefined) {
+  const parsed = Number.parseInt(value ?? "20", 10);
+  if (!Number.isFinite(parsed)) return 20;
+  return Math.min(Math.max(parsed, 1), 100);
+}
+
+function parseOffset(value: string | undefined) {
+  const parsed = Number.parseInt(value ?? "0", 10);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(parsed, 0);
+}
+
 export function adminRoutes(deps: AdminDeps) {
   const { repo, secret, adminKey, registry } = deps;
   const app = new Hono();
@@ -334,24 +350,17 @@ export function adminRoutes(deps: AdminDeps) {
         );
       }
 
-      const client = await repo.getOAuthClient(query.client_id);
-      if (!client) {
-        return c.json(
-          { error: "unauthorized_client", error_description: "oauth client not found" },
-          401,
-        );
-      }
-
-      if (!client.redirectUris.includes(query.redirect_uri)) {
-        return c.json(
-          { error: "invalid_request", error_description: "redirect_uri is not allowed" },
-          400,
-        );
+      try {
+        await validateExternalConnectAuthorizationRequest(repo, query);
+      } catch (error) {
+        const oauthError = externalConnectOAuthError(error);
+        return c.json(oauthError.body, oauthError.status as 400);
       }
 
       const sessionId = randomCode("external_connect", 12);
       const expiresIn = 300;
       const expiresAt = Date.now() + expiresIn * 1000;
+      const client = (await repo.getOAuthClient(query.client_id))!;
       const permissions = parsePermissions(query.scope).filter((scope) =>
         client.scopes.includes(scope),
       );
@@ -1170,26 +1179,32 @@ export function adminRoutes(deps: AdminDeps) {
   app.use("/request-logs", adminSessionAuth(secret, adminKey));
   app.get("/request-logs", async (c) => {
     const connectionId = c.req.query("connectionId") || undefined;
-    const limit = Number.parseInt(c.req.query("limit") || "100", 10);
+    const limit = parseLimit(c.req.query("limit"));
+    const offset = parseOffset(c.req.query("offset"));
     const logs = await repo.listRequestLogs({
       connectionId,
-      limit: Number.isFinite(limit) ? limit : 100,
+      limit,
+      offset,
     });
 
-    return c.json({ items: logs });
+    return c.json({ items: logs, limit, offset });
   });
 
   app.use("/refresh-logs", adminSessionAuth(secret, adminKey));
   app.get("/refresh-logs", async (c) => {
     const connectionId = c.req.query("connectionId") || undefined;
-    const limit = Number.parseInt(c.req.query("limit") || "100", 10);
+    const limit = parseLimit(c.req.query("limit"));
+    const offset = parseOffset(c.req.query("offset"));
     const logs = await repo.listTokenRefreshLogs({
       connectionId,
-      limit: Number.isFinite(limit) ? limit : 100,
+      limit,
+      offset,
     });
 
     return c.json({
       items: logs.map((log) => tokenRefreshLogSchema.parse(log)),
+      limit,
+      offset,
     });
   });
 
@@ -1205,10 +1220,10 @@ export function adminRoutes(deps: AdminDeps) {
 
   app.get("/system/task-runs", async (c) => {
     const taskDefinitionId = c.req.query("taskDefinitionId") || undefined;
-    const limit = Number.parseInt(c.req.query("limit") || "100", 10);
+    const limit = parseLimit(c.req.query("limit"));
     const runs = await repo.listSystemTaskRuns({
       taskDefinitionId,
-      limit: Number.isFinite(limit) ? limit : 100,
+      limit,
     });
     return c.json({
       items: runs.map((run) => systemTaskRunSchema.parse(run)),

@@ -36,6 +36,17 @@ export const authSessions = sqliteTable("auth_sessions", {
   expiresAt: integer("expires_at", { mode: "number" }).notNull(),
 });
 
+// ─── OAuth Clients ───
+
+export const oauthClients = sqliteTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientSecret: text("client_secret").notNull(),
+  name: text("name").notNull(),
+  redirectUris: text("redirect_uris", { mode: "json" }).notNull(),
+  scopes: text("scopes", { mode: "json" }).notNull(),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+});
+
 // ─── Proxy Rules ───
 
 export const proxyRules = sqliteTable("proxy_rules", {

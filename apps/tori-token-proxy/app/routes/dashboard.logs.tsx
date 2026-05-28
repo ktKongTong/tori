@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { Button } from "@repo/ui/components/button";
 import {
   DashboardActionBar,
+  DashboardLimitPager,
   DashboardNotice,
   DashboardStatusPill,
   DashboardTable,
@@ -18,6 +20,8 @@ import {
 export const Route = createFileRoute("/dashboard/logs")({
   component: DashboardLogsPage,
 });
+
+const PAGE_SIZE = 20;
 
 function formatDate(epochSeconds: number | null | undefined) {
   if (!epochSeconds) return "—";
@@ -43,19 +47,21 @@ function getRefreshStatusTone(status: string) {
 
 function DashboardLogsPage() {
   const queryClient = useQueryClient();
+  const [requestLogPage, setRequestLogPage] = useState(1);
+  const [refreshLogPage, setRefreshLogPage] = useState(1);
   const requestLogsQuery = useQuery({
-    queryKey: ["token-proxy", "logs"],
+    queryKey: ["token-proxy", "logs", requestLogPage],
     queryFn: () =>
-      apiRequest("/admin/request-logs?limit=200").then((payload) =>
-        requestLogsListSchema.parse(payload),
-      ),
+      apiRequest(
+        `/admin/request-logs?limit=${PAGE_SIZE}&offset=${(requestLogPage - 1) * PAGE_SIZE}`,
+      ).then((payload) => requestLogsListSchema.parse(payload)),
   });
   const refreshLogsQuery = useQuery({
-    queryKey: ["token-proxy", "refresh-logs"],
+    queryKey: ["token-proxy", "refresh-logs", refreshLogPage],
     queryFn: () =>
-      apiRequest("/admin/refresh-logs?limit=200").then((payload) =>
-        tokenRefreshLogsListSchema.parse(payload),
-      ),
+      apiRequest(
+        `/admin/refresh-logs?limit=${PAGE_SIZE}&offset=${(refreshLogPage - 1) * PAGE_SIZE}`,
+      ).then((payload) => tokenRefreshLogsListSchema.parse(payload)),
   });
 
   const runRefreshTasksMutation = useMutation({
@@ -130,6 +136,12 @@ function DashboardLogsPage() {
           rowIds={requestLogs.map((log) => String(log.id))}
           empty="No request logs have been recorded yet."
         />
+        <DashboardLimitPager
+          page={requestLogPage}
+          pageSize={PAGE_SIZE}
+          itemCount={requestLogs.length}
+          onPageChange={setRequestLogPage}
+        />
       </section>
 
       <section className="space-y-3">
@@ -152,6 +164,12 @@ function DashboardLogsPage() {
           ])}
           rowIds={refreshLogs.map((log) => String(log.id))}
           empty="No refresh logs have been recorded yet."
+        />
+        <DashboardLimitPager
+          page={refreshLogPage}
+          pageSize={PAGE_SIZE}
+          itemCount={refreshLogs.length}
+          onPageChange={setRefreshLogPage}
         />
       </section>
     </div>

@@ -2,6 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { randomCode } from "@repo/utils/random";
 import { encrypt } from "../crypto/index.ts";
+import {
+  exchangeExternalConnectAuthorizationCode,
+  externalConnectOAuthError,
+} from "../oauth/external-connect-server.ts";
 import type { ProviderRegistry } from "../provider/registry.ts";
 import type { Repository } from "../repository/types.ts";
 import {
@@ -23,17 +27,6 @@ function generateCode(prefix: string): string {
 
 function oauthError(c: any, status: number, error: string, description: string) {
   return c.json({ error, error_description: description }, status);
-}
-
-function base64UrlEncode(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-async function codeChallengeFromVerifier(verifier: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  return base64UrlEncode(new Uint8Array(digest));
 }
 
 function zodHook(result: any, c: any) {
@@ -325,74 +318,19 @@ export function oauthRoutes(deps: OAuthDeps) {
 
         const [sid] = code.split(".");
         if (sid?.startsWith("external_connect_")) {
-          if (!clientId || !clientSecret || !redirectUri || !codeVerifier) {
-            return oauthError(
-              c,
-              400,
-              "invalid_request",
-              "client_id, client_secret, redirect_uri, and code_verifier are required",
-            );
+          try {
+            const result = await exchangeExternalConnectAuthorizationCode(repo, secret, {
+              code,
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: redirectUri,
+              code_verifier: codeVerifier,
+            });
+            return c.json(result.response);
+          } catch (error) {
+            const oauthError = externalConnectOAuthError(error);
+            return c.json(oauthError.body, oauthError.status as 400);
           }
-
-          const client = await repo.getOAuthClient(clientId);
-          if (!client || client.clientSecret !== clientSecret) {
-            return oauthError(c, 401, "invalid_client", "client authentication failed");
-          }
-
-          if (!client.redirectUris.includes(redirectUri)) {
-            return oauthError(c, 400, "invalid_grant", "redirect_uri is not allowed");
-          }
-
-          const session = await repo.getAuthSession(sid);
-          if (
-            !session ||
-            session.mode !== "external-connect" ||
-            !session.externalConnect ||
-            session.externalConnect.clientId !== clientId ||
-            session.externalConnect.redirectUri !== redirectUri ||
-            session.externalConnect.codeChallengeMethod !== "S256" ||
-            session.authCode !== code
-          ) {
-            return oauthError(c, 400, "invalid_grant", "invalid or expired authorization code");
-          }
-
-          const actualChallenge = await codeChallengeFromVerifier(codeVerifier);
-          if (actualChallenge !== session.externalConnect.codeChallenge) {
-            return oauthError(c, 400, "invalid_grant", "code_verifier mismatch");
-          }
-
-          const connId = await repo.consumeAuthCode(code);
-          if (!connId) {
-            return oauthError(c, 400, "invalid_grant", "invalid or expired authorization code");
-          }
-
-          const conn = await repo.getConnectionById(connId);
-          if (!conn) {
-            return oauthError(c, 400, "invalid_grant", "connection not found");
-          }
-
-          await repo.deleteAuthSession(sid);
-
-          return c.json({
-            access_token: conn.apiKey,
-            token_type: "Bearer",
-            scope: conn.permissions?.join(" ") ?? conn.provider,
-            provider: conn.provider,
-            provider_uid: conn.providerUid,
-            display_name: conn.displayName,
-            connection: {
-              id: conn.id,
-              provider: conn.provider,
-              providerUid: conn.providerUid,
-              name: conn.displayName,
-              permissions: conn.permissions ?? [],
-            },
-            account: {
-              providerAccountId: conn.providerUid,
-              providerAccountName: conn.displayName,
-              providerAccountAvatar: null,
-            },
-          });
         }
 
         const connId = await repo.consumeAuthCode(code);

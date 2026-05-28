@@ -22,7 +22,7 @@ function DashboardOverviewPage() {
   const logsQuery = useQuery({
     queryKey: ["token-proxy", "logs"],
     queryFn: () =>
-      apiRequest("/admin/request-logs?limit=200").then((payload) =>
+      apiRequest("/admin/request-logs?limit=20").then((payload) =>
         requestLogsListSchema.parse(payload),
       ),
   });

@@ -392,14 +392,33 @@ export class SqliteRepository implements Repository {
   }
 
   async createOAuthClient(input: OAuthClient): Promise<OAuthClient> {
-    await this.setSetting(`oauth_client:${input.clientId}`, JSON.stringify(input));
+    await this.db.insert(schema.oauthClients).values({
+      clientId: input.clientId,
+      clientSecret: input.clientSecret,
+      name: input.name,
+      redirectUris: input.redirectUris,
+      scopes: input.scopes,
+      createdAt: input.createdAt,
+    });
     return input;
   }
 
   async getOAuthClient(clientId: string): Promise<OAuthClient | null> {
-    const value = await this.getSetting(`oauth_client:${clientId}`);
-    if (!value) return null;
-    return JSON.parse(value) as OAuthClient;
+    const [row] = await this.db
+      .select()
+      .from(schema.oauthClients)
+      .where(eq(schema.oauthClients.clientId, clientId))
+      .limit(1);
+    if (!row) return null;
+
+    return {
+      clientId: row.clientId,
+      clientSecret: row.clientSecret,
+      name: row.name,
+      redirectUris: parseJsonArray(row.redirectUris),
+      scopes: parseJsonArray(row.scopes),
+      createdAt: row.createdAt,
+    };
   }
 
   async getProxyRules(provider: string): Promise<ProxyRule[]> {
@@ -453,8 +472,13 @@ export class SqliteRepository implements Repository {
     return result[0] as RequestLog;
   }
 
-  async listRequestLogs(input?: { connectionId?: string; limit?: number }): Promise<RequestLog[]> {
+  async listRequestLogs(input?: {
+    connectionId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<RequestLog[]> {
     const limit = input?.limit ?? 100;
+    const offset = input?.offset ?? 0;
 
     if (input?.connectionId) {
       return this.db
@@ -462,6 +486,7 @@ export class SqliteRepository implements Repository {
         .from(schema.requestLogs)
         .where(eq(schema.requestLogs.connectionId, input.connectionId))
         .orderBy(desc(schema.requestLogs.id))
+        .offset(offset)
         .limit(limit) as unknown as Promise<RequestLog[]>;
     }
 
@@ -469,6 +494,7 @@ export class SqliteRepository implements Repository {
       .select()
       .from(schema.requestLogs)
       .orderBy(desc(schema.requestLogs.id))
+      .offset(offset)
       .limit(limit) as unknown as Promise<RequestLog[]>;
   }
 
@@ -684,8 +710,10 @@ export class SqliteRepository implements Repository {
   async listTokenRefreshLogs(input?: {
     connectionId?: string;
     limit?: number;
+    offset?: number;
   }): Promise<TokenRefreshLog[]> {
     const limit = input?.limit ?? 100;
+    const offset = input?.offset ?? 0;
 
     if (input?.connectionId) {
       return this.db
@@ -693,6 +721,7 @@ export class SqliteRepository implements Repository {
         .from(schema.tokenRefreshLogs)
         .where(eq(schema.tokenRefreshLogs.connectionId, input.connectionId))
         .orderBy(desc(schema.tokenRefreshLogs.id))
+        .offset(offset)
         .limit(limit) as unknown as Promise<TokenRefreshLog[]>;
     }
 
@@ -700,6 +729,7 @@ export class SqliteRepository implements Repository {
       .select()
       .from(schema.tokenRefreshLogs)
       .orderBy(desc(schema.tokenRefreshLogs.id))
+      .offset(offset)
       .limit(limit) as unknown as Promise<TokenRefreshLog[]>;
   }
 }

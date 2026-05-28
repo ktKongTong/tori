@@ -225,12 +225,17 @@ export class MemoryRepository implements Repository {
     return row;
   }
 
-  async listRequestLogs(input?: { connectionId?: string; limit?: number }): Promise<RequestLog[]> {
+  async listRequestLogs(input?: {
+    connectionId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<RequestLog[]> {
     const limit = input?.limit ?? 100;
+    const offset = input?.offset ?? 0;
     const rows = input?.connectionId
       ? this.requestLogs.filter((row) => row.connectionId === input.connectionId)
       : this.requestLogs;
-    return rows.slice(0, limit);
+    return rows.slice(offset, offset + limit);
   }
 
   async deleteRequestLogsBefore(cutoffCreatedAt: number): Promise<number> {
@@ -404,11 +409,13 @@ export class MemoryRepository implements Repository {
   async listTokenRefreshLogs(input?: {
     connectionId?: string;
     limit?: number;
+    offset?: number;
   }): Promise<TokenRefreshLog[]> {
     const limit = input?.limit ?? 100;
+    const offset = input?.offset ?? 0;
     const rows = input?.connectionId
       ? this.tokenRefreshLogs.filter((row) => row.connectionId === input.connectionId)
       : this.tokenRefreshLogs;
-    return rows.slice(0, limit);
+    return rows.slice(offset, offset + limit);
   }
 }

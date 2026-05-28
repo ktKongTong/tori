@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
+import { Button } from "@repo/ui/components/button";
 
 export function DashboardPanel({
   eyebrow,
@@ -206,6 +207,54 @@ export function DashboardTable({
           )}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+export function DashboardLimitPager({
+  page,
+  pageSize,
+  itemCount,
+  onPageChange,
+}: {
+  page: number;
+  pageSize: number;
+  itemCount: number;
+  onPageChange: (page: number) => void;
+}) {
+  const hasPrevious = page > 1;
+  const hasNext = itemCount >= pageSize;
+  const firstItem = itemCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastItem = (page - 1) * pageSize + itemCount;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-x border-b border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground">
+      <span>
+        Showing {firstItem}-{lastItem}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!hasPrevious}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Previous
+        </Button>
+        <span className="min-w-16 text-center text-xs font-medium tracking-[0.16em] uppercase">
+          Page {page}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!hasNext}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

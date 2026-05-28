@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "@jmondi/oauth2-server": "catalog:",
     "@repo/data-table": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",

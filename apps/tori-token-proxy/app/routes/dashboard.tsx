@@ -73,7 +73,7 @@ function DashboardLayout() {
     <SidebarProvider>
       <DashboardSidebar onSignOut={() => logoutMutation.mutate()} />
 
-      <SidebarInset className="min-w-0 h-svh overflow-hidden">
+      <SidebarInset className="min-w-0 h-svh overflow-y-auto">
         <header className="sticky top-0 z-40 flex min-h-20 shrink-0 items-center gap-2 border-b bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger className="-ml-1 md:hidden" />
           <Separator orientation="vertical" className="hidden h-4 md:block" />

@@ -76,7 +76,11 @@ export interface Repository {
     error?: string | null;
     createdAt: number;
   }): Promise<RequestLog>;
-  listRequestLogs(input?: { connectionId?: string; limit?: number }): Promise<RequestLog[]>;
+  listRequestLogs(input?: {
+    connectionId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<RequestLog[]>;
   deleteRequestLogsBefore(cutoffCreatedAt: number): Promise<number>;
 
   // ─── System Tasks ───
@@ -145,5 +149,6 @@ export interface Repository {
   listTokenRefreshLogs(input?: {
     connectionId?: string;
     limit?: number;
+    offset?: number;
   }): Promise<TokenRefreshLog[]>;
 }

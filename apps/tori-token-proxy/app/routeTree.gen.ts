@@ -15,7 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as ExternalConnectSidRouteImport } from './routes/external-connect.$sid'
 import { Route as DashboardTokensRouteImport } from './routes/dashboard.tokens'
-import { Route as DashboardOAuthClientsRouteImport } from './routes/dashboard.oauth-clients'
+import { Route as DashboardOauthClientsRouteImport } from './routes/dashboard.oauth-clients'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard.logs'
 
 const LoginRoute = LoginRouteImport.update({
@@ -48,7 +48,7 @@ const DashboardTokensRoute = DashboardTokensRouteImport.update({
   path: '/tokens',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardOAuthClientsRoute = DashboardOAuthClientsRouteImport.update({
+const DashboardOauthClientsRoute = DashboardOauthClientsRouteImport.update({
   id: '/oauth-clients',
   path: '/oauth-clients',
   getParentRoute: () => DashboardRoute,
@@ -64,7 +64,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/oauth-clients': typeof DashboardOAuthClientsRoute
+  '/dashboard/oauth-clients': typeof DashboardOauthClientsRoute
   '/dashboard/tokens': typeof DashboardTokensRoute
   '/external-connect/$sid': typeof ExternalConnectSidRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -73,7 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/oauth-clients': typeof DashboardOAuthClientsRoute
+  '/dashboard/oauth-clients': typeof DashboardOauthClientsRoute
   '/dashboard/tokens': typeof DashboardTokensRoute
   '/external-connect/$sid': typeof ExternalConnectSidRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -84,7 +84,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/oauth-clients': typeof DashboardOAuthClientsRoute
+  '/dashboard/oauth-clients': typeof DashboardOauthClientsRoute
   '/dashboard/tokens': typeof DashboardTokensRoute
   '/external-connect/$sid': typeof ExternalConnectSidRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -176,7 +176,7 @@ declare module '@tanstack/react-router' {
       id: '/dashboard/oauth-clients'
       path: '/oauth-clients'
       fullPath: '/dashboard/oauth-clients'
-      preLoaderRoute: typeof DashboardOAuthClientsRouteImport
+      preLoaderRoute: typeof DashboardOauthClientsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/logs': {
@@ -191,14 +191,14 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
-  DashboardOAuthClientsRoute: typeof DashboardOAuthClientsRoute
+  DashboardOauthClientsRoute: typeof DashboardOauthClientsRoute
   DashboardTokensRoute: typeof DashboardTokensRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
-  DashboardOAuthClientsRoute: DashboardOAuthClientsRoute,
+  DashboardOauthClientsRoute: DashboardOauthClientsRoute,
   DashboardTokensRoute: DashboardTokensRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }

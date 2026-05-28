@@ -190,7 +190,7 @@ describe("admin connect flow", () => {
     const state = "external-state-0001";
     const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
     const client = await createOAuthClient(app, callback);
-    const codeVerifier = "verifier-verifier-verifier-verifier-0001";
+    const codeVerifier = "verifier-verifier-verifier-verifier-0001-rfc7636";
     const codeChallenge = await crypto.subtle
       .digest("SHA-256", new TextEncoder().encode(codeVerifier))
       .then((digest) =>
@@ -291,7 +291,7 @@ describe("admin connect flow", () => {
     const state = "external-state-0002";
     const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
     const client = await createOAuthClient(app, callback);
-    const codeVerifier = "verifier-verifier-verifier-verifier-0002";
+    const codeVerifier = "verifier-verifier-verifier-verifier-0002-rfc7636";
     const codeChallenge = await crypto.subtle
       .digest("SHA-256", new TextEncoder().encode(codeVerifier))
       .then((digest) =>

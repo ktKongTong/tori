@@ -135,6 +135,8 @@ export const requestLogSchema = z.object({
 
 export const requestLogsListSchema = z.object({
   items: z.array(requestLogSchema),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
 });
 
 export const oauthClientCreatedSchema = z.object({
@@ -157,6 +159,8 @@ export const tokenRefreshLogSchema = z.object({
 
 export const tokenRefreshLogsListSchema = z.object({
   items: z.array(tokenRefreshLogSchema),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
 });
 
 export const systemTaskDefinitionSchema = z.object({
