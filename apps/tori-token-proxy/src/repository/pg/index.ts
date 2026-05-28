@@ -1,5 +1,5 @@
 import { and, defineRelations, desc, eq, isNull, lte } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomCode } from "@repo/utils/random";
 
 import type {
@@ -57,9 +57,9 @@ export const relations = defineRelations(schema);
  * Used for Deno Deploy (Neon) and Node.js (node-postgres).
  */
 export class PgRepository implements Repository {
-  private db: PostgresJsDatabase;
+  private db: NodePgDatabase;
 
-  constructor(db: PostgresJsDatabase) {
+  constructor(db: NodePgDatabase) {
     this.db = db;
   }
 

@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { createApp } from "./app.ts";
 import { createDefaultProviderRegistry } from "./provider/registry.ts";
 import { MemoryRepository } from "./repository/memory.ts";
@@ -39,7 +39,7 @@ export function createTokenProxyServerApp(
 
   const db = drizzle({
     connection: {
-      url: databaseUrl,
+      connectionString: databaseUrl,
       ssl: true,
     },
     relations,
