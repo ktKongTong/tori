@@ -67,6 +67,7 @@ function copyShellToIndex(): Plugin {
     },
 
     async closeBundle() {
+      console.log("moving shell.html to index.html");
       const from = resolve(root, ".output/public/_shell.html");
       const to = resolve(root, ".output/public/index.html");
 
