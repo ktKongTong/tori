@@ -1,0 +1,24 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 17b5742f02eb8d7a1db7ac7a5cd45a37ae4117e0..02a797ba3da617e6d266937ea8cd38812e16a3fa 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -1,6 +1,6 @@
+ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+ const require_errors = require("./errors-DZzzR6qt.cjs");
+-let crypto = require("crypto");
++let crypto = require("node:crypto");
+ let ms = require("ms");
+ ms = require_errors.__toESM(ms, 1);
+ let uri_js = require("uri-js");
+diff --git a/dist/index.js b/dist/index.js
+index 75a628a2f033016df2404845068f84e6f7fbcc2e..2e6864248fba7b839915f696d967104273ee5e95 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,6 +1,6 @@
+ import "./chunk--u3MIqq1.js";
+ import { a as HttpStatus, i as ErrorType, n as OAuthRequest, o as OAuthException, r as OAuthResponse, t as isOAuthError } from "./errors-VM5iKSGw.js";
+-import { createHash, randomBytes } from "crypto";
++import { createHash, randomBytes } from "node:crypto";
+ import ms from "ms";
+ import { parse } from "uri-js";
+ import jwt from "jsonwebtoken";

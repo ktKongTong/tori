@@ -86,6 +86,8 @@ catalogs:
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+patchedDependencies:
+  "@jmondi/oauth2-server": patches/@jmondi__oauth2-server.patch
 
 peerDependencyRules:
   allowAny:

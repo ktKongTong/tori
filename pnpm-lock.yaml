@@ -156,6 +156,11 @@ overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
 
+patchedDependencies:
+  '@jmondi/oauth2-server':
+    hash: 74977817c177f6136c01e3886570391a0270d09056f292b2095fecc1dff35ecf
+    path: patches/@jmondi__oauth2-server.patch
+
 importers:
 
   .:
@@ -417,7 +422,7 @@ importers:
         version: 0.7.6(hono@4.12.15)(zod@4.3.6)
       '@jmondi/oauth2-server':
         specifier: 'catalog:'
-        version: 4.3.5
+        version: 4.3.5(patch_hash=74977817c177f6136c01e3886570391a0270d09056f292b2095fecc1dff35ecf)
       '@repo/data-table':
         specifier: workspace:*
         version: link:../../packages/data-table
@@ -8921,7 +8926,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.12.2
 
-  '@jmondi/oauth2-server@4.3.5':
+  '@jmondi/oauth2-server@4.3.5(patch_hash=74977817c177f6136c01e3886570391a0270d09056f292b2095fecc1dff35ecf)':
     dependencies:
       jsonwebtoken: 9.0.3
       ms: 2.1.3
@@ -13789,7 +13794,7 @@ snapshots:
       rolldown: 1.0.3
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4)(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.1(@cloudflare/workers-types@4.20260426.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(bun-types@1.3.13)(pg@8.20.0)(postgres@3.4.9)(zod@4.3.6)))(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 17.4.2
       jiti: 2.7.0
@@ -13840,7 +13845,7 @@ snapshots:
       rolldown: 1.0.3
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4)(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.1(@cloudflare/workers-types@4.20260426.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(bun-types@1.3.13)(pg@8.20.0)(postgres@3.4.9)(zod@4.3.6)))(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 17.4.2
       jiti: 2.7.0
@@ -15127,7 +15132,7 @@ snapshots:
       picomatch: 4.0.4
       webpack-virtual-modules: 0.6.2
 
-  unstorage@2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4)(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(aws4fetch@1.0.20)(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.1(@cloudflare/workers-types@4.20260426.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(bun-types@1.3.13)(pg@8.20.0)(postgres@3.4.9)(zod@4.3.6)))(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       aws4fetch: 1.0.20
       chokidar: 5.0.0
