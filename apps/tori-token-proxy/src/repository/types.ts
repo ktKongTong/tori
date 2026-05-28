@@ -55,6 +55,7 @@ export interface Repository {
   // ─── OAuth Clients ───
   createOAuthClient(input: OAuthClient): Promise<OAuthClient>;
   getOAuthClient(clientId: string): Promise<OAuthClient | null>;
+  listOAuthClients(): Promise<OAuthClient[]>;
 
   // ─── Proxy Rules ───
   getProxyRules(provider: string): Promise<ProxyRule[]>;

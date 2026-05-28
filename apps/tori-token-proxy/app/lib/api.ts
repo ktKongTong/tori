@@ -147,6 +147,14 @@ export const oauthClientCreatedSchema = z.object({
   scopes: z.array(z.string()),
 });
 
+export const oauthClientSchema = oauthClientCreatedSchema.omit({ client_secret: true }).extend({
+  created_at: z.number(),
+});
+
+export const oauthClientsListSchema = z.object({
+  items: z.array(oauthClientSchema),
+});
+
 export const tokenRefreshLogSchema = z.object({
   id: z.number(),
   taskRunId: z.string().nullable().optional(),

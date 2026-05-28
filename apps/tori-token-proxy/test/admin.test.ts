@@ -127,6 +127,29 @@ async function createOAuthClient(app: ReturnType<typeof createApp>, redirectUri:
 }
 
 describe("admin connect flow", () => {
+  it("lists oauth clients for the admin dashboard", async () => {
+    const { app } = createTestApp();
+    const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
+    const client = await createOAuthClient(app, callback);
+
+    const loginResponse = await request(app, "POST", "/admin/auth/login", {
+      body: { adminKey: ADMIN_KEY },
+    });
+    expect(loginResponse.status).toBe(200);
+    const cookie = parseCookie(loginResponse.headers.get("set-cookie"));
+
+    const listResponse = await request(app, "GET", "/admin/oauth/clients", {
+      headers: { Cookie: cookie },
+    });
+    expect(listResponse.status).toBe(200);
+    const listData = (await listResponse.json()) as any;
+    expect(listData.items).toHaveLength(1);
+    expect(listData.items[0].client_id).toBe(client.client_id);
+    expect(listData.items[0].client_secret).toBeUndefined();
+    expect(listData.items[0].redirect_uris).toEqual([callback]);
+    expect(listData.items[0].scopes).toEqual(["proxy", "account"]);
+  });
+
   it("creates a connection and issues an api key from admin dashboard flow", async () => {
     const { app } = createTestApp();
 

@@ -20,7 +20,10 @@ const META: Record<string, { title: string }> = {
     title: "Issued Tokens",
   },
   "/dashboard/logs": {
-    title: "Usage Logs",
+    title: "Request Logs",
+  },
+  "/dashboard/refresh-logs": {
+    title: "Refresh Logs",
   },
   "/dashboard/oauth-clients": {
     title: "OAuth Clients",

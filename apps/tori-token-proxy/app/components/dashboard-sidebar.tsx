@@ -38,7 +38,11 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     to: "/dashboard/logs",
-    label: "Logs",
+    label: "Request Logs",
+  },
+  {
+    to: "/dashboard/refresh-logs",
+    label: "Refresh Logs",
   },
   {
     to: "/dashboard/oauth-clients",

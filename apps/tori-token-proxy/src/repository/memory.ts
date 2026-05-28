@@ -184,6 +184,10 @@ export class MemoryRepository implements Repository {
     return this.oauthClients.get(clientId) ?? null;
   }
 
+  async listOAuthClients(): Promise<OAuthClient[]> {
+    return [...this.oauthClients.values()].sort((a, b) => b.createdAt - a.createdAt);
+  }
+
   async getProxyRules(provider: string): Promise<ProxyRule[]> {
     return this.proxyRules.filter((rule) => rule.provider === provider);
   }

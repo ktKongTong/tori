@@ -441,6 +441,24 @@ export class PgRepository implements Repository {
     };
   }
 
+  async listOAuthClients(): Promise<OAuthClient[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.oauthClients)
+      .orderBy(desc(schema.oauthClients.createdAt));
+
+    return rows.map((row) => ({
+      clientId: row.clientId,
+      clientSecret: row.clientSecret,
+      name: row.name,
+      redirectUris: Array.isArray(row.redirectUris)
+        ? row.redirectUris.map((item) => String(item))
+        : [],
+      scopes: Array.isArray(row.scopes) ? row.scopes.map((item) => String(item)) : [],
+      createdAt: row.createdAt,
+    }));
+  }
+
   async getProxyRules(provider: string): Promise<ProxyRule[]> {
     return this.db.select().from(schema.proxyRules).where(eq(schema.proxyRules.provider, provider));
   }

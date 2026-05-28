@@ -301,6 +301,19 @@ export function adminRoutes(deps: AdminDeps) {
     },
   );
 
+  app.get("/oauth/clients", adminSessionAuth(secret, adminKey), async (c) => {
+    const clients = await repo.listOAuthClients();
+    return c.json({
+      items: clients.map((client) => ({
+        client_id: client.clientId,
+        client_name: client.name,
+        redirect_uris: client.redirectUris,
+        scopes: client.scopes,
+        created_at: client.createdAt,
+      })),
+    });
+  });
+
   app.use("/auth/session", adminSessionAuth(secret, adminKey));
   app.get("/auth/session", (c) => {
     return c.json({ authenticated: true });
