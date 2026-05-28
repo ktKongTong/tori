@@ -5,7 +5,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vp dev",
-    "build": "vp build && cp .output/public/_shell.html .output/public/index.html",
+    "build": "vp build && echo \"hello\"",
     "start": "serve .output/public --config ../../serve.json",
     "preview": "vp preview",
     "types:check": "fumadocs-mdx && tsc --noEmit",
