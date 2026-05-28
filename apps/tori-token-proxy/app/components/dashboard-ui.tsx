@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Badge } from "@repo/ui/components/badge";
@@ -163,11 +163,13 @@ export function DashboardTable({
   rows,
   empty,
   rowIds,
+  expandedRows,
 }: {
   columns: string[];
   rows: Array<Array<ReactNode>>;
   empty: string;
   rowIds?: string[];
+  expandedRows?: Array<ReactNode | null | undefined>;
 }) {
   return (
     <div className="overflow-hidden border border-border/70 bg-card">
@@ -183,18 +185,32 @@ export function DashboardTable({
         </TableHeader>
         <TableBody>
           {rows.length ? (
-            rows.map((row, rowIndex) => (
-              <TableRow key={rowIds?.[rowIndex] ?? String(rowIndex)} className="align-top">
-                {row.map((cell, cellIndex) => (
-                  <TableCell
-                    key={`${rowIds?.[rowIndex] ?? rowIndex}-${cellIndex}`}
-                    className="px-4 py-3 align-top whitespace-normal"
-                  >
-                    {cell}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            rows.map((row, rowIndex) => {
+              const rowId = rowIds?.[rowIndex] ?? String(rowIndex);
+              const expandedRow = expandedRows?.[rowIndex];
+
+              return (
+                <Fragment key={rowId}>
+                  <TableRow key={rowId} className="align-top">
+                    {row.map((cell, cellIndex) => (
+                      <TableCell
+                        key={`${rowId}-${cellIndex}`}
+                        className="px-4 py-3 align-top whitespace-normal"
+                      >
+                        {cell}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {expandedRow ? (
+                    <TableRow key={`${rowId}-expanded`} className="bg-muted/20 hover:bg-muted/20">
+                      <TableCell colSpan={columns.length} className="px-4 py-4">
+                        {expandedRow}
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </Fragment>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell

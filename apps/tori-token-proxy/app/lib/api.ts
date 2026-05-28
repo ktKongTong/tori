@@ -128,6 +128,12 @@ export const requestLogSchema = z.object({
   routeGroup: z.string(),
   method: z.string(),
   targetUrl: z.string().nullable().optional(),
+  headers: z.record(z.string(), z.string()).nullable().optional(),
+  query: z
+    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .nullable()
+    .optional(),
+  requestBody: z.unknown().optional(),
   statusCode: z.number().nullable().optional(),
   error: z.string().nullable().optional(),
   createdAt: z.number(),
