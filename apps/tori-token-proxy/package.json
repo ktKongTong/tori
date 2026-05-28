@@ -48,7 +48,7 @@
     "hono": "catalog:hono",
     "nitro": "catalog:",
     "ofetch": "2.0.0-alpha.3",
-    "pg": "^8.20.0",
+    "postgres": "^3.4.9",
     "qrcode.react": "^4.2.0",
     "react": "catalog:react",
     "react-dom": "catalog:react",

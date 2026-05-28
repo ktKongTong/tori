@@ -1,6 +1,7 @@
-import { and, desc, eq, isNull, lte } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { and, defineRelations, desc, eq, isNull, lte } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { randomCode } from "@repo/utils/random";
+
 import type {
   AuthSessionState,
   Connection,
@@ -49,14 +50,16 @@ function parseJsonNullable(value: string | null | undefined) {
   }
 }
 
+export const relations = defineRelations(schema);
+
 /**
  * PostgreSQL-backed Repository.
  * Used for Deno Deploy (Neon) and Node.js (node-postgres).
  */
 export class PgRepository implements Repository {
-  private db: NodePgDatabase;
+  private db: PostgresJsDatabase;
 
-  constructor(db: NodePgDatabase) {
+  constructor(db: PostgresJsDatabase) {
     this.db = db;
   }
 

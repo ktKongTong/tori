@@ -1,11 +1,9 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { createApp } from "./app.ts";
 import { createDefaultProviderRegistry } from "./provider/registry.ts";
 import { MemoryRepository } from "./repository/memory.ts";
-import { PgRepository } from "./repository/pg/index.ts";
-import * as schema from "./repository/pg/schema.ts";
-import type { SystemTaskSchedulerDeps } from "./system-tasks/index.ts";
+import { PgRepository, relations } from "./repository/pg";
+import type { SystemTaskSchedulerDeps } from "./system-tasks";
 
 type EnvReader = (name: string) => string | undefined;
 
@@ -39,10 +37,13 @@ export function createTokenProxyServerApp(
     };
   }
 
-  const pool = new Pool({
-    connectionString: databaseUrl,
+  const db = drizzle({
+    connection: {
+      url: databaseUrl,
+      ssl: true,
+    },
+    relations,
   });
-  const db = drizzle({ client: pool, schema } as never);
   const repo = new PgRepository(db);
   const registry = createDefaultProviderRegistry();
 
