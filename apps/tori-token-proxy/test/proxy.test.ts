@@ -217,7 +217,7 @@ describe("proxy", () => {
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain("access_token=real-steam-token-123");
       const [log] = await repo.listRequestLogs({ connectionId: conn.id });
-      expect(log.targetUrl).toContain("access_token=%5Bredacted%5D");
+      expect(log.targetUrl).toBe("https://api.steampowered.com/test");
       expect(log.query?.access_token).toBe("[redacted]");
     });
 
@@ -321,8 +321,7 @@ describe("proxy", () => {
       expect(log.headers?.authorization).toBe("[redacted]");
       expect(log.headers?.cookie).toBe("[redacted]");
       expect(log.headers?.["x-api-key"]).toBe("[redacted]");
-      expect(log.targetUrl).toContain("access_token=%5Bredacted%5D");
-      expect(log.targetUrl).toContain("token=%5Bredacted%5D");
+      expect(log.targetUrl).toBe("https://api.steampowered.com/test");
       expect(log.query).toMatchObject({
         access_token: "[redacted]",
         token: "[redacted]",

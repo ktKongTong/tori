@@ -38,7 +38,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl: c.req.header("X-PROXY-URL") ?? null,
+        targetUrl: captureTargetUrl(c.req.header("X-PROXY-URL")),
         headers: capturedHeaders,
         statusCode: 403,
         error: `provider mismatch: ${conn.provider} != ${provider}`,
@@ -83,7 +83,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl,
+        targetUrl: captureTargetUrl(targetUrl),
         headers: capturedHeaders,
         statusCode: 400,
         error: "invalid X-PROXY-URL",
@@ -105,7 +105,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl,
+        targetUrl: captureTargetUrl(parsedUrl),
         headers: capturedHeaders,
         query: captureQuery(parsedUrl),
         requestBody,
@@ -129,7 +129,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl,
+        targetUrl: captureTargetUrl(parsedUrl),
         headers: capturedHeaders,
         query: captureQuery(parsedUrl),
         requestBody,
@@ -212,7 +212,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl: loggedUrl.toString(),
+        targetUrl: captureTargetUrl(loggedUrl),
         headers: capturedHeaders,
         query: captureQuery(loggedUrl),
         requestBody,
@@ -247,7 +247,7 @@ export function proxyRoutes(deps: ProxyDeps) {
       connectionId: conn.id,
       routeGroup: "proxy",
       method: c.req.method,
-      targetUrl: loggedUrl.toString(),
+      targetUrl: captureTargetUrl(loggedUrl),
       headers: capturedHeaders,
       query: captureQuery(loggedUrl),
       requestBody,
@@ -286,6 +286,16 @@ function captureQuery(url: URL) {
     }
   }
   return query;
+}
+
+function captureTargetUrl(url: string | URL | null | undefined) {
+  if (!url) return null;
+  try {
+    const parsed = typeof url === "string" ? new URL(url) : url;
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return typeof url === "string" ? url : null;
+  }
 }
 
 async function captureRequestBody(request: Request) {
