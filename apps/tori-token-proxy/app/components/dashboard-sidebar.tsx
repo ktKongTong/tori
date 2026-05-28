@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     to: "/dashboard/tokens",
-    label: "Tokens",
+    label: "Connections",
   },
   {
     to: "/dashboard/logs",

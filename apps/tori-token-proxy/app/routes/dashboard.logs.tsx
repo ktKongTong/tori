@@ -141,14 +141,9 @@ function DashboardRequestLogsPage() {
 
           return [
             formatDate(log.createdAt),
-            <div key={`${log.id}-connection`} className="space-y-1">
-              <p className="font-medium text-foreground">
-                {connectionNames.get(log.connectionId) ?? log.connectionId}
-              </p>
-              {connectionNames.has(log.connectionId) ? (
-                <p className="text-xs text-muted-foreground">{log.connectionId}</p>
-              ) : null}
-            </div>,
+            <span key={`${log.id}-connection`} className="font-medium text-foreground">
+              {connectionNames.get(log.connectionId) ?? "Unknown connection"}
+            </span>,
             log.method,
             <DashboardStatusPill
               key={`${log.id}-status`}

@@ -58,9 +58,8 @@ function getFlowStatusTone(status: string) {
   return "neutral" as const;
 }
 
-function permissionOptionsForProvider(provider: string, currentPermissions: string[] = []) {
-  const defaults =
-    provider === "steam" ? ["proxy", "account", "steam-family"] : ["proxy", "account"];
+function permissionOptionsForProvider(_provider: string, currentPermissions: string[] = []) {
+  const defaults = ["proxy", "account"];
   return [...new Set([...defaults, ...currentPermissions])];
 }
 
@@ -255,7 +254,7 @@ function DashboardTokensPage() {
       }),
       codeColumn({
         id: "token",
-        header: "Preview Token",
+        header: "API Key Preview",
         value: (row) => row.apiKeyPreview ?? row.apiKey.slice(0, 12),
       }),
       actionsColumn({
@@ -329,9 +328,7 @@ function DashboardTokensPage() {
         <DashboardNotice tone="error">{providersQuery.error.message}</DashboardNotice>
       ) : null}
       {connectionsQuery.isLoading ? (
-        <DashboardNotice title="Loading">
-          Fetching the latest issued token registry.
-        </DashboardNotice>
+        <DashboardNotice title="Loading">Fetching the latest connections.</DashboardNotice>
       ) : null}
       {connectionsQuery.error instanceof Error ? (
         <DashboardNotice tone="error">{connectionsQuery.error.message}</DashboardNotice>
@@ -349,7 +346,7 @@ function DashboardTokensPage() {
         isLoading={connectionsQuery.isLoading}
         error={connectionsQuery.error instanceof Error ? connectionsQuery.error : null}
         onRetry={() => void connectionsQuery.refetch()}
-        empty={{ title: "No tokens", description: "No issued tokens are available yet." }}
+        empty={{ title: "No connections", description: "No connections are available yet." }}
       />
 
       <Dialog open={Boolean(connecting)} onOpenChange={(open) => !open && setConnecting(null)}>
@@ -357,7 +354,7 @@ function DashboardTokensPage() {
           <DialogHeader>
             <DialogTitle className="normal-case">Add Connection</DialogTitle>
             <DialogDescription>
-              Authenticate the provider account and issue a managed API key.
+              Authenticate the provider account and create a managed connection.
             </DialogDescription>
           </DialogHeader>
           {connecting ? (
@@ -379,7 +376,7 @@ function DashboardTokensPage() {
                 {connectView.status === "completed" && connectView.connection ? (
                   <DashboardNotice title="Connection Ready" tone="success">
                     {connectView.connection.displayName} is connected and the API key has been
-                    issued.
+                    ready.
                   </DashboardNotice>
                 ) : null}
 
@@ -408,7 +405,7 @@ function DashboardTokensPage() {
                       value={connectView.verificationUri ?? "No verification URI available yet."}
                     />
                     {connectView.apiKey ? (
-                      <DashboardResult title="Issued API Key" value={connectView.apiKey} />
+                      <DashboardResult title="API Key" value={connectView.apiKey} />
                     ) : null}
                   </div>
 
@@ -543,9 +540,9 @@ function DashboardTokensPage() {
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="normal-case">Edit Credential</DialogTitle>
+            <DialogTitle className="normal-case">Edit Connection</DialogTitle>
             <DialogDescription>
-              Update the operator-facing label, allowed scopes, and status for this issued token.
+              Update the operator-facing label, permissions, and status for this connection.
             </DialogDescription>
           </DialogHeader>
           {editing ? (

@@ -17,7 +17,7 @@ const META: Record<string, { title: string }> = {
     title: "Overview",
   },
   "/dashboard/tokens": {
-    title: "Issued Tokens",
+    title: "Connections",
   },
   "/dashboard/logs": {
     title: "Request Logs",

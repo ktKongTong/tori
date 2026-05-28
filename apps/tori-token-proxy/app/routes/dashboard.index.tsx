@@ -145,7 +145,7 @@ function DashboardOverviewPage() {
           isLoading={connectionsQuery.isLoading}
           error={connectionsQuery.error instanceof Error ? connectionsQuery.error : null}
           onRetry={() => void connectionsQuery.refetch()}
-          empty={{ title: "No connections", description: "No issued tokens are available yet." }}
+          empty={{ title: "No connections", description: "No connections are available yet." }}
         />
       </section>
 

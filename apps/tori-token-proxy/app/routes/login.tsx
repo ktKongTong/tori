@@ -50,18 +50,19 @@ function LoginPage() {
               Admin Control Plane
             </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Sign in with the token-proxy admin key to inspect issued tokens, review request
-              telemetry, reconnect Steam credentials, and revoke or scope credentials without
-              touching raw persistence directly.
+              Sign in with the token-proxy admin key to inspect connections, review request
+              telemetry, reconnect provider credentials, and manage permissions without touching raw
+              persistence directly.
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="border bg-card/80 px-5 py-5">
                 <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
-                  Issued Credentials
+                  Connections
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Review provider identity, status, scopes, and last-used metadata from one table.
+                  Review provider identity, status, permissions, and last-used metadata from one
+                  table.
                 </p>
               </div>
               <div className="border bg-card/80 px-5 py-5">

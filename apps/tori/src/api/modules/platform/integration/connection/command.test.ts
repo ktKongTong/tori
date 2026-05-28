@@ -152,7 +152,7 @@ describe("token-proxy connection flow", () => {
     expect(connectUrl.searchParams.get("provider")).toBe("steam");
     expect(connectUrl.searchParams.get("sessionId")).toBe(result.sessionId);
     expect(connectUrl.searchParams.get("state")).toBe(result.state);
-    expect(connectUrl.searchParams.get("scope")).toBe("proxy account steam-family");
+    expect(connectUrl.searchParams.get("scope")).toBe("proxy account");
     expect(connectUrl.searchParams.get("code_challenge_method")).toBe("S256");
     expect(connectUrl.searchParams.get("code_challenge")).toBeTruthy();
 
@@ -231,9 +231,14 @@ describe("token-proxy connection flow", () => {
             provider: "steam",
             providerUid: "76561198000000000",
             name: "Steam User",
-            permissions: ["proxy", "account", "steam-family"],
+            permissions: ["proxy", "account"],
           },
-          apiKey: "tp-api-key",
+          access_token: "tp-api-key",
+          token_type: "Bearer",
+          scope: "proxy account",
+          provider: "steam",
+          provider_uid: "76561198000000000",
+          display_name: "Steam User",
           account: {
             providerAccountId: "76561198000000000",
             providerAccountName: "Steam User",
@@ -365,9 +370,14 @@ describe("token-proxy connection flow", () => {
             provider: "steam",
             providerUid: "76561198000000000",
             name: "Steam User",
-            permissions: ["proxy", "account", "steam-family"],
+            permissions: ["proxy", "account"],
           },
-          apiKey: "new-tp-api-key",
+          access_token: "new-tp-api-key",
+          token_type: "Bearer",
+          scope: "proxy account",
+          provider: "steam",
+          provider_uid: "76561198000000000",
+          display_name: "Steam User",
           account: {
             providerAccountId: "76561198000000000",
             providerAccountName: "Steam User",
