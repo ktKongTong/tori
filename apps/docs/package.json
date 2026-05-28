@@ -4,10 +4,10 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "vp dev",
+    "build": "vp build",
     "start": "serve .output/public --config ../../serve.json",
-    "preview": "vite preview",
+    "preview": "vp preview",
     "types:check": "fumadocs-mdx && tsc --noEmit",
     "postinstall": "fumadocs-mdx"
   },

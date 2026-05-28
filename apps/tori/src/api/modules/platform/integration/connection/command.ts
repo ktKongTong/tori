@@ -24,7 +24,12 @@ const tokenProxyExchangeResponseSchema = z.object({
     name: z.string().nullish(),
     permissions: z.array(z.string()).default([]),
   }),
-  apiKey: z.string().min(1),
+  access_token: z.string().min(1),
+  token_type: z.string(),
+  scope: z.string(),
+  provider: z.string(),
+  provider_uid: z.string(),
+  display_name: z.string(),
   account: z
     .object({
       providerAccountId: z.string(),
@@ -248,10 +253,7 @@ export async function startTokenProxyConnection(
   connectUrl.searchParams.set("code_challenge", codeChallenge);
   connectUrl.searchParams.set("code_challenge_method", "S256");
   connectUrl.searchParams.set("label", "Tori");
-  connectUrl.searchParams.set(
-    "scope",
-    input.provider === "steam" ? "proxy,account,steam-family" : "proxy,account",
-  );
+  connectUrl.searchParams.set("scope", "proxy account");
 
   const session = await ctx.repositories.connection.createTokenProxyConnectionSession({
     id: sessionId,
@@ -410,14 +412,14 @@ export async function completeTokenProxyConnectionCallback(
       connectionId: connection.id,
       proxyInstanceId: proxyInstance.id,
       kind: TOKEN_PROXY_CREDENTIAL_KIND,
-      credentialRef: exchange.apiKey,
+      credentialRef: exchange.access_token,
       metadata: credentialMetadata,
     });
   } else {
     await ctx.repositories.connection.updateConnectionCredential({
       id: existingCredential.id,
       proxyInstanceId: proxyInstance.id,
-      credentialRef: exchange.apiKey,
+      credentialRef: exchange.access_token,
       metadata: credentialMetadata,
     });
   }

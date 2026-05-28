@@ -59,6 +59,13 @@ function toPublicClient(client: OAuthClient): LibraryOAuthClient {
   };
 }
 
+function normalizeScope(scope: string | undefined) {
+  return scope
+    ?.split(/[,\s]+/)
+    .filter(Boolean)
+    .join(" ");
+}
+
 function toOAuthError(error: unknown) {
   if (error && typeof error === "object" && "oauth" in error) {
     const oauthError = error as {
@@ -313,7 +320,7 @@ export async function validateExternalConnectAuthorizationRequest(
         state: request.state,
         code_challenge: request.code_challenge,
         code_challenge_method: request.code_challenge_method,
-        ...(request.scope ? { scope: request.scope } : {}),
+        ...(request.scope ? { scope: normalizeScope(request.scope) } : {}),
       },
     }),
   );

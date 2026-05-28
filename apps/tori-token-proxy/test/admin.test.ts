@@ -207,7 +207,7 @@ describe("admin connect flow", () => {
         client.client_id,
       )}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&provider=mock-connect&state=${encodeURIComponent(
         state,
-      )}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256&scope=proxy%20account`,
+      )}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256&scope=proxy%2Caccount`,
     );
     const sessionId = externalConnectSessionId(startResponse);
     expect(sessionId).toBeTruthy();

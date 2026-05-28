@@ -152,7 +152,7 @@ describe("token-proxy connection flow", () => {
     expect(connectUrl.searchParams.get("provider")).toBe("steam");
     expect(connectUrl.searchParams.get("sessionId")).toBe(result.sessionId);
     expect(connectUrl.searchParams.get("state")).toBe(result.state);
-    expect(connectUrl.searchParams.get("scope")).toBe("proxy,account,steam-family");
+    expect(connectUrl.searchParams.get("scope")).toBe("proxy account steam-family");
     expect(connectUrl.searchParams.get("code_challenge_method")).toBe("S256");
     expect(connectUrl.searchParams.get("code_challenge")).toBeTruthy();
 
