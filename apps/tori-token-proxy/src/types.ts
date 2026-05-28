@@ -68,8 +68,12 @@ export interface AuthSessionState {
   mode?: "connect" | "reconnect" | "external-connect";
   reconnectConnectionId?: string | null;
   externalConnect?: {
+    clientId?: string;
     state: string;
     callbackUrl: string;
+    redirectUri?: string;
+    codeChallenge?: string;
+    codeChallengeMethod?: "S256";
     connectionId?: string | null;
     authStarted?: boolean;
   } | null;
@@ -87,6 +91,15 @@ export interface AuthResult {
   displayName: string;
   accessToken: string;
   refreshToken: string;
+}
+
+export interface OAuthClient {
+  clientId: string;
+  clientSecret: string;
+  name: string;
+  redirectUris: string[];
+  scopes: string[];
+  createdAt: number;
 }
 
 export interface ProxyRule {
@@ -113,6 +126,9 @@ export interface RequestLog {
   routeGroup: string;
   method: string;
   targetUrl?: string | null;
+  headers?: Record<string, string> | null;
+  query?: Record<string, string | string[]> | null;
+  requestBody?: unknown;
   statusCode?: number | null;
   error?: string | null;
   createdAt: number;

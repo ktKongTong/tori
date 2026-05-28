@@ -12,13 +12,18 @@ const proxyInstance = {
   provider: "multi",
   name: "Proxy",
   baseUrl: "https://proxy.example.com",
-  credentialRef: "admin-key",
+  credentialRef: "client-1",
   status: "active",
   healthStatus: "healthy",
   capabilities: {
     providers: [{ name: "steam", flow: "poll", grantType: "device" }],
   },
-  metadata: null,
+  metadata: {
+    oauthClient: {
+      clientId: "client-1",
+      clientSecret: "secret-1",
+    },
+  },
   lastSeenAt: null,
   createdAt: new Date("2026-05-10T00:00:00Z"),
   updatedAt: new Date("2026-05-10T00:00:00Z"),
@@ -32,7 +37,7 @@ function createConnectionRepository(overrides: Record<string, unknown> = {}) {
       tokenProxyCode: null,
       connectionId: null,
       error: null,
-      metadata: null,
+      metadata: input.metadata ?? { codeVerifier: input.codeVerifier },
       completedAt: null,
       createdAt: new Date("2026-05-10T00:00:00Z"),
       updatedAt: new Date("2026-05-10T00:00:00Z"),
@@ -142,12 +147,16 @@ describe("token-proxy connection flow", () => {
     const connectUrl = new URL(result.connectUrl);
     expect(connectUrl.origin).toBe("https://proxy.example.com");
     expect(connectUrl.pathname).toBe("/admin/external-connect");
+    expect(connectUrl.searchParams.get("client_id")).toBe("client-1");
+    expect(connectUrl.searchParams.get("response_type")).toBe("code");
     expect(connectUrl.searchParams.get("provider")).toBe("steam");
     expect(connectUrl.searchParams.get("sessionId")).toBe(result.sessionId);
     expect(connectUrl.searchParams.get("state")).toBe(result.state);
-    expect(connectUrl.searchParams.get("permissions")).toBe("proxy,account,steam-family");
+    expect(connectUrl.searchParams.get("scope")).toBe("proxy,account,steam-family");
+    expect(connectUrl.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(connectUrl.searchParams.get("code_challenge")).toBeTruthy();
 
-    const callbackUrl = new URL(connectUrl.searchParams.get("callback") ?? "");
+    const callbackUrl = new URL(connectUrl.searchParams.get("redirect_uri") ?? "");
     expect(callbackUrl.origin).toBe("https://tori.example.com");
     expect(callbackUrl.pathname).toBe("/api/integration/connections/token-proxy/callback");
     expect(callbackUrl.searchParams.get("sessionId")).toBe(result.sessionId);
@@ -194,7 +203,7 @@ describe("token-proxy connection flow", () => {
         tokenProxyCode: null,
         connectionId: null,
         error: null,
-        metadata: null,
+        metadata: { codeVerifier: "verifier-1" },
         expiresAt: new Date(Date.now() + 60_000),
         completedAt: null,
         createdAt: new Date("2026-05-10T00:00:00Z"),
@@ -266,19 +275,17 @@ describe("token-proxy connection flow", () => {
         tokenProxyCode: "code-1",
         connectionId: "conn-1",
       });
-      expect(fetchMock.mock.calls[0]?.[0]).toBe(
-        "https://proxy.example.com/admin/external-connect/exchange",
-      );
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("https://proxy.example.com/oauth/token");
       const exchangeRequestBody = fetchMock.mock.calls[0]?.[1]?.body;
-      if (typeof exchangeRequestBody !== "string") {
-        throw new Error("Expected JSON string exchange request body");
+      if (!(exchangeRequestBody instanceof URLSearchParams)) {
+        throw new Error("Expected URLSearchParams exchange request body");
       }
-      const exchangeBody = JSON.parse(exchangeRequestBody);
-      expect(exchangeBody).toMatchObject({
-        sessionId: "session-1",
-        state: "state-1",
-        code: "code-1",
-      });
+      expect(exchangeRequestBody.get("grant_type")).toBe("authorization_code");
+      expect(exchangeRequestBody.get("client_id")).toBe("client-1");
+      expect(exchangeRequestBody.get("client_secret")).toBe("secret-1");
+      expect(exchangeRequestBody.get("redirect_uri")).toBe("https://tori.example.com/callback");
+      expect(exchangeRequestBody.get("code_verifier")).toBe("verifier-1");
+      expect(exchangeRequestBody.get("code")).toBe("code-1");
     } finally {
       fetchMock.mockRestore();
     }
@@ -316,7 +323,7 @@ describe("token-proxy connection flow", () => {
         tokenProxyCode: null,
         connectionId: null,
         error: null,
-        metadata: null,
+        metadata: { codeVerifier: "verifier-1" },
         expiresAt: new Date(Date.now() + 60_000),
         completedAt: null,
         createdAt: new Date("2026-05-10T00:00:00Z"),

@@ -8,6 +8,7 @@ import type {
   SystemTaskDefinition,
   SystemTaskRun,
   TokenRefreshLog,
+  OAuthClient,
 } from "../types.ts";
 
 /**
@@ -43,13 +44,17 @@ export interface Repository {
   revokeApiKey(apiKey: string): Promise<void>;
 
   // ─── Auth Codes (one-time, TTL) ───
-  createAuthCode(connId: string, ttlSec: number): Promise<string>;
+  createAuthCode(connId: string, ttlSec: number, code?: string): Promise<string>;
   consumeAuthCode(code: string): Promise<string | null>;
 
   // ─── Auth Sessions (for client-driven polling) ───
   setAuthSession(sid: string, state: AuthSessionState, ttlSec: number): Promise<void>;
   getAuthSession(sid: string): Promise<AuthSessionState | null>;
   deleteAuthSession(sid: string): Promise<void>;
+
+  // ─── OAuth Clients ───
+  createOAuthClient(input: OAuthClient): Promise<OAuthClient>;
+  getOAuthClient(clientId: string): Promise<OAuthClient | null>;
 
   // ─── Proxy Rules ───
   getProxyRules(provider: string): Promise<ProxyRule[]>;
@@ -64,11 +69,15 @@ export interface Repository {
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
+    headers?: Record<string, string> | null;
+    query?: Record<string, string | string[]> | null;
+    requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
     createdAt: number;
   }): Promise<RequestLog>;
   listRequestLogs(input?: { connectionId?: string; limit?: number }): Promise<RequestLog[]>;
+  deleteRequestLogsBefore(cutoffCreatedAt: number): Promise<number>;
 
   // ─── System Tasks ───
   ensureSystemTaskDefinition(input: {

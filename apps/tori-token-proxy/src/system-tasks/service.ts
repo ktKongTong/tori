@@ -5,6 +5,9 @@ import type { Connection, SystemTaskDefinition, SystemTaskRun } from "../types.t
 import {
   createProviderRefreshTaskId,
   createSystemTaskRunId,
+  REQUEST_LOG_RETENTION_DAYS,
+  REQUEST_LOG_RETENTION_TASK_ID,
+  SYSTEM_TASK_KIND_REQUEST_LOG_RETENTION,
   SYSTEM_TASK_KIND_PROVIDER_REFRESH,
 } from "./types.ts";
 
@@ -16,6 +19,13 @@ interface SystemTaskDeps {
 
 function nowSeconds() {
   return Math.floor(Date.now() / 1000);
+}
+
+function nextUtcMidnightSeconds(now = Date.now()) {
+  const date = new Date(now);
+  return Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1) / 1000,
+  );
 }
 
 function taskSummary(
@@ -36,6 +46,17 @@ function taskSummary(
 
 export async function ensureDefaultSystemTasks({ repo, registry }: SystemTaskDeps) {
   const now = nowSeconds();
+
+  await repo.ensureSystemTaskDefinition({
+    id: REQUEST_LOG_RETENTION_TASK_ID,
+    kind: SYSTEM_TASK_KIND_REQUEST_LOG_RETENTION,
+    provider: "system",
+    intervalSec: 24 * 60 * 60,
+    payload: {
+      retentionDays: REQUEST_LOG_RETENTION_DAYS,
+    },
+    nextRunAt: nextUtcMidnightSeconds(),
+  });
 
   for (const provider of registry.all()) {
     if (!provider.refreshPolicy) continue;
@@ -163,11 +184,23 @@ async function executeSystemTask(
   taskRunId: string,
 ) {
   switch (definition.kind) {
+    case SYSTEM_TASK_KIND_REQUEST_LOG_RETENTION:
+      return runRequestLogRetentionTask(deps);
     case SYSTEM_TASK_KIND_PROVIDER_REFRESH:
       return runProviderRefreshTask(deps, definition.provider, taskRunId);
     default:
       throw new Error(`unsupported system task kind: ${definition.kind}`);
   }
+}
+
+async function runRequestLogRetentionTask({ repo }: SystemTaskDeps) {
+  const cutoffCreatedAt = nowSeconds() - REQUEST_LOG_RETENTION_DAYS * 24 * 60 * 60;
+  const deleted = await repo.deleteRequestLogsBefore(cutoffCreatedAt);
+  return {
+    retentionDays: REQUEST_LOG_RETENTION_DAYS,
+    cutoffCreatedAt,
+    deleted,
+  };
 }
 
 async function runProviderRefreshTask(

@@ -4,6 +4,7 @@ import type {
   Connection,
   CreateConnectionParams,
   EncryptedCredentials,
+  OAuthClient,
   ProxyRule,
   RequestLog,
   SystemTaskDefinition,
@@ -22,6 +23,7 @@ export class MemoryRepository implements Repository {
   connections = new Map<string, Connection & { accessTokenEnc: string; refreshTokenEnc: string }>();
   authCodes = new Map<string, { connectionId: string; expiresAt: number; consumed: boolean }>();
   authSessions = new Map<string, { state: AuthSessionState; expiresAt: number }>();
+  oauthClients = new Map<string, OAuthClient>();
   proxyRules: ProxyRule[] = [];
   settingsMap = new Map<string, string>();
   requestLogs: RequestLog[] = [];
@@ -136,8 +138,8 @@ export class MemoryRepository implements Repository {
     }
   }
 
-  async createAuthCode(connId: string, ttlSec: number): Promise<string> {
-    const code = generateId("ac");
+  async createAuthCode(connId: string, ttlSec: number, inputCode?: string): Promise<string> {
+    const code = inputCode ?? generateId("ac");
     this.authCodes.set(code, {
       connectionId: connId,
       expiresAt: Math.floor(Date.now() / 1000) + ttlSec,
@@ -173,6 +175,15 @@ export class MemoryRepository implements Repository {
     this.authSessions.delete(sid);
   }
 
+  async createOAuthClient(input: OAuthClient): Promise<OAuthClient> {
+    this.oauthClients.set(input.clientId, input);
+    return input;
+  }
+
+  async getOAuthClient(clientId: string): Promise<OAuthClient | null> {
+    return this.oauthClients.get(clientId) ?? null;
+  }
+
   async getProxyRules(provider: string): Promise<ProxyRule[]> {
     return this.proxyRules.filter((rule) => rule.provider === provider);
   }
@@ -190,6 +201,9 @@ export class MemoryRepository implements Repository {
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
+    headers?: Record<string, string> | null;
+    query?: Record<string, string | string[]> | null;
+    requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
     createdAt: number;
@@ -200,6 +214,9 @@ export class MemoryRepository implements Repository {
       routeGroup: log.routeGroup,
       method: log.method,
       targetUrl: log.targetUrl ?? null,
+      headers: log.headers ?? null,
+      query: log.query ?? null,
+      requestBody: log.requestBody ?? null,
       statusCode: log.statusCode ?? null,
       error: log.error ?? null,
       createdAt: log.createdAt,
@@ -214,6 +231,12 @@ export class MemoryRepository implements Repository {
       ? this.requestLogs.filter((row) => row.connectionId === input.connectionId)
       : this.requestLogs;
     return rows.slice(0, limit);
+  }
+
+  async deleteRequestLogsBefore(cutoffCreatedAt: number): Promise<number> {
+    const before = this.requestLogs.length;
+    this.requestLogs = this.requestLogs.filter((row) => row.createdAt >= cutoffCreatedAt);
+    return before - this.requestLogs.length;
   }
 
   async ensureSystemTaskDefinition(input: {

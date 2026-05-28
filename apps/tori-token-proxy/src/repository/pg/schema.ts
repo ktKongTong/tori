@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, serial, text } from "drizzle-orm/pg-core";
 
 // ─── Connections ───
 
@@ -61,6 +61,9 @@ export const requestLogs = pgTable("request_logs", {
   routeGroup: text("route_group").notNull(),
   method: text("method").notNull(),
   targetUrl: text("target_url"),
+  headers: jsonb("headers"),
+  query: jsonb("query"),
+  requestBody: jsonb("request_body"),
   statusCode: integer("status_code"),
   error: text("error"),
   createdAt: integer("created_at").notNull(),

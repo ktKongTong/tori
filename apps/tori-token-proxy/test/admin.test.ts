@@ -105,6 +105,27 @@ function request(
   return app.request(`http://localhost${path}`, init);
 }
 
+async function createOAuthClient(app: ReturnType<typeof createApp>, redirectUri: string) {
+  const loginResponse = await request(app, "POST", "/admin/auth/login", {
+    body: { adminKey: ADMIN_KEY },
+  });
+  expect(loginResponse.status).toBe(200);
+  const cookie = parseCookie(loginResponse.headers.get("set-cookie"));
+  const response = await request(app, "POST", "/admin/oauth/clients", {
+    headers: { Cookie: cookie },
+    body: {
+      name: "Tori",
+      redirectUris: [redirectUri],
+      scopes: ["proxy", "account"],
+    },
+  });
+  expect(response.status).toBe(200);
+  return (await response.json()) as {
+    client_id: string;
+    client_secret: string;
+  };
+}
+
 describe("admin connect flow", () => {
   it("creates a connection and issues an api key from admin dashboard flow", async () => {
     const { app } = createTestApp();
@@ -168,13 +189,25 @@ describe("admin connect flow", () => {
     const { app } = createTestApp();
     const state = "external-state-0001";
     const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
+    const client = await createOAuthClient(app, callback);
+    const codeVerifier = "verifier-verifier-verifier-verifier-0001";
+    const codeChallenge = await crypto.subtle
+      .digest("SHA-256", new TextEncoder().encode(codeVerifier))
+      .then((digest) =>
+        btoa(String.fromCharCode(...new Uint8Array(digest)))
+          .replaceAll("+", "-")
+          .replaceAll("/", "_")
+          .replaceAll("=", ""),
+      );
 
     const startResponse = await request(
       app,
       "GET",
-      `/admin/external-connect?provider=mock-connect&state=${encodeURIComponent(
+      `/admin/external-connect?client_id=${encodeURIComponent(
+        client.client_id,
+      )}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&provider=mock-connect&state=${encodeURIComponent(
         state,
-      )}&callback=${encodeURIComponent(callback)}&permissions=proxy,account`,
+      )}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256&scope=proxy%20account`,
     );
     const sessionId = externalConnectSessionId(startResponse);
     expect(sessionId).toBeTruthy();
@@ -213,25 +246,32 @@ describe("admin connect flow", () => {
     const code = redirectUrl.searchParams.get("code");
     expect(code).toMatch(new RegExp(`^${sessionId}\\.tp_code_`));
 
-    const exchangeResponse = await request(app, "POST", "/admin/external-connect/exchange", {
-      body: { code, state },
+    const exchangeResponse = await request(app, "POST", "/oauth/token", {
+      body: `grant_type=authorization_code&code=${encodeURIComponent(
+        code ?? "",
+      )}&client_id=${encodeURIComponent(client.client_id)}&client_secret=${encodeURIComponent(
+        client.client_secret,
+      )}&redirect_uri=${encodeURIComponent(callback)}&code_verifier=${encodeURIComponent(
+        codeVerifier,
+      )}`,
     });
     expect(exchangeResponse.status).toBe(200);
     const exchangeData = (await exchangeResponse.json()) as any;
-    expect(exchangeData.connection.provider).toBe("mock-connect");
-    expect(exchangeData.connection.providerUid).toBe("mock-user-001");
+    expect(exchangeData.provider).toBe("mock-connect");
+    expect(exchangeData.provider_uid).toBe("mock-user-001");
     expect(exchangeData.account.providerAccountName).toBe("Mock Admin User");
-    expect(exchangeData.apiKey).toMatch(/^ak_/);
+    expect(exchangeData.access_token).toMatch(/^ak_/);
 
-    const repeatedExchangeResponse = await request(
-      app,
-      "POST",
-      "/admin/external-connect/exchange",
-      {
-        body: { code, state },
-      },
-    );
-    expect(repeatedExchangeResponse.status).toBe(404);
+    const repeatedExchangeResponse = await request(app, "POST", "/oauth/token", {
+      body: `grant_type=authorization_code&code=${encodeURIComponent(
+        code ?? "",
+      )}&client_id=${encodeURIComponent(client.client_id)}&client_secret=${encodeURIComponent(
+        client.client_secret,
+      )}&redirect_uri=${encodeURIComponent(callback)}&code_verifier=${encodeURIComponent(
+        codeVerifier,
+      )}`,
+    });
+    expect(repeatedExchangeResponse.status).toBe(400);
   });
 
   it("lets external connect choose an existing token-proxy connection before creating a new one", async () => {
@@ -250,13 +290,25 @@ describe("admin connect flow", () => {
     });
     const state = "external-state-0002";
     const callback = "https://tori.example.com/api/integration/connections/token-proxy/callback";
+    const client = await createOAuthClient(app, callback);
+    const codeVerifier = "verifier-verifier-verifier-verifier-0002";
+    const codeChallenge = await crypto.subtle
+      .digest("SHA-256", new TextEncoder().encode(codeVerifier))
+      .then((digest) =>
+        btoa(String.fromCharCode(...new Uint8Array(digest)))
+          .replaceAll("+", "-")
+          .replaceAll("/", "_")
+          .replaceAll("=", ""),
+      );
 
     const startResponse = await request(
       app,
       "GET",
-      `/admin/external-connect?provider=mock-connect&state=${encodeURIComponent(
+      `/admin/external-connect?client_id=${encodeURIComponent(
+        client.client_id,
+      )}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&provider=mock-connect&state=${encodeURIComponent(
         state,
-      )}&callback=${encodeURIComponent(callback)}&permissions=proxy,account`,
+      )}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256&scope=proxy%20account`,
     );
     const sessionId = externalConnectSessionId(startResponse);
     expect(sessionId).toBeTruthy();
@@ -283,14 +335,20 @@ describe("admin connect flow", () => {
     const code = redirectUrl.searchParams.get("code");
     expect(code).toMatch(new RegExp(`^${sessionId}\\.tp_code_`));
 
-    const exchangeResponse = await request(app, "POST", "/admin/external-connect/exchange", {
-      body: { code, state },
+    const exchangeResponse = await request(app, "POST", "/oauth/token", {
+      body: `grant_type=authorization_code&code=${encodeURIComponent(
+        code ?? "",
+      )}&client_id=${encodeURIComponent(client.client_id)}&client_secret=${encodeURIComponent(
+        client.client_secret,
+      )}&redirect_uri=${encodeURIComponent(callback)}&code_verifier=${encodeURIComponent(
+        codeVerifier,
+      )}`,
     });
     expect(exchangeResponse.status).toBe(200);
     const exchangeData = (await exchangeResponse.json()) as any;
     expect(exchangeData.connection.id).toBe(existing.id);
     expect(exchangeData.connection.providerUid).toBe("mock-user-existing");
     expect(exchangeData.account.providerAccountName).toBe("Existing Mock User");
-    expect(exchangeData.apiKey).toBe(existing.apiKey);
+    expect(exchangeData.access_token).toBe(existing.apiKey);
   });
 });

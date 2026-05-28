@@ -6,6 +6,7 @@ import type {
   Connection,
   CreateConnectionParams,
   EncryptedCredentials,
+  OAuthClient,
   ProxyRule,
   RequestLog,
   SystemTaskDefinition,
@@ -338,8 +339,8 @@ export class SqliteRepository implements Repository {
       .where(eq(schema.connections.apiKey, apiKey));
   }
 
-  async createAuthCode(connId: string, ttlSec: number): Promise<string> {
-    const code = generateId("ac");
+  async createAuthCode(connId: string, ttlSec: number, inputCode?: string): Promise<string> {
+    const code = inputCode ?? generateId("ac");
     const expiresAt = Math.floor(Date.now() / 1000) + ttlSec;
     await this.db.insert(schema.authCodes).values({
       code,
@@ -352,19 +353,12 @@ export class SqliteRepository implements Repository {
 
   async consumeAuthCode(code: string): Promise<string | null> {
     const now = Math.floor(Date.now() / 1000);
-    const rows = await this.db
-      .select()
-      .from(schema.authCodes)
-      .where(and(eq(schema.authCodes.code, code), eq(schema.authCodes.consumed, false)))
-      .limit(1);
-
-    const row = rows[0];
-    if (!row || row.expiresAt < now) return null;
-
-    await this.db
+    const [row] = await this.db
       .update(schema.authCodes)
       .set({ consumed: true })
-      .where(eq(schema.authCodes.code, code));
+      .where(and(eq(schema.authCodes.code, code), eq(schema.authCodes.consumed, false)))
+      .returning();
+    if (!row || row.expiresAt < now) return null;
 
     return row.connectionId;
   }
@@ -397,6 +391,17 @@ export class SqliteRepository implements Repository {
     await this.db.delete(schema.authSessions).where(eq(schema.authSessions.sid, sid));
   }
 
+  async createOAuthClient(input: OAuthClient): Promise<OAuthClient> {
+    await this.setSetting(`oauth_client:${input.clientId}`, JSON.stringify(input));
+    return input;
+  }
+
+  async getOAuthClient(clientId: string): Promise<OAuthClient | null> {
+    const value = await this.getSetting(`oauth_client:${clientId}`);
+    if (!value) return null;
+    return JSON.parse(value) as OAuthClient;
+  }
+
   async getProxyRules(provider: string): Promise<ProxyRule[]> {
     return this.db.select().from(schema.proxyRules).where(eq(schema.proxyRules.provider, provider));
   }
@@ -422,6 +427,9 @@ export class SqliteRepository implements Repository {
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
+    headers?: Record<string, string> | null;
+    query?: Record<string, string | string[]> | null;
+    requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
     createdAt: number;
@@ -433,6 +441,9 @@ export class SqliteRepository implements Repository {
         routeGroup: log.routeGroup,
         method: log.method,
         targetUrl: log.targetUrl ?? null,
+        headers: log.headers as any,
+        query: log.query as any,
+        requestBody: log.requestBody as any,
         statusCode: log.statusCode ?? null,
         error: log.error ?? null,
         createdAt: log.createdAt,
@@ -459,6 +470,14 @@ export class SqliteRepository implements Repository {
       .from(schema.requestLogs)
       .orderBy(desc(schema.requestLogs.id))
       .limit(limit) as unknown as Promise<RequestLog[]>;
+  }
+
+  async deleteRequestLogsBefore(cutoffCreatedAt: number): Promise<number> {
+    const rows = (await this.db
+      .delete(schema.requestLogs)
+      .where(lte(schema.requestLogs.createdAt, cutoffCreatedAt))
+      .returning({ id: schema.requestLogs.id })) as Array<{ id: number }>;
+    return rows.length;
   }
 
   async ensureSystemTaskDefinition(input: {

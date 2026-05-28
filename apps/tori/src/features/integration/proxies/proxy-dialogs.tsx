@@ -17,7 +17,8 @@ import { useModal } from "@/lib/modal";
 
 const proxyFormSchema = z.object({
   baseUrl: z.url("Enter a valid base URL"),
-  credentialRef: z.string().trim().min(1, "Credential is required"),
+  clientId: z.string().trim().min(1, "Client ID is required"),
+  clientSecret: z.string().trim().min(1, "Client secret is required"),
   name: z.string(),
 });
 
@@ -38,7 +39,8 @@ export function TokenProxyDialog() {
     defaultValues: {
       name: "",
       baseUrl: "",
-      credentialRef: "",
+      clientId: "",
+      clientSecret: "",
     },
     validators: {
       onSubmit: proxyFormSchema,
@@ -107,16 +109,38 @@ export function TokenProxyDialog() {
             }}
           />
           <proxyForm.Field
-            name="credentialRef"
+            name="clientId"
             children={(field) => {
               const invalid = field.state.meta.errors.length > 0;
 
               return (
                 <Field data-invalid={invalid}>
-                  <FieldLabel htmlFor={field.name}>Admin/API Credential</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>OAuth Client ID</FieldLabel>
                   <Input
                     id={field.name}
                     name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-invalid={invalid}
+                  />
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              );
+            }}
+          />
+          <proxyForm.Field
+            name="clientSecret"
+            children={(field) => {
+              const invalid = field.state.meta.errors.length > 0;
+
+              return (
+                <Field data-invalid={invalid}>
+                  <FieldLabel htmlFor={field.name}>OAuth Client Secret</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="password"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}

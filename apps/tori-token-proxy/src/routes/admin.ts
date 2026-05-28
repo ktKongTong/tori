@@ -37,11 +37,15 @@ const createConnectionSchema = z.object({
 });
 
 const externalConnectQuerySchema = z.object({
+  client_id: z.string().min(1),
+  redirect_uri: z.string().url(),
+  response_type: z.literal("code").default("code"),
   provider: z.string().min(1),
   state: z.string().min(16),
-  callback: z.string().url(),
+  code_challenge: z.string().min(32),
+  code_challenge_method: z.literal("S256"),
+  scope: z.string().optional(),
   label: z.string().nullable().optional(),
-  permissions: z.string().optional(),
 });
 
 const externalConnectConfirmSchema = z.object({
@@ -53,9 +57,10 @@ const externalConnectStartNewSchema = z.object({
   state: z.string().min(16),
 });
 
-const externalConnectExchangeSchema = z.object({
-  code: z.string().min(1),
-  state: z.string().min(16),
+const createOAuthClientSchema = z.object({
+  name: z.string().trim().min(1).default("OAuth Client"),
+  redirectUris: z.array(z.string().url()).min(1),
+  scopes: z.array(z.string().min(1)).default(["proxy", "account"]),
 });
 
 const connectionViewSchema = z.object({
@@ -222,7 +227,7 @@ function parsePermissions(value: string | undefined) {
   }
 
   const permissions = value
-    .split(",")
+    .split(/[,\s]+/)
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -254,6 +259,31 @@ export function adminRoutes(deps: AdminDeps) {
     deleteCookie(c, ADMIN_SESSION_COOKIE, { path: "/" });
     return c.json({ authenticated: false });
   });
+
+  app.post(
+    "/oauth/clients",
+    adminSessionAuth(secret, adminKey),
+    zValidator("json", createOAuthClientSchema, zodHook),
+    async (c) => {
+      const body = c.req.valid("json");
+      const client = await repo.createOAuthClient({
+        clientId: randomCode("client", 16),
+        clientSecret: randomCode("secret", 24),
+        name: body.name,
+        redirectUris: body.redirectUris,
+        scopes: body.scopes,
+        createdAt: Math.floor(Date.now() / 1000),
+      });
+
+      return c.json({
+        client_id: client.clientId,
+        client_secret: client.clientSecret,
+        client_name: client.name,
+        redirect_uris: client.redirectUris,
+        scopes: client.scopes,
+      });
+    },
+  );
 
   app.use("/auth/session", adminSessionAuth(secret, adminKey));
   app.get("/auth/session", (c) => {
@@ -304,10 +334,27 @@ export function adminRoutes(deps: AdminDeps) {
         );
       }
 
+      const client = await repo.getOAuthClient(query.client_id);
+      if (!client) {
+        return c.json(
+          { error: "unauthorized_client", error_description: "oauth client not found" },
+          401,
+        );
+      }
+
+      if (!client.redirectUris.includes(query.redirect_uri)) {
+        return c.json(
+          { error: "invalid_request", error_description: "redirect_uri is not allowed" },
+          400,
+        );
+      }
+
       const sessionId = randomCode("external_connect", 12);
       const expiresIn = 300;
       const expiresAt = Date.now() + expiresIn * 1000;
-      const permissions = parsePermissions(query.permissions);
+      const permissions = parsePermissions(query.scope).filter((scope) =>
+        client.scopes.includes(scope),
+      );
 
       await repo.setAuthSession(
         sessionId,
@@ -318,14 +365,18 @@ export function adminRoutes(deps: AdminDeps) {
           expiresAt,
           mode: "external-connect",
           externalConnect: {
+            clientId: client.clientId,
             state: query.state,
-            callbackUrl: query.callback,
+            callbackUrl: query.redirect_uri,
+            redirectUri: query.redirect_uri,
+            codeChallenge: query.code_challenge,
+            codeChallengeMethod: query.code_challenge_method,
             connectionId: null,
             authStarted: false,
           },
           requestedConnection: {
-            label: query.label ?? "Tori",
-            permissions,
+            label: query.label ?? client.name,
+            permissions: permissions.length ? permissions : ["proxy", "account"],
           },
         },
         expiresIn,
@@ -588,6 +639,7 @@ export function adminRoutes(deps: AdminDeps) {
 
         const codeSecret = randomCode("tp_code", 16);
         const code = `${sid}.${codeSecret}`;
+        await repo.createAuthCode(existingConnection.id, 300, code);
         const callbackUrl = new URL(session.externalConnect.callbackUrl);
         callbackUrl.searchParams.set("state", session.externalConnect.state);
         callbackUrl.searchParams.set("code", code);
@@ -632,6 +684,7 @@ export function adminRoutes(deps: AdminDeps) {
       });
       const codeSecret = randomCode("tp_code", 16);
       const code = `${sid}.${codeSecret}`;
+      await repo.createAuthCode(connection.id, 300, code);
       const callbackUrl = new URL(session.externalConnect.callbackUrl);
       callbackUrl.searchParams.set("state", session.externalConnect.state);
       callbackUrl.searchParams.set("code", code);
@@ -651,55 +704,6 @@ export function adminRoutes(deps: AdminDeps) {
 
       return c.json({
         redirectUrl: callbackUrl.toString(),
-      });
-    },
-  );
-
-  app.post(
-    "/external-connect/exchange",
-    zValidator("json", externalConnectExchangeSchema, zodHook),
-    async (c) => {
-      const body = c.req.valid("json");
-      const [sid] = body.code.split(".");
-      if (!sid) {
-        return c.json({ error: "invalid_request", error_description: "invalid code" }, 400);
-      }
-
-      const session = await repo.getAuthSession(sid);
-      if (
-        !session ||
-        session.mode !== "external-connect" ||
-        !session.externalConnect ||
-        !session.externalConnect.connectionId ||
-        session.authCode !== body.code
-      ) {
-        return c.json({ error: "not_found", error_description: "exchange code not found" }, 404);
-      }
-
-      if (session.externalConnect.state !== body.state) {
-        return c.json({ error: "invalid_request", error_description: "state mismatch" }, 400);
-      }
-
-      if (session.expiresAt < Date.now()) {
-        await repo.deleteAuthSession(sid);
-        return c.json({ error: "expired", error_description: "exchange code expired" }, 410);
-      }
-
-      const connection = await repo.getConnectionById(session.externalConnect.connectionId);
-      if (!connection) {
-        return c.json({ error: "not_found", error_description: "connection not found" }, 404);
-      }
-
-      await repo.deleteAuthSession(sid);
-
-      return c.json({
-        connection: serializeConnection(connection),
-        apiKey: connection.apiKey,
-        account: {
-          providerAccountId: connection.providerUid,
-          providerAccountName: connection.displayName,
-          providerAccountAvatar: null,
-        },
       });
     },
   );

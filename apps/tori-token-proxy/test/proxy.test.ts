@@ -216,6 +216,9 @@ describe("proxy", () => {
 
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain("access_token=real-steam-token-123");
+      const [log] = await repo.listRequestLogs({ connectionId: conn.id });
+      expect(log.targetUrl).toContain("access_token=%5Bredacted%5D");
+      expect(log.query?.access_token).toBe("[redacted]");
     });
 
     it("injects custom header token", async () => {
@@ -281,6 +284,58 @@ describe("proxy", () => {
 
       expect(res.status).toBe(201);
       expect(mockFetch.mock.calls[0][1].method).toBe("POST");
+      const [log] = await repo.listRequestLogs({ connectionId: conn.id });
+      expect(log.headers?.["x-api-key"]).toBe("[redacted]");
+      expect(log.headers?.["content-type"]).toBe("application/json");
+      expect(log.requestBody).toEqual({ key: "value" });
+    });
+
+    it("redacts sensitive headers, query values, and JSON body fields", async () => {
+      const { repo, app } = setup();
+      const conn = await createTestConnection(repo);
+
+      mockFetch.mockResolvedValueOnce(new Response("created", { status: 201 }));
+
+      const res = await app.request("http://localhost/proxy/steam", {
+        method: "POST",
+        headers: {
+          "X-API-KEY": conn.apiKey,
+          "X-PROXY-URL":
+            "https://api.steampowered.com/test?access_token=query-access&token=query-token&safe=ok",
+          "Content-Type": "application/json",
+          Authorization: "Bearer inbound",
+          Cookie: "session=inbound",
+        },
+        body: JSON.stringify({
+          token: "body-token",
+          refresh_token: "body-refresh",
+          nested: {
+            access_token: "nested-access",
+            safe: "value",
+          },
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const [log] = await repo.listRequestLogs({ connectionId: conn.id });
+      expect(log.headers?.authorization).toBe("[redacted]");
+      expect(log.headers?.cookie).toBe("[redacted]");
+      expect(log.headers?.["x-api-key"]).toBe("[redacted]");
+      expect(log.targetUrl).toContain("access_token=%5Bredacted%5D");
+      expect(log.targetUrl).toContain("token=%5Bredacted%5D");
+      expect(log.query).toMatchObject({
+        access_token: "[redacted]",
+        token: "[redacted]",
+        safe: "ok",
+      });
+      expect(log.requestBody).toEqual({
+        token: "[redacted]",
+        refresh_token: "[redacted]",
+        nested: {
+          access_token: "[redacted]",
+          safe: "value",
+        },
+      });
     });
 
     it("passes through upstream error status", async () => {

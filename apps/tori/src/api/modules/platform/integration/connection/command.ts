@@ -57,6 +57,33 @@ type ConnectionCallbackPayload = {
   updatedAt: Date;
 };
 
+function base64UrlEncode(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+async function createCodeChallenge(verifier: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+function readOAuthClient(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object") return null;
+  const oauthClient = (metadata as { oauthClient?: unknown }).oauthClient;
+  if (!oauthClient || typeof oauthClient !== "object") return null;
+  const clientId = (oauthClient as { clientId?: unknown }).clientId;
+  const clientSecret = (oauthClient as { clientSecret?: unknown }).clientSecret;
+  if (typeof clientId !== "string" || typeof clientSecret !== "string") return null;
+  return { clientId, clientSecret };
+}
+
+function readCodeVerifier(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object") return null;
+  const verifier = (metadata as { codeVerifier?: unknown }).codeVerifier;
+  return typeof verifier === "string" ? verifier : null;
+}
+
 export async function createConnection(ctx: ServiceContext, input: CreateConnectionInput) {
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
@@ -203,16 +230,26 @@ export async function startTokenProxyConnection(
 
   const sessionId = uniqueId();
   const state = randomCode("tp_state", 16);
+  const codeVerifier = randomCode("tp_verifier", 32);
+  const codeChallenge = await createCodeChallenge(codeVerifier);
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
   const callbackUrl = createCallbackUrl(origin, sessionId, state);
+  const oauthClient = readOAuthClient(proxyInstance.metadata);
+  if (!oauthClient) {
+    throw new ParameterError("proxy instance is missing oauth client credentials");
+  }
   const connectUrl = new URL("/admin/external-connect", proxyInstance.baseUrl);
+  connectUrl.searchParams.set("client_id", oauthClient.clientId);
+  connectUrl.searchParams.set("redirect_uri", callbackUrl.toString());
+  connectUrl.searchParams.set("response_type", "code");
   connectUrl.searchParams.set("provider", input.provider);
   connectUrl.searchParams.set("sessionId", sessionId);
   connectUrl.searchParams.set("state", state);
-  connectUrl.searchParams.set("callback", callbackUrl.toString());
+  connectUrl.searchParams.set("code_challenge", codeChallenge);
+  connectUrl.searchParams.set("code_challenge_method", "S256");
   connectUrl.searchParams.set("label", "Tori");
   connectUrl.searchParams.set(
-    "permissions",
+    "scope",
     input.provider === "steam" ? "proxy,account,steam-family" : "proxy,account",
   );
 
@@ -225,6 +262,7 @@ export async function startTokenProxyConnection(
     accessMode: input.accessMode,
     callbackUrl: callbackUrl.toString(),
     tokenProxyConnectUrl: connectUrl.toString(),
+    codeVerifier,
     expiresAt,
   });
 
@@ -295,20 +333,26 @@ export async function completeTokenProxyConnectionCallback(
   if (!proxyInstance || proxyInstance.status !== "active") {
     return fail("proxy instance is not active");
   }
+  const oauthClient = readOAuthClient(proxyInstance.metadata);
+  const codeVerifier = readCodeVerifier(session.metadata);
+  if (!oauthClient || !codeVerifier) {
+    return fail("proxy instance oauth client is not configured");
+  }
 
-  const result = await ofetch(
-    `${proxyInstance.baseUrl.replace(/\/+$/, "")}/admin/external-connect/exchange`,
-    {
-      method: "POST",
-      retry: 0,
-      timeout: 15_000,
-      body: {
-        sessionId: session.id,
-        code: input.code,
-        state: session.state,
-      },
-    },
-  );
+  const form = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: input.code,
+    client_id: oauthClient.clientId,
+    client_secret: oauthClient.clientSecret,
+    redirect_uri: session.callbackUrl,
+    code_verifier: codeVerifier,
+  });
+  const result = await ofetch(`${proxyInstance.baseUrl.replace(/\/+$/, "")}/oauth/token`, {
+    method: "POST",
+    retry: 0,
+    timeout: 15_000,
+    body: form,
+  });
   const exchange = tokenProxyExchangeResponseSchema.parse(result);
 
   if (exchange.connection.provider !== session.provider) {

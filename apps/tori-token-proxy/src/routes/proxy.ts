@@ -8,6 +8,17 @@ interface ProxyDeps {
   secret: string;
 }
 
+const SENSITIVE_LOG_KEYS = new Set([
+  "authorization",
+  "set-cookie",
+  "cookie",
+  "x-api-key",
+  "access_token",
+  "acceess_token",
+  "token",
+  "refresh_token",
+]);
+
 export function proxyRoutes(deps: ProxyDeps) {
   const { repo, secret } = deps;
   const app = new Hono();
@@ -18,6 +29,8 @@ export function proxyRoutes(deps: ProxyDeps) {
   app.all("/:provider{.+}", async (c) => {
     const conn = c.get("connection") as Connection;
     const provider = c.req.param("provider");
+    const capturedHeaders = captureRequestHeaders(c.req.raw.headers);
+    const requestBody = await captureRequestBody(c.req.raw);
 
     // Verify connection matches provider
     if (conn.provider !== provider) {
@@ -26,6 +39,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: c.req.header("X-PROXY-URL") ?? null,
+        headers: capturedHeaders,
         statusCode: 403,
         error: `provider mismatch: ${conn.provider} != ${provider}`,
         createdAt: Math.floor(Date.now() / 1000),
@@ -46,6 +60,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
+        headers: capturedHeaders,
         statusCode: 400,
         error: "missing X-PROXY-URL header",
         createdAt: Math.floor(Date.now() / 1000),
@@ -69,6 +84,7 @@ export function proxyRoutes(deps: ProxyDeps) {
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl,
+        headers: capturedHeaders,
         statusCode: 400,
         error: "invalid X-PROXY-URL",
         createdAt: Math.floor(Date.now() / 1000),
@@ -90,6 +106,9 @@ export function proxyRoutes(deps: ProxyDeps) {
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl,
+        headers: capturedHeaders,
+        query: captureQuery(parsedUrl),
+        requestBody,
         statusCode: 403,
         error: "blocked by proxy rules",
         createdAt: Math.floor(Date.now() / 1000),
@@ -111,6 +130,9 @@ export function proxyRoutes(deps: ProxyDeps) {
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl,
+        headers: capturedHeaders,
+        query: captureQuery(parsedUrl),
+        requestBody,
         statusCode: 500,
         error: "credentials not found",
         createdAt: Math.floor(Date.now() / 1000),
@@ -172,7 +194,7 @@ export function proxyRoutes(deps: ProxyDeps) {
     // Forward body for non-GET requests
     let body: BodyInit | undefined;
     if (c.req.method !== "GET" && c.req.method !== "HEAD") {
-      body = await c.req.arrayBuffer();
+      body = await c.req.raw.clone().arrayBuffer();
       if ((body as ArrayBuffer).byteLength === 0) body = undefined;
     }
 
@@ -185,11 +207,15 @@ export function proxyRoutes(deps: ProxyDeps) {
         body,
       });
     } catch (err: any) {
+      const loggedUrl = redactInjectedCredentialUrl(finalUrl, conn);
       await repo.createRequestLog({
         connectionId: conn.id,
         routeGroup: "proxy",
         method: c.req.method,
-        targetUrl: finalUrl,
+        targetUrl: loggedUrl.toString(),
+        headers: capturedHeaders,
+        query: captureQuery(loggedUrl),
+        requestBody,
         statusCode: 502,
         error: err.message,
         createdAt: Math.floor(Date.now() / 1000),
@@ -216,11 +242,15 @@ export function proxyRoutes(deps: ProxyDeps) {
       lastUsedAt: Math.floor(Date.now() / 1000),
       updatedAt: Math.floor(Date.now() / 1000),
     });
+    const loggedUrl = redactInjectedCredentialUrl(finalUrl, conn);
     await repo.createRequestLog({
       connectionId: conn.id,
       routeGroup: "proxy",
       method: c.req.method,
-      targetUrl: finalUrl,
+      targetUrl: loggedUrl.toString(),
+      headers: capturedHeaders,
+      query: captureQuery(loggedUrl),
+      requestBody,
       statusCode: resp.status,
       createdAt: Math.floor(Date.now() / 1000),
     });
@@ -232,6 +262,79 @@ export function proxyRoutes(deps: ProxyDeps) {
   });
 
   return app;
+}
+
+function captureRequestHeaders(headers: Headers) {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = redactLogValue(key, value) as string;
+  });
+  return result;
+}
+
+function captureQuery(url: URL) {
+  const query: Record<string, string | string[]> = {};
+  for (const [key, value] of url.searchParams.entries()) {
+    const safeValue = redactLogValue(key, value) as string;
+    const existing = query[key];
+    if (existing === undefined) {
+      query[key] = safeValue;
+    } else if (Array.isArray(existing)) {
+      existing.push(safeValue);
+    } else {
+      query[key] = [existing, safeValue];
+    }
+  }
+  return query;
+}
+
+async function captureRequestBody(request: Request) {
+  if (request.method === "GET" || request.method === "HEAD") return null;
+  const contentType = request.headers.get("content-type") ?? "";
+  const clone = request.clone();
+  if (contentType.includes("application/json")) {
+    try {
+      return redactLogObject(await clone.json());
+    } catch {
+      return null;
+    }
+  }
+
+  const text = await clone.text();
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    return captureQuery(new URL(`http://localhost/?${text}`));
+  }
+  return text || null;
+}
+
+function redactInjectedCredentialUrl(rawUrl: string, connection: Connection) {
+  const url = new URL(rawUrl);
+  if (connection.tokenInject.startsWith("query:")) {
+    url.searchParams.set(connection.tokenInject.slice(6), "[redacted]");
+  }
+  for (const key of url.searchParams.keys()) {
+    if (isSensitiveLogKey(key)) url.searchParams.set(key, "[redacted]");
+  }
+  return url;
+}
+
+function isSensitiveLogKey(key: string) {
+  return SENSITIVE_LOG_KEYS.has(key.toLowerCase());
+}
+
+function redactLogValue(key: string, value: unknown): unknown {
+  return isSensitiveLogKey(key) ? "[redacted]" : value;
+}
+
+function redactLogObject(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => redactLogObject(item));
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    result[key] = isSensitiveLogKey(key) ? "[redacted]" : redactLogObject(item);
+  }
+  return result;
 }
 
 function isAllowed(

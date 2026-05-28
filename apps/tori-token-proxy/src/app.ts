@@ -15,6 +15,17 @@ import { healthRoutes } from "./routes/health.ts";
 import { oauthRoutes } from "./routes/oauth.ts";
 import { proxyRoutes } from "./routes/proxy.ts";
 
+const SENSITIVE_LOG_KEYS = new Set([
+  "authorization",
+  "set-cookie",
+  "cookie",
+  "x-api-key",
+  "access_token",
+  "acceess_token",
+  "token",
+  "refresh_token",
+]);
+
 export interface AppDeps {
   repo: Repository;
   secret: string;
@@ -48,8 +59,6 @@ export function createApp(deps: AppDeps) {
   app.route("/", healthRoutes());
 
   app.use("/oauth/device/*", adminKeyAuth(adminKey));
-  app.use("/oauth/authorize", adminKeyAuth(adminKey));
-  app.use("/oauth/providers", adminKeyAuth(adminKey));
 
   // ─── Public: token, callback ───
   // /oauth/token — client polls with device_code or exchanges auth code
@@ -83,6 +92,7 @@ export function createApp(deps: AppDeps) {
       connectionId: conn.id,
       routeGroup: "account",
       method: "GET",
+      headers: captureRequestHeaders(c.req.raw.headers),
       statusCode: 200,
       createdAt: Math.floor(Date.now() / 1000),
     });
@@ -96,6 +106,14 @@ export function createApp(deps: AppDeps) {
   });
 
   return app;
+}
+
+function captureRequestHeaders(headers: Headers) {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = SENSITIVE_LOG_KEYS.has(key.toLowerCase()) ? "[redacted]" : value;
+  });
+  return result;
 }
 
 function generateAdminKey(): string {

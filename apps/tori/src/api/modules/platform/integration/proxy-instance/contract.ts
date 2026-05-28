@@ -29,7 +29,8 @@ export const proxyInstanceListDtoSchema = PageBasedPaginationResultSchema(
 
 export const registerProxyInstanceDtoSchema = z.object({
   baseUrl: z.string().url(),
-  credentialRef: z.string().min(1),
+  clientId: z.string().min(1),
+  clientSecret: z.string().min(1),
   name: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

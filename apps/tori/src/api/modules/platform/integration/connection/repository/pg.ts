@@ -429,7 +429,14 @@ export class ConnectionPgRepository implements IConnectionRepository {
         accessMode: input.accessMode,
         callbackUrl: input.callbackUrl,
         tokenProxyConnectUrl: input.tokenProxyConnectUrl,
-        metadata: input.metadata ?? null,
+        metadata: {
+          ...((input.metadata &&
+          typeof input.metadata === "object" &&
+          !Array.isArray(input.metadata)
+            ? input.metadata
+            : {}) as Record<string, unknown>),
+          codeVerifier: input.codeVerifier ?? null,
+        },
         expiresAt: input.expiresAt,
       })
       .returning();

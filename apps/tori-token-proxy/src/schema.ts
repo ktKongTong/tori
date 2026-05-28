@@ -11,6 +11,10 @@ export const tokenRequestSchema = z.object({
   grant_type: z.string().min(1, "grant_type is required"),
   device_code: z.string().optional(),
   code: z.string().optional(),
+  client_id: z.string().optional(),
+  client_secret: z.string().optional(),
+  redirect_uri: z.string().url().optional(),
+  code_verifier: z.string().optional(),
 });
 
 export const revokeSchema = z.object({

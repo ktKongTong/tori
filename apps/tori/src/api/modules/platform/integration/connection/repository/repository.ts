@@ -118,6 +118,7 @@ export interface CreateTokenProxyConnectionSessionInput {
   accessMode: string;
   callbackUrl: string;
   tokenProxyConnectUrl: string;
+  codeVerifier?: string | null;
   metadata?: unknown;
   expiresAt: Date;
 }

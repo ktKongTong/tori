@@ -2,7 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { decrypt, encrypt } from "../src/crypto/index.ts";
 import { ProviderRegistry } from "../src/provider/registry.ts";
 import type { PollResult, Provider } from "../src/provider/types.ts";
-import { ensureDefaultSystemTasks, runDueSystemTasks } from "../src/system-tasks/index.ts";
+import {
+  ensureDefaultSystemTasks,
+  REQUEST_LOG_RETENTION_TASK_ID,
+  runDueSystemTasks,
+} from "../src/system-tasks/index.ts";
 import type { AuthResult, AuthSessionState } from "../src/types.ts";
 import { MemoryRepository } from "../src/repository/memory.ts";
 
@@ -62,7 +66,10 @@ describe("system refresh tasks", () => {
     });
 
     await ensureDefaultSystemTasks({ repo, registry, secret: SECRET });
-    const [definition] = await repo.listSystemTaskDefinitions();
+    const definition = (await repo.listSystemTaskDefinitions()).find(
+      (task) => task.id === "system.provider.mock-refresh.refresh",
+    );
+    if (!definition) throw new Error("missing refresh task definition");
     expect(definition.provider).toBe("mock-refresh");
 
     await repo.updateSystemTaskDefinition(definition.id, {
@@ -92,5 +99,37 @@ describe("system refresh tasks", () => {
       failed: 0,
       skipped: 0,
     });
+  });
+
+  it("deletes request logs older than seven days", async () => {
+    const repo = new MemoryRepository();
+    const registry = new ProviderRegistry();
+    const now = Math.floor(Date.now() / 1000);
+
+    await repo.createRequestLog({
+      connectionId: "conn-old",
+      routeGroup: "proxy",
+      method: "GET",
+      createdAt: now - 8 * 24 * 60 * 60,
+    });
+    await repo.createRequestLog({
+      connectionId: "conn-new",
+      routeGroup: "proxy",
+      method: "GET",
+      createdAt: now - 6 * 24 * 60 * 60,
+    });
+
+    await ensureDefaultSystemTasks({ repo, registry, secret: SECRET });
+    await repo.updateSystemTaskDefinition(REQUEST_LOG_RETENTION_TASK_ID, {
+      nextRunAt: 0,
+    });
+
+    const runs = await runDueSystemTasks({ repo, registry, secret: SECRET });
+    expect(runs).toHaveLength(1);
+    expect(runs[0].summary).toMatchObject({ retentionDays: 7, deleted: 1 });
+
+    const logs = await repo.listRequestLogs();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].connectionId).toBe("conn-new");
   });
 });

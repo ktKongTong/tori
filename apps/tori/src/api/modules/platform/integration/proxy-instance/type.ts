@@ -1,6 +1,7 @@
 export interface RegisterProxyInstanceInput {
   baseUrl: string;
-  credentialRef: string;
+  clientId: string;
+  clientSecret: string;
   name?: string | null;
   metadata?: Record<string, unknown> | null;
 }

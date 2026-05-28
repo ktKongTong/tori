@@ -9,10 +9,7 @@ import {
   PROXY_INSTANCE_DISABLED,
 } from "./event.ts";
 
-async function probeProxy(
-  baseUrl: string,
-  credentialRef: string,
-): Promise<ProbeProxyInstanceResult> {
+async function probeProxy(baseUrl: string): Promise<ProbeProxyInstanceResult> {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
   const health = await ofetch<{ status: string }>(`${normalizedBaseUrl}/health`, {
     retry: 0,
@@ -28,17 +25,7 @@ async function probeProxy(
   }>(`${normalizedBaseUrl}/oauth/providers`, {
     retry: 0,
     timeout: 8000,
-    headers: {
-      "X-Admin-Key": credentialRef,
-    },
-  }).catch(async () =>
-    ofetch<{
-      providers?: Array<{ name?: string; flow?: string; grant_type?: string }>;
-    }>(`${normalizedBaseUrl}/oauth/providers`, {
-      retry: 0,
-      timeout: 8000,
-    }),
-  );
+  });
 
   const providers =
     providerResponse.providers?.map((provider) => ({
@@ -66,8 +53,12 @@ export async function registerProxyInstance(
 ) {
   const userId = ctx.userId;
   if (!userId) throw new NotFoundError("user not found");
-  const probe = await probeProxy(input.baseUrl, input.credentialRef);
+  const probe = await probeProxy(input.baseUrl);
   const normalizedBaseUrl = input.baseUrl.replace(/\/+$/, "");
+  const oauthClient = {
+    clientId: input.clientId,
+    clientSecret: input.clientSecret,
+  };
 
   const existing = await ctx.repositories.integration.findProxyInstanceByOwnerAndBaseUrl({
     ownerUserId: userId,
@@ -77,11 +68,11 @@ export async function registerProxyInstance(
   if (existing) {
     const updated = await ctx.repositories.integration.updateProxyInstanceRegistration({
       id: existing.id,
-      credentialRef: input.credentialRef,
+      credentialRef: input.clientId,
       name: input.name ?? existing.name ?? null,
       healthStatus: probe.healthStatus,
       capabilities: probe.capabilities,
-      metadata: input.metadata ?? null,
+      metadata: { ...input.metadata, oauthClient },
     });
     return { proxyInstance: updated, created: false, probe };
   }
@@ -91,11 +82,11 @@ export async function registerProxyInstance(
     ownerUserId: userId,
     provider: "multi",
     baseUrl: normalizedBaseUrl,
-    credentialRef: input.credentialRef,
+    credentialRef: input.clientId,
     name: input.name ?? null,
     healthStatus: probe.healthStatus,
     capabilities: probe.capabilities,
-    metadata: input.metadata ?? null,
+    metadata: { ...input.metadata, oauthClient },
   });
 
   return { proxyInstance: row, created: true, probe };
@@ -114,7 +105,7 @@ export async function probeProxyInstance(ctx: ServiceContext, proxyInstanceId: s
 
   if (!proxyInstance) throw new NotFoundError("proxy instance not found");
 
-  const probe = await probeProxy(proxyInstance.baseUrl, proxyInstance.credentialRef);
+  const probe = await probeProxy(proxyInstance.baseUrl);
 
   const updated = await ctx.repositories.integration.updateProxyInstanceProbe({
     id: proxyInstance.id,

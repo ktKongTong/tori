@@ -25,6 +25,17 @@ function oauthError(c: any, status: number, error: string, description: string) 
   return c.json({ error, error_description: description }, status);
 }
 
+function base64UrlEncode(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+async function codeChallengeFromVerifier(verifier: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
 function zodHook(result: any, c: any) {
   if (!result.success) {
     const first = result.error.issues[0];
@@ -202,7 +213,15 @@ export function oauthRoutes(deps: OAuthDeps) {
   // POST /token — RFC 6749 §3.2
   // ═══════════════════════════════════════════════
   app.post("/token", zValidator("form", tokenRequestSchema, zodHook), async (c) => {
-    const { grant_type: grantType, device_code: deviceCode, code } = c.req.valid("form");
+    const {
+      grant_type: grantType,
+      device_code: deviceCode,
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
+    } = c.req.valid("form");
 
     switch (grantType) {
       // ─── Device Flow polling (RFC 8628 §3.4) ───
@@ -302,6 +321,78 @@ export function oauthRoutes(deps: OAuthDeps) {
       case "authorization_code": {
         if (!code) {
           return oauthError(c, 400, "invalid_request", "code is required");
+        }
+
+        const [sid] = code.split(".");
+        if (sid?.startsWith("external_connect_")) {
+          if (!clientId || !clientSecret || !redirectUri || !codeVerifier) {
+            return oauthError(
+              c,
+              400,
+              "invalid_request",
+              "client_id, client_secret, redirect_uri, and code_verifier are required",
+            );
+          }
+
+          const client = await repo.getOAuthClient(clientId);
+          if (!client || client.clientSecret !== clientSecret) {
+            return oauthError(c, 401, "invalid_client", "client authentication failed");
+          }
+
+          if (!client.redirectUris.includes(redirectUri)) {
+            return oauthError(c, 400, "invalid_grant", "redirect_uri is not allowed");
+          }
+
+          const session = await repo.getAuthSession(sid);
+          if (
+            !session ||
+            session.mode !== "external-connect" ||
+            !session.externalConnect ||
+            session.externalConnect.clientId !== clientId ||
+            session.externalConnect.redirectUri !== redirectUri ||
+            session.externalConnect.codeChallengeMethod !== "S256" ||
+            session.authCode !== code
+          ) {
+            return oauthError(c, 400, "invalid_grant", "invalid or expired authorization code");
+          }
+
+          const actualChallenge = await codeChallengeFromVerifier(codeVerifier);
+          if (actualChallenge !== session.externalConnect.codeChallenge) {
+            return oauthError(c, 400, "invalid_grant", "code_verifier mismatch");
+          }
+
+          const connId = await repo.consumeAuthCode(code);
+          if (!connId) {
+            return oauthError(c, 400, "invalid_grant", "invalid or expired authorization code");
+          }
+
+          const conn = await repo.getConnectionById(connId);
+          if (!conn) {
+            return oauthError(c, 400, "invalid_grant", "connection not found");
+          }
+
+          await repo.deleteAuthSession(sid);
+
+          return c.json({
+            access_token: conn.apiKey,
+            token_type: "Bearer",
+            scope: conn.permissions?.join(" ") ?? conn.provider,
+            provider: conn.provider,
+            provider_uid: conn.providerUid,
+            display_name: conn.displayName,
+            connection: {
+              id: conn.id,
+              provider: conn.provider,
+              providerUid: conn.providerUid,
+              name: conn.displayName,
+              permissions: conn.permissions ?? [],
+            },
+            account: {
+              providerAccountId: conn.providerUid,
+              providerAccountName: conn.displayName,
+              providerAccountAvatar: null,
+            },
+          });
         }
 
         const connId = await repo.consumeAuthCode(code);
