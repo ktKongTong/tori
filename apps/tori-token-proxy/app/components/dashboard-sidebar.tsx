@@ -40,6 +40,10 @@ const NAV_ITEMS: NavItem[] = [
     to: "/dashboard/logs",
     label: "Logs",
   },
+  {
+    to: "/dashboard/oauth-clients",
+    label: "OAuth Clients",
+  },
 ];
 
 function isItemActive(pathname: string, item: NavItem) {

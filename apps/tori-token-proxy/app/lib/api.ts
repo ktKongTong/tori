@@ -137,6 +137,14 @@ export const requestLogsListSchema = z.object({
   items: z.array(requestLogSchema),
 });
 
+export const oauthClientCreatedSchema = z.object({
+  client_id: z.string(),
+  client_secret: z.string(),
+  client_name: z.string(),
+  redirect_uris: z.array(z.string()),
+  scopes: z.array(z.string()),
+});
+
 export const tokenRefreshLogSchema = z.object({
   id: z.number(),
   taskRunId: z.string().nullable().optional(),

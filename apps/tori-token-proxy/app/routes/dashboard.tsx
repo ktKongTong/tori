@@ -22,6 +22,9 @@ const META: Record<string, { title: string }> = {
   "/dashboard/logs": {
     title: "Usage Logs",
   },
+  "/dashboard/oauth-clients": {
+    title: "OAuth Clients",
+  },
 };
 
 export const Route = createFileRoute("/dashboard")({
