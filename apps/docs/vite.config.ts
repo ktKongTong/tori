@@ -16,6 +16,7 @@ export default defineConfig({
     tailwindcss(),
     tanstackStart({
       spa: {
+        maskPath: "/",
         enabled: true,
         prerender: {
           outputPath: "/index.html",
@@ -44,7 +45,6 @@ export default defineConfig({
     // nitro({
     //   preset: "node_server",
     // }),
-    copyShellToIndex(),
   ],
   resolve: {
     tsconfigPaths: true,
@@ -53,35 +53,3 @@ export default defineConfig({
     },
   },
 });
-
-function copyShellToIndex(): Plugin {
-  let root = process.cwd();
-
-  return {
-    name: "copy-shell-to-index",
-    apply: "build",
-    enforce: "post",
-
-    configResolved(config) {
-      root = config.root;
-    },
-
-    async closeBundle() {
-      console.log("moving shell.html to index.html");
-      const from = resolve(root, ".output/public/_shell.html");
-      const to = resolve(root, ".output/public/index.html");
-
-      try {
-        await stat(from);
-      } catch {
-        console.warn(`[copy-shell-to-index] _shell.html not found: ${from}`);
-        return;
-      }
-
-      await mkdir(dirname(to), { recursive: true });
-      await copyFile(from, to);
-
-      console.log(`[copy-shell-to-index] copied ${from} -> ${to}`);
-    },
-  };
-}
