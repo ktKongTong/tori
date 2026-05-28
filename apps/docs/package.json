@@ -5,7 +5,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vp dev",
-    "build": "vp build && echo \"hello\"",
+    "build": "vp build",
     "start": "serve .output/public --config ../../serve.json",
     "preview": "vp preview",
     "types:check": "fumadocs-mdx && tsc --noEmit",

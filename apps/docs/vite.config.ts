@@ -3,14 +3,9 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vite-plus";
 import tailwindcss from "@tailwindcss/vite";
 import mdx from "fumadocs-mdx/vite";
-import type { Plugin } from "vite-plus";
-import { dirname, resolve } from "node:path";
-import { copyFile, mkdir, stat } from "node:fs/promises";
+import { nitro } from "nitro/vite";
 
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
   plugins: [
     mdx(),
     tailwindcss(),
@@ -42,9 +37,9 @@ export default defineConfig({
     }),
     react(),
     // please see https://tanstack.com/start/latest/docs/framework/react/guide/hosting#nitro for guides on hosting
-    // nitro({
-    //   preset: "node_server",
-    // }),
+    nitro({
+      preset: "node_server",
+    }),
   ],
   resolve: {
     tsconfigPaths: true,
