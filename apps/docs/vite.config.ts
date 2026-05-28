@@ -16,8 +16,9 @@ export default defineConfig({
       spa: {
         enabled: true,
         prerender: {
-          enabled: true,
+          outputPath: "/index.html",
           crawlLinks: true,
+          retryCount: 0,
         },
       },
 
@@ -38,9 +39,9 @@ export default defineConfig({
     }),
     react(),
     // please see https://tanstack.com/start/latest/docs/framework/react/guide/hosting#nitro for guides on hosting
-    nitro({
-      preset: "node_server",
-    }),
+    // nitro({
+    //   preset: "node_server",
+    // }),
   ],
   resolve: {
     tsconfigPaths: true,
