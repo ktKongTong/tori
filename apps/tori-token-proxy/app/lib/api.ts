@@ -125,6 +125,7 @@ export const externalConnectConfirmResponseSchema = z.object({
 export const requestLogSchema = z.object({
   id: z.number(),
   connectionId: z.string(),
+  clientId: z.string().nullable().optional(),
   routeGroup: z.string(),
   method: z.string(),
   targetUrl: z.string().nullable().optional(),
@@ -136,6 +137,10 @@ export const requestLogSchema = z.object({
   requestBody: z.unknown().optional(),
   statusCode: z.number().nullable().optional(),
   error: z.string().nullable().optional(),
+  policyId: z.string().nullable().optional(),
+  matchedRuleId: z.string().nullable().optional(),
+  ruleDecision: z.string().nullable().optional(),
+  blockedReason: z.string().nullable().optional(),
   createdAt: z.number(),
 });
 
@@ -151,6 +156,7 @@ export const oauthClientCreatedSchema = z.object({
   client_name: z.string(),
   redirect_uris: z.array(z.string()),
   scopes: z.array(z.string()),
+  policy_id: z.string().nullable().optional(),
 });
 
 export const oauthClientSchema = oauthClientCreatedSchema.omit({ client_secret: true }).extend({
@@ -159,6 +165,44 @@ export const oauthClientSchema = oauthClientCreatedSchema.omit({ client_secret: 
 
 export const oauthClientsListSchema = z.object({
   items: z.array(oauthClientSchema),
+});
+
+export const proxyPolicyRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  effect: z.literal("allow"),
+  methods: z.array(z.string()),
+  schemes: z.array(z.string()),
+  hosts: z.array(
+    z.object({
+      match: z.enum(["exact", "suffix"]),
+      value: z.string(),
+    }),
+  ),
+  paths: z.array(
+    z.object({
+      match: z.enum(["exact", "prefix", "glob"]),
+      value: z.string(),
+    }),
+  ),
+});
+
+export const proxyPolicyDocumentSchema = z.object({
+  mode: z.literal("allowlist"),
+  rules: z.array(proxyPolicyRuleSchema),
+});
+
+export const proxyPolicySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  document: proxyPolicyDocumentSchema,
+  created_at: z.number(),
+  updated_at: z.number(),
+});
+
+export const proxyPoliciesListSchema = z.object({
+  items: z.array(proxyPolicySchema),
 });
 
 export const tokenRefreshLogSchema = z.object({

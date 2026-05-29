@@ -28,6 +28,9 @@ const META: Record<string, { title: string }> = {
   "/dashboard/oauth-clients": {
     title: "OAuth Clients",
   },
+  "/dashboard/proxy-policies": {
+    title: "Proxy Policies",
+  },
 };
 
 export const Route = createFileRoute("/dashboard")({

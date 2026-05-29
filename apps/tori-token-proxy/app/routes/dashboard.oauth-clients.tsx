@@ -23,6 +23,7 @@ import {
   apiRequest,
   oauthClientCreatedSchema,
   oauthClientsListSchema,
+  proxyPoliciesListSchema,
   type TokenProxyWebError,
 } from "~/lib/api";
 
@@ -43,18 +44,25 @@ function DashboardOAuthClientsPage() {
   const [name, setName] = useState("OAuth Client");
   const [redirectUri, setRedirectUri] = useState("");
   const [scopes, setScopes] = useState(DEFAULT_SCOPES);
+  const [policyId, setPolicyId] = useState("");
   const [createdClient, setCreatedClient] = useState<null | {
     clientId: string;
     clientSecret: string;
     clientName: string;
     redirectUris: string[];
     scopes: string[];
+    policyId: string | null;
   }>(null);
 
   const clientsQuery = useQuery({
     queryKey: ["token-proxy", "oauth-clients"],
     queryFn: () =>
       apiRequest("/admin/oauth/clients").then((payload) => oauthClientsListSchema.parse(payload)),
+  });
+  const policiesQuery = useQuery({
+    queryKey: ["token-proxy", "proxy-policies"],
+    queryFn: () =>
+      apiRequest("/admin/proxy/policies").then((payload) => proxyPoliciesListSchema.parse(payload)),
   });
 
   const createClientMutation = useMutation({
@@ -65,6 +73,7 @@ function DashboardOAuthClientsPage() {
           name,
           redirectUris: [redirectUri],
           scopes: scopes.split(/[,\s]+/).filter(Boolean),
+          policyId: policyId || null,
         }),
       }).then((payload) => oauthClientCreatedSchema.parse(payload)),
     onSuccess: (client) => {
@@ -74,15 +83,19 @@ function DashboardOAuthClientsPage() {
         clientName: client.client_name,
         redirectUris: client.redirect_uris,
         scopes: client.scopes,
+        policyId: client.policy_id ?? null,
       });
       setName("OAuth Client");
       setRedirectUri("");
       setScopes(DEFAULT_SCOPES);
+      setPolicyId("");
       void queryClient.invalidateQueries({ queryKey: ["token-proxy", "oauth-clients"] });
     },
   });
 
   const clients = clientsQuery.data?.items ?? [];
+  const policies = policiesQuery.data?.items ?? [];
+  const policyNames = new Map(policies.map((policy) => [policy.id, policy.name]));
   const createError = createClientMutation.error as TokenProxyWebError | null;
 
   return (
@@ -108,6 +121,9 @@ function DashboardOAuthClientsPage() {
       {clientsQuery.error instanceof Error ? (
         <DashboardNotice tone="error">{clientsQuery.error.message}</DashboardNotice>
       ) : null}
+      {policiesQuery.error instanceof Error ? (
+        <DashboardNotice tone="error">{policiesQuery.error.message}</DashboardNotice>
+      ) : null}
 
       <DashboardPanel
         eyebrow="Client registry"
@@ -115,13 +131,14 @@ function DashboardOAuthClientsPage() {
         description="Applications registered to use this token-proxy as an OAuth authorization server."
       >
         <DashboardTable
-          columns={["Created", "Name", "Client ID", "Redirect URIs", "Scopes"]}
+          columns={["Created", "Name", "Client ID", "Policy", "Redirect URIs", "Scopes"]}
           rows={clients.map((client) => [
             formatDate(client.created_at),
             client.client_name,
             <code key={`${client.client_id}-id`} className="break-all text-xs">
               {client.client_id}
             </code>,
+            client.policy_id ? (policyNames.get(client.policy_id) ?? client.policy_id) : "—",
             <pre
               key={`${client.client_id}-redirects`}
               className="whitespace-pre-wrap break-all text-xs"
@@ -150,6 +167,23 @@ function DashboardOAuthClientsPage() {
             </DashboardField>
             <DashboardField label="Scopes" hint="Separate scopes with spaces or commas.">
               <Input value={scopes} onChange={(event) => setScopes(event.target.value)} />
+            </DashboardField>
+            <DashboardField
+              label="Proxy policy"
+              hint="Required for client-bound proxy tokens to pass allowlist checks."
+            >
+              <select
+                value={policyId}
+                onChange={(event) => setPolicyId(event.target.value)}
+                className="h-10 border-b border-input bg-transparent text-sm outline-none"
+              >
+                <option value="">No policy</option>
+                {policies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.name}
+                  </option>
+                ))}
+              </select>
             </DashboardField>
             <div className="md:col-span-2">
               <DashboardField
@@ -180,6 +214,14 @@ function DashboardOAuthClientsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <DashboardResult title="Client ID" value={createdClient.clientId} />
                 <DashboardResult title="Client Secret" value={createdClient.clientSecret} />
+                <DashboardResult
+                  title="Proxy Policy"
+                  value={
+                    createdClient.policyId
+                      ? (policyNames.get(createdClient.policyId) ?? createdClient.policyId)
+                      : "No policy"
+                  }
+                />
                 <DashboardResult
                   title="Redirect URI"
                   value={createdClient.redirectUris.join("\n")}

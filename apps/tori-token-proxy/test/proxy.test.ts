@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { createApp } from "../src/app.ts";
 import { encrypt } from "../src/crypto/index.ts";
 import { MemoryRepository } from "../src/repository/memory.ts";
+import { sha256Hash } from "@repo/utils/encoding/hash";
 
 const SECRET = "test-secret-must-be-32-chars!!!!";
 const ADMIN_KEY = "test-admin-key";
@@ -32,6 +33,52 @@ async function createTestConnection(
     tokenInject: opts.tokenInject || "bearer",
     credentials: { accessToken, refreshToken },
   });
+}
+
+async function createPolicyBoundProxyToken(repo: MemoryRepository, connectionId: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const policy = await repo.createProxyPolicy({
+    id: "policy-steam-webapi",
+    name: "Steam WebAPI",
+    description: null,
+    document: {
+      mode: "allowlist",
+      rules: [
+        {
+          id: "steam-user",
+          name: "Steam user endpoints",
+          effect: "allow",
+          methods: ["GET"],
+          schemes: ["https"],
+          hosts: [{ match: "exact", value: "api.steampowered.com" }],
+          paths: [{ match: "prefix", value: "/ISteamUser/" }],
+        },
+      ],
+    },
+    createdAt: now,
+    updatedAt: now,
+  });
+  const client = await repo.createOAuthClient({
+    clientId: "client-steam",
+    clientSecret: "secret",
+    name: "Steam Client",
+    redirectUris: ["https://client.example.com/callback"],
+    scopes: ["proxy", "account"],
+    policyId: policy.id,
+    createdAt: now,
+  });
+  const token = "pg_test_proxy_token";
+  await repo.createProxyGrant({
+    id: "grant-steam",
+    tokenHash: await sha256Hash(token),
+    clientId: client.clientId,
+    connectionId,
+    scopes: ["proxy"],
+    status: "active",
+    createdAt: now,
+    lastUsedAt: null,
+  });
+  return token;
 }
 
 describe("proxy", () => {
@@ -109,8 +156,8 @@ describe("proxy", () => {
     });
   });
 
-  describe("proxy rules", () => {
-    it("allows when no rules configured", async () => {
+  describe("proxy policies", () => {
+    it("allows direct connection api keys without client policy", async () => {
       const { repo, app } = setup();
       const conn = await createTestConnection(repo);
 
@@ -131,50 +178,43 @@ describe("proxy", () => {
       expect(res.status).toBe(200);
     });
 
-    it("rejects when URL not in allowed rules", async () => {
+    it("rejects client-bound proxy token when URL is not allowed by policy", async () => {
       const { repo, app } = setup();
       const conn = await createTestConnection(repo);
-
-      repo.proxyRules.push({
-        id: 1,
-        provider: "steam",
-        allowedHost: "api.steampowered.com",
-        pathPattern: "/ISteamUser/",
-        methods: "GET",
-      });
+      const token = await createPolicyBoundProxyToken(repo, conn.id);
 
       const res = await app.request("http://localhost/proxy/steam", {
         method: "GET",
         headers: {
-          "X-API-KEY": conn.apiKey,
+          "X-API-KEY": token,
           "X-PROXY-URL": "https://evil.example.com/steal",
         },
       });
       expect(res.status).toBe(403);
+      const [log] = await repo.listRequestLogs({ connectionId: conn.id });
+      expect(log.error).toBe("blocked_by_proxy_policy");
+      expect(log.clientId).toBe("client-steam");
     });
 
-    it("allows when URL matches rules", async () => {
+    it("allows client-bound proxy token when URL matches policy", async () => {
       const { repo, app } = setup();
       const conn = await createTestConnection(repo);
-
-      repo.proxyRules.push({
-        id: 1,
-        provider: "steam",
-        allowedHost: "api.steampowered.com",
-        pathPattern: "/ISteamUser/",
-        methods: "GET",
-      });
+      const token = await createPolicyBoundProxyToken(repo, conn.id);
 
       mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
 
       const res = await app.request("http://localhost/proxy/steam", {
         method: "GET",
         headers: {
-          "X-API-KEY": conn.apiKey,
+          "X-API-KEY": token,
           "X-PROXY-URL": "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/",
         },
       });
       expect(res.status).toBe(200);
+      const [log] = await repo.listRequestLogs({ connectionId: conn.id });
+      expect(log.clientId).toBe("client-steam");
+      expect(log.policyId).toBe("policy-steam-webapi");
+      expect(log.matchedRuleId).toBe("steam-user");
     });
   });
 
@@ -285,7 +325,8 @@ describe("proxy", () => {
       expect(res.status).toBe(201);
       expect(mockFetch.mock.calls[0][1].method).toBe("POST");
       const [log] = await repo.listRequestLogs({ connectionId: conn.id });
-      expect(log.headers?.["x-api-key"]).toBe("[redacted]");
+      expect(log.headers?.["x-api-key"]).toBeUndefined();
+      expect(log.headers?.["x-proxy-url"]).toBeUndefined();
       expect(log.headers?.["content-type"]).toBe("application/json");
       expect(log.requestBody).toEqual({ key: "value" });
     });
@@ -320,7 +361,8 @@ describe("proxy", () => {
       const [log] = await repo.listRequestLogs({ connectionId: conn.id });
       expect(log.headers?.authorization).toBe("[redacted]");
       expect(log.headers?.cookie).toBe("[redacted]");
-      expect(log.headers?.["x-api-key"]).toBe("[redacted]");
+      expect(log.headers?.["x-api-key"]).toBeUndefined();
+      expect(log.headers?.["x-proxy-url"]).toBeUndefined();
       expect(log.targetUrl).toBe("https://api.steampowered.com/test");
       expect(log.query).toMatchObject({
         access_token: "[redacted]",

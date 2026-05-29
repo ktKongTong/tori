@@ -26,6 +26,8 @@ const SENSITIVE_LOG_KEYS = new Set([
   "refresh_token",
 ]);
 
+const CONTROL_LOG_HEADERS = new Set(["x-api-key", "x-proxy-url"]);
+
 export interface AppDeps {
   repo: Repository;
   secret: string;
@@ -111,6 +113,7 @@ export function createApp(deps: AppDeps) {
 function captureRequestHeaders(headers: Headers) {
   const result: Record<string, string> = {};
   headers.forEach((value, key) => {
+    if (CONTROL_LOG_HEADERS.has(key.toLowerCase())) return;
     result[key] = SENSITIVE_LOG_KEYS.has(key.toLowerCase()) ? "[redacted]" : value;
   });
   return result;

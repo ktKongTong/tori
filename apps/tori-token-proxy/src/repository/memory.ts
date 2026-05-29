@@ -5,12 +5,14 @@ import type {
   CreateConnectionParams,
   EncryptedCredentials,
   OAuthClient,
-  ProxyRule,
+  ProxyGrant,
+  ProxyPolicy,
   RequestLog,
   SystemTaskDefinition,
   SystemTaskRun,
   TokenRefreshLog,
 } from "../types.ts";
+import { sha256Hash } from "@repo/utils/encoding/hash";
 
 function generateId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 18)}`;
@@ -24,7 +26,8 @@ export class MemoryRepository implements Repository {
   authCodes = new Map<string, { connectionId: string; expiresAt: number; consumed: boolean }>();
   authSessions = new Map<string, { state: AuthSessionState; expiresAt: number }>();
   oauthClients = new Map<string, OAuthClient>();
-  proxyRules: ProxyRule[] = [];
+  proxyPolicies = new Map<string, ProxyPolicy>();
+  proxyGrants = new Map<string, ProxyGrant>();
   settingsMap = new Map<string, string>();
   requestLogs: RequestLog[] = [];
   systemTaskDefinitions = new Map<string, SystemTaskDefinition>();
@@ -66,6 +69,32 @@ export class MemoryRepository implements Repository {
     }
 
     return null;
+  }
+
+  async getConnectionForProxyToken(token: string) {
+    const directConnection = await this.getConnectionByApiKey(token);
+    if (directConnection) {
+      return {
+        grant: null,
+        client: null,
+        connection: directConnection,
+        policy: null,
+      };
+    }
+
+    const grant = await this.getProxyGrantByTokenHash(await sha256Hash(token));
+    if (!grant || grant.status !== "active") return null;
+
+    const client = await this.getOAuthClient(grant.clientId);
+    const connection = await this.getConnectionById(grant.connectionId);
+    if (!client || !connection || connection.status !== "active") return null;
+
+    return {
+      grant,
+      client,
+      connection,
+      policy: client.policyId ? await this.getProxyPolicy(client.policyId) : null,
+    };
   }
 
   async listConnections(): Promise<Connection[]> {
@@ -188,8 +217,35 @@ export class MemoryRepository implements Repository {
     return [...this.oauthClients.values()].sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async getProxyRules(provider: string): Promise<ProxyRule[]> {
-    return this.proxyRules.filter((rule) => rule.provider === provider);
+  async createProxyPolicy(input: ProxyPolicy): Promise<ProxyPolicy> {
+    this.proxyPolicies.set(input.id, input);
+    return input;
+  }
+
+  async getProxyPolicy(id: string): Promise<ProxyPolicy | null> {
+    return this.proxyPolicies.get(id) ?? null;
+  }
+
+  async listProxyPolicies(): Promise<ProxyPolicy[]> {
+    return [...this.proxyPolicies.values()].sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  async createProxyGrant(input: ProxyGrant): Promise<ProxyGrant> {
+    this.proxyGrants.set(input.tokenHash, input);
+    return input;
+  }
+
+  async getProxyGrantByTokenHash(tokenHash: string): Promise<ProxyGrant | null> {
+    return this.proxyGrants.get(tokenHash) ?? null;
+  }
+
+  async updateProxyGrantLastUsed(id: string, lastUsedAt: number): Promise<void> {
+    for (const grant of this.proxyGrants.values()) {
+      if (grant.id === id) {
+        grant.lastUsedAt = lastUsedAt;
+        return;
+      }
+    }
   }
 
   async getSetting(key: string): Promise<string | null> {
@@ -202,6 +258,7 @@ export class MemoryRepository implements Repository {
 
   async createRequestLog(log: {
     connectionId: string;
+    clientId?: string | null;
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
@@ -210,11 +267,16 @@ export class MemoryRepository implements Repository {
     requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
+    policyId?: string | null;
+    matchedRuleId?: string | null;
+    ruleDecision?: string | null;
+    blockedReason?: string | null;
     createdAt: number;
   }): Promise<RequestLog> {
     const row: RequestLog = {
       id: this.requestLogs.length + 1,
       connectionId: log.connectionId,
+      clientId: log.clientId ?? null,
       routeGroup: log.routeGroup,
       method: log.method,
       targetUrl: log.targetUrl ?? null,
@@ -223,6 +285,10 @@ export class MemoryRepository implements Repository {
       requestBody: log.requestBody ?? null,
       statusCode: log.statusCode ?? null,
       error: log.error ?? null,
+      policyId: log.policyId ?? null,
+      matchedRuleId: log.matchedRuleId ?? null,
+      ruleDecision: log.ruleDecision ?? null,
+      blockedReason: log.blockedReason ?? null,
       createdAt: log.createdAt,
     };
     this.requestLogs.unshift(row);

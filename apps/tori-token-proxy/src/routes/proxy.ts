@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { decrypt } from "../crypto/index.ts";
 import type { Repository } from "../repository/types.ts";
-import type { Connection } from "../types.ts";
+import type { Connection, ProxyPolicy } from "../types.ts";
 
 interface ProxyDeps {
   repo: Repository;
@@ -19,6 +19,8 @@ const SENSITIVE_LOG_KEYS = new Set([
   "refresh_token",
 ]);
 
+const CONTROL_LOG_HEADERS = new Set(["x-api-key", "x-proxy-url"]);
+
 export function proxyRoutes(deps: ProxyDeps) {
   const { repo, secret } = deps;
   const app = new Hono();
@@ -28,6 +30,9 @@ export function proxyRoutes(deps: ProxyDeps) {
   // Target URL via X-PROXY-URL header
   app.all("/:provider{.+}", async (c) => {
     const conn = c.get("connection") as Connection;
+    const proxyClient = c.get("proxyClient");
+    const proxyGrant = c.get("proxyGrant");
+    const proxyPolicy = c.get("proxyPolicy");
     const provider = c.req.param("provider");
     const capturedHeaders = captureRequestHeaders(c.req.raw.headers);
     const requestBody = await captureRequestBody(c.req.raw);
@@ -36,6 +41,7 @@ export function proxyRoutes(deps: ProxyDeps) {
     if (conn.provider !== provider) {
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: captureTargetUrl(c.req.header("X-PROXY-URL")),
@@ -58,6 +64,7 @@ export function proxyRoutes(deps: ProxyDeps) {
     if (!targetUrl) {
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         headers: capturedHeaders,
@@ -81,6 +88,7 @@ export function proxyRoutes(deps: ProxyDeps) {
     } catch {
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: captureTargetUrl(targetUrl),
@@ -98,11 +106,13 @@ export function proxyRoutes(deps: ProxyDeps) {
       );
     }
 
-    // Check proxy rules
-    const rules = await repo.getProxyRules(provider);
-    if (rules.length > 0 && !isAllowed(rules, c.req.method, parsedUrl)) {
+    const policyDecision = evaluateProxyPolicy(proxyPolicy, c.req.method, parsedUrl, {
+      requirePolicy: Boolean(proxyClient),
+    });
+    if (!policyDecision.allowed) {
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: captureTargetUrl(parsedUrl),
@@ -110,13 +120,16 @@ export function proxyRoutes(deps: ProxyDeps) {
         query: captureQuery(parsedUrl),
         requestBody,
         statusCode: 403,
-        error: "blocked by proxy rules",
+        error: "blocked_by_proxy_policy",
+        policyId: proxyPolicy?.id ?? null,
+        ruleDecision: "blocked",
+        blockedReason: policyDecision.reason,
         createdAt: Math.floor(Date.now() / 1000),
       });
       return c.json(
         {
           error: "forbidden",
-          error_description: `${c.req.method} ${parsedUrl.hostname}${parsedUrl.pathname} not allowed by proxy rules`,
+          error_description: `${c.req.method} ${parsedUrl.hostname}${parsedUrl.pathname} not allowed by proxy policy`,
         },
         403,
       );
@@ -127,6 +140,7 @@ export function proxyRoutes(deps: ProxyDeps) {
     if (!creds) {
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: captureTargetUrl(parsedUrl),
@@ -210,6 +224,7 @@ export function proxyRoutes(deps: ProxyDeps) {
       const loggedUrl = redactInjectedCredentialUrl(finalUrl, conn);
       await repo.createRequestLog({
         connectionId: conn.id,
+        clientId: proxyClient?.clientId ?? null,
         routeGroup: "proxy",
         method: c.req.method,
         targetUrl: captureTargetUrl(loggedUrl),
@@ -242,9 +257,13 @@ export function proxyRoutes(deps: ProxyDeps) {
       lastUsedAt: Math.floor(Date.now() / 1000),
       updatedAt: Math.floor(Date.now() / 1000),
     });
+    if (proxyGrant) {
+      await repo.updateProxyGrantLastUsed(proxyGrant.id, Math.floor(Date.now() / 1000));
+    }
     const loggedUrl = redactInjectedCredentialUrl(finalUrl, conn);
     await repo.createRequestLog({
       connectionId: conn.id,
+      clientId: proxyClient?.clientId ?? null,
       routeGroup: "proxy",
       method: c.req.method,
       targetUrl: captureTargetUrl(loggedUrl),
@@ -252,6 +271,9 @@ export function proxyRoutes(deps: ProxyDeps) {
       query: captureQuery(loggedUrl),
       requestBody,
       statusCode: resp.status,
+      policyId: proxyPolicy?.id ?? null,
+      matchedRuleId: policyDecision.matchedRuleId ?? null,
+      ruleDecision: policyDecision.allowed ? "allowed" : "blocked",
       createdAt: Math.floor(Date.now() / 1000),
     });
 
@@ -267,6 +289,7 @@ export function proxyRoutes(deps: ProxyDeps) {
 function captureRequestHeaders(headers: Headers) {
   const result: Record<string, string> = {};
   headers.forEach((value, key) => {
+    if (CONTROL_LOG_HEADERS.has(key.toLowerCase())) return;
     result[key] = redactLogValue(key, value) as string;
   });
   return result;
@@ -347,16 +370,42 @@ function redactLogObject(value: unknown): unknown {
   return result;
 }
 
-function isAllowed(
-  rules: Array<{ allowedHost: string; pathPattern: string; methods: string }>,
+function evaluateProxyPolicy(
+  policy: ProxyPolicy | null,
   method: string,
   url: URL,
-): boolean {
-  return rules.some((rule) => {
-    const hostMatch = url.hostname === rule.allowedHost || rule.allowedHost === "*";
-    const methodMatch =
-      rule.methods === "*" || rule.methods.split(",").includes(method.toUpperCase());
-    const pathMatch = rule.pathPattern === "*" || url.pathname.startsWith(rule.pathPattern);
-    return hostMatch && methodMatch && pathMatch;
-  });
+  options: { requirePolicy: boolean },
+) {
+  if (!policy) {
+    return options.requirePolicy
+      ? { allowed: false, matchedRuleId: null, reason: "missing_proxy_policy" }
+      : { allowed: true, matchedRuleId: null, reason: null };
+  }
+
+  if (policy.document.mode !== "allowlist") {
+    return { allowed: false, matchedRuleId: null, reason: "unsupported_policy_mode" };
+  }
+
+  for (const rule of policy.document.rules) {
+    if (rule.effect !== "allow") continue;
+    if (!rule.methods.includes(method.toUpperCase())) continue;
+    if (!rule.schemes.includes(url.protocol.replace(":", ""))) continue;
+    if (!rule.hosts.some((host) => matchesHost(host, url.hostname))) continue;
+    if (!rule.paths.some((path) => matchesPath(path, url.pathname))) continue;
+    return { allowed: true, matchedRuleId: rule.id, reason: null };
+  }
+
+  return { allowed: false, matchedRuleId: null, reason: "no_matching_allow_rule" };
+}
+
+function matchesHost(matcher: { match: "exact" | "suffix"; value: string }, hostname: string) {
+  if (matcher.match === "exact") return hostname === matcher.value;
+  return hostname === matcher.value || hostname.endsWith(`.${matcher.value}`);
+}
+
+function matchesPath(matcher: { match: "exact" | "prefix" | "glob"; value: string }, path: string) {
+  if (matcher.match === "exact") return path === matcher.value;
+  if (matcher.match === "prefix") return path.startsWith(matcher.value);
+  const escaped = matcher.value.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
+  return new RegExp(`^${escaped}$`).test(path);
 }

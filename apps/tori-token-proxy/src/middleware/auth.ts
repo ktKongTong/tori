@@ -2,7 +2,7 @@ import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionCookieValue } from "../admin-session.ts";
 import type { Repository } from "../repository/types.ts";
-import type { Connection } from "../types.ts";
+import type { Connection, OAuthClient, ProxyGrant, ProxyPolicy } from "../types.ts";
 
 /**
  * AdminKey authentication.
@@ -21,6 +21,9 @@ export function adminKeyAuth(adminKey: string) {
 declare module "hono" {
   interface ContextVariableMap {
     connection: Connection;
+    proxyClient: OAuthClient | null;
+    proxyGrant: ProxyGrant | null;
+    proxyPolicy: ProxyPolicy | null;
     adminAuthenticated: boolean;
   }
 }
@@ -35,12 +38,15 @@ export function apiKeyAuth(repo: Repository) {
       return c.json({ error: "unauthorized", error_description: "missing X-API-KEY header" }, 401);
     }
 
-    const conn = await repo.getConnectionByApiKey(apiKey);
-    if (!conn) {
+    const proxyAuth = await repo.getConnectionForProxyToken(apiKey);
+    if (!proxyAuth?.connection) {
       return c.json({ error: "unauthorized", error_description: "invalid API key" }, 401);
     }
 
-    c.set("connection", conn);
+    c.set("connection", proxyAuth.connection);
+    c.set("proxyClient", proxyAuth.client);
+    c.set("proxyGrant", proxyAuth.grant);
+    c.set("proxyPolicy", proxyAuth.policy);
     await next();
   };
 }

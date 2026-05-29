@@ -46,17 +46,30 @@ export const oauthClients = pgTable("oauth_clients", {
   name: text("name").notNull(),
   redirectUris: jsonb("redirect_uris").notNull(),
   scopes: jsonb("scopes").notNull(),
+  policyId: text("policy_id"),
   createdAt: integer("created_at").notNull(),
 });
 
-// ─── Proxy Rules ───
+// ─── Proxy Policies & Grants ───
 
-export const proxyRules = pgTable("proxy_rules", {
-  id: serial("id").primaryKey(),
-  provider: text("provider").notNull(),
-  allowedHost: text("allowed_host").notNull(),
-  pathPattern: text("path_pattern").notNull().default("*"),
-  methods: text("methods").notNull().default("GET"),
+export const proxyPolicies = pgTable("proxy_policies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  document: jsonb("document").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const proxyGrants = pgTable("proxy_grants", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique("proxy_grants_token_hash_unique"),
+  clientId: text("client_id").notNull(),
+  connectionId: text("connection_id").notNull(),
+  scopes: jsonb("scopes").notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: integer("created_at").notNull(),
+  lastUsedAt: integer("last_used_at"),
 });
 
 // ─── Settings ───
@@ -69,6 +82,7 @@ export const settings = pgTable("settings", {
 export const requestLogs = pgTable("request_logs", {
   id: serial("id").primaryKey(),
   connectionId: text("connection_id").notNull(),
+  clientId: text("client_id"),
   routeGroup: text("route_group").notNull(),
   method: text("method").notNull(),
   targetUrl: text("target_url"),
@@ -77,6 +91,10 @@ export const requestLogs = pgTable("request_logs", {
   requestBody: jsonb("request_body"),
   statusCode: integer("status_code"),
   error: text("error"),
+  policyId: text("policy_id"),
+  matchedRuleId: text("matched_rule_id"),
+  ruleDecision: text("rule_decision"),
+  blockedReason: text("blocked_reason"),
   createdAt: integer("created_at").notNull(),
 });
 

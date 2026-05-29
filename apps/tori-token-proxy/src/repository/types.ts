@@ -3,7 +3,8 @@ import type {
   Connection,
   CreateConnectionParams,
   EncryptedCredentials,
-  ProxyRule,
+  ProxyGrant,
+  ProxyPolicy,
   RequestLog,
   SystemTaskDefinition,
   SystemTaskRun,
@@ -20,6 +21,12 @@ export interface Repository {
   createConnection(params: CreateConnectionParams): Promise<Connection>;
   getConnectionById(id: string): Promise<Connection | null>;
   getConnectionByApiKey(apiKey: string): Promise<Connection | null>;
+  getConnectionForProxyToken(token: string): Promise<{
+    grant: ProxyGrant | null;
+    client: OAuthClient | null;
+    connection: Connection | null;
+    policy: ProxyPolicy | null;
+  } | null>;
   listConnections(): Promise<Connection[]>;
   updateCredentials(connId: string, creds: EncryptedCredentials): Promise<void>;
   updateStatus(connId: string, status: string): Promise<void>;
@@ -57,8 +64,13 @@ export interface Repository {
   getOAuthClient(clientId: string): Promise<OAuthClient | null>;
   listOAuthClients(): Promise<OAuthClient[]>;
 
-  // ─── Proxy Rules ───
-  getProxyRules(provider: string): Promise<ProxyRule[]>;
+  // ─── Proxy Policies & Grants ───
+  createProxyPolicy(input: ProxyPolicy): Promise<ProxyPolicy>;
+  getProxyPolicy(id: string): Promise<ProxyPolicy | null>;
+  listProxyPolicies(): Promise<ProxyPolicy[]>;
+  createProxyGrant(input: ProxyGrant): Promise<ProxyGrant>;
+  getProxyGrantByTokenHash(tokenHash: string): Promise<ProxyGrant | null>;
+  updateProxyGrantLastUsed(id: string, lastUsedAt: number): Promise<void>;
 
   // ─── Settings (encrypted KV) ───
   getSetting(key: string): Promise<string | null>;
@@ -67,6 +79,7 @@ export interface Repository {
   // ─── Request Logs ───
   createRequestLog(log: {
     connectionId: string;
+    clientId?: string | null;
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
@@ -75,6 +88,10 @@ export interface Repository {
     requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
+    policyId?: string | null;
+    matchedRuleId?: string | null;
+    ruleDecision?: string | null;
+    blockedReason?: string | null;
     createdAt: number;
   }): Promise<RequestLog>;
   listRequestLogs(input?: {

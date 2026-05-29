@@ -15,6 +15,8 @@ import {
   type OAuthUserRepository,
 } from "@jmondi/oauth2-server";
 import { OAuthRequest } from "@jmondi/oauth2-server";
+import { randomCode } from "@repo/utils/random";
+import { sha256Hash } from "@repo/utils/encoding/hash";
 import type { Repository } from "../repository/types.ts";
 import type { Connection, OAuthClient } from "../types.ts";
 
@@ -39,6 +41,29 @@ export interface ExternalConnectExchangeResult {
       providerAccountAvatar: null;
     };
   };
+}
+
+async function createProxyGrantToken(
+  repo: Repository,
+  input: {
+    clientId: string;
+    connectionId: string;
+    scopes: string[];
+  },
+) {
+  const token = randomCode("pg", 32);
+  const now = Math.floor(Date.now() / 1000);
+  await repo.createProxyGrant({
+    id: randomCode("grant", 16),
+    tokenHash: await sha256Hash(token),
+    clientId: input.clientId,
+    connectionId: input.connectionId,
+    scopes: input.scopes,
+    status: "active",
+    createdAt: now,
+    lastUsedAt: null,
+  });
+  return token;
 }
 
 function toLibraryClient(client: OAuthClient): LibraryOAuthClient {
@@ -368,12 +393,22 @@ export async function exchangeExternalConnectAuthorizationCode(
       conn = apiKey ? await repo.getConnectionByApiKey(apiKey) : null;
     }
     if (!conn) throw OAuthException.invalidGrant("connection not found");
+    const scopes = (body.scope ?? conn.permissions?.join(" ") ?? conn.provider)
+      .split(/\s+/)
+      .filter(Boolean);
+    const clientId = request.client_id;
+    if (!clientId) throw OAuthException.invalidClient("missing client_id");
+    const proxyToken = await createProxyGrantToken(repo, {
+      clientId,
+      connectionId: conn.id,
+      scopes,
+    });
 
     return {
       response: {
-        access_token: conn.apiKey,
+        access_token: proxyToken,
         token_type: "Bearer",
-        scope: body.scope ?? conn.permissions?.join(" ") ?? conn.provider,
+        scope: scopes.join(" "),
         provider: conn.provider,
         provider_uid: conn.providerUid,
         display_name: conn.displayName,

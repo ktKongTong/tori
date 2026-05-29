@@ -1,13 +1,15 @@
 import { and, desc, eq, lte } from "drizzle-orm";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { randomCode } from "@repo/utils/random";
+import { sha256Hash } from "@repo/utils/encoding/hash";
 import type {
   AuthSessionState,
   Connection,
   CreateConnectionParams,
   EncryptedCredentials,
   OAuthClient,
-  ProxyRule,
+  ProxyGrant,
+  ProxyPolicy,
   RequestLog,
   SystemTaskDefinition,
   SystemTaskRun,
@@ -237,6 +239,31 @@ export class SqliteRepository implements Repository {
     return rows[0] ? this.mapConnection(rows[0]) : null;
   }
 
+  async getConnectionForProxyToken(token: string) {
+    const directConnection = await this.getConnectionByApiKey(token);
+    if (directConnection) {
+      return {
+        grant: null,
+        client: null,
+        connection: directConnection,
+        policy: null,
+      };
+    }
+
+    const grant = await this.getProxyGrantByTokenHash(await sha256Hash(token));
+    if (!grant || grant.status !== "active") return null;
+    const client = await this.getOAuthClient(grant.clientId);
+    const connection = await this.getConnectionById(grant.connectionId);
+    if (!client || !connection || connection.status !== "active") return null;
+
+    return {
+      grant,
+      client,
+      connection,
+      policy: client.policyId ? await this.getProxyPolicy(client.policyId) : null,
+    };
+  }
+
   async listConnections(): Promise<Connection[]> {
     const rows = await this.db
       .select({
@@ -398,6 +425,7 @@ export class SqliteRepository implements Repository {
       name: input.name,
       redirectUris: input.redirectUris,
       scopes: input.scopes,
+      policyId: input.policyId ?? null,
       createdAt: input.createdAt,
     });
     return input;
@@ -417,6 +445,7 @@ export class SqliteRepository implements Repository {
       name: row.name,
       redirectUris: parseJsonArray(row.redirectUris),
       scopes: parseJsonArray(row.scopes),
+      policyId: row.policyId ?? null,
       createdAt: row.createdAt,
     };
   }
@@ -433,12 +462,93 @@ export class SqliteRepository implements Repository {
       name: row.name,
       redirectUris: parseJsonArray(row.redirectUris),
       scopes: parseJsonArray(row.scopes),
+      policyId: row.policyId ?? null,
       createdAt: row.createdAt,
     }));
   }
 
-  async getProxyRules(provider: string): Promise<ProxyRule[]> {
-    return this.db.select().from(schema.proxyRules).where(eq(schema.proxyRules.provider, provider));
+  async createProxyPolicy(input: ProxyPolicy): Promise<ProxyPolicy> {
+    await this.db.insert(schema.proxyPolicies).values({
+      id: input.id,
+      name: input.name,
+      description: input.description ?? null,
+      document: input.document as any,
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt,
+    });
+    return input;
+  }
+
+  async getProxyPolicy(id: string): Promise<ProxyPolicy | null> {
+    const [row] = await this.db
+      .select()
+      .from(schema.proxyPolicies)
+      .where(eq(schema.proxyPolicies.id, id))
+      .limit(1);
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description ?? null,
+      document: row.document as ProxyPolicy["document"],
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async listProxyPolicies(): Promise<ProxyPolicy[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.proxyPolicies)
+      .orderBy(desc(schema.proxyPolicies.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? null,
+      document: row.document as ProxyPolicy["document"],
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  async createProxyGrant(input: ProxyGrant): Promise<ProxyGrant> {
+    await this.db.insert(schema.proxyGrants).values({
+      id: input.id,
+      tokenHash: input.tokenHash,
+      clientId: input.clientId,
+      connectionId: input.connectionId,
+      scopes: input.scopes,
+      status: input.status,
+      createdAt: input.createdAt,
+      lastUsedAt: input.lastUsedAt ?? null,
+    });
+    return input;
+  }
+
+  async getProxyGrantByTokenHash(tokenHash: string): Promise<ProxyGrant | null> {
+    const [row] = await this.db
+      .select()
+      .from(schema.proxyGrants)
+      .where(eq(schema.proxyGrants.tokenHash, tokenHash))
+      .limit(1);
+    if (!row) return null;
+    return {
+      id: row.id,
+      tokenHash: row.tokenHash,
+      clientId: row.clientId,
+      connectionId: row.connectionId,
+      scopes: parseJsonArray(row.scopes),
+      status: row.status,
+      createdAt: row.createdAt,
+      lastUsedAt: row.lastUsedAt ?? null,
+    };
+  }
+
+  async updateProxyGrantLastUsed(id: string, lastUsedAt: number): Promise<void> {
+    await this.db
+      .update(schema.proxyGrants)
+      .set({ lastUsedAt })
+      .where(eq(schema.proxyGrants.id, id));
   }
 
   async getSetting(key: string): Promise<string | null> {
@@ -459,6 +569,7 @@ export class SqliteRepository implements Repository {
 
   async createRequestLog(log: {
     connectionId: string;
+    clientId?: string | null;
     routeGroup: string;
     method: string;
     targetUrl?: string | null;
@@ -467,12 +578,17 @@ export class SqliteRepository implements Repository {
     requestBody?: unknown;
     statusCode?: number | null;
     error?: string | null;
+    policyId?: string | null;
+    matchedRuleId?: string | null;
+    ruleDecision?: string | null;
+    blockedReason?: string | null;
     createdAt: number;
   }): Promise<RequestLog> {
     const result = await this.db
       .insert(schema.requestLogs)
       .values({
         connectionId: log.connectionId,
+        clientId: log.clientId ?? null,
         routeGroup: log.routeGroup,
         method: log.method,
         targetUrl: log.targetUrl ?? null,
@@ -481,6 +597,10 @@ export class SqliteRepository implements Repository {
         requestBody: log.requestBody as any,
         statusCode: log.statusCode ?? null,
         error: log.error ?? null,
+        policyId: log.policyId ?? null,
+        matchedRuleId: log.matchedRuleId ?? null,
+        ruleDecision: log.ruleDecision ?? null,
+        blockedReason: log.blockedReason ?? null,
         createdAt: log.createdAt,
       })
       .returning();

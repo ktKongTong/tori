@@ -283,7 +283,7 @@ describe("admin connect flow", () => {
     expect(exchangeData.provider).toBe("mock-connect");
     expect(exchangeData.provider_uid).toBe("mock-user-001");
     expect(exchangeData.account.providerAccountName).toBe("Mock Admin User");
-    expect(exchangeData.access_token).toMatch(/^ak_/);
+    expect(exchangeData.access_token).toMatch(/^pg_/);
 
     const repeatedExchangeResponse = await request(app, "POST", "/oauth/token", {
       body: `grant_type=authorization_code&code=${encodeURIComponent(
@@ -372,6 +372,7 @@ describe("admin connect flow", () => {
     expect(exchangeData.connection.id).toBe(existing.id);
     expect(exchangeData.connection.providerUid).toBe("mock-user-existing");
     expect(exchangeData.account.providerAccountName).toBe("Existing Mock User");
-    expect(exchangeData.access_token).toBe(existing.apiKey);
+    expect(exchangeData.access_token).toMatch(/^pg_/);
+    expect(exchangeData.access_token).not.toBe(existing.apiKey);
   });
 });

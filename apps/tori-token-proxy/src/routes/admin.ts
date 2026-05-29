@@ -65,6 +65,40 @@ const createOAuthClientSchema = z.object({
   name: z.string().trim().min(1).default("OAuth Client"),
   redirectUris: z.array(z.string().url()).min(1),
   scopes: z.array(z.string().min(1)).default(["proxy", "account"]),
+  policyId: z.string().min(1).nullable().optional(),
+});
+
+const proxyPolicyRuleSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  effect: z.literal("allow"),
+  methods: z.array(z.string().min(1)).min(1),
+  schemes: z.array(z.enum(["https"])).default(["https"]),
+  hosts: z
+    .array(
+      z.object({
+        match: z.enum(["exact", "suffix"]),
+        value: z.string().min(1),
+      }),
+    )
+    .min(1),
+  paths: z
+    .array(
+      z.object({
+        match: z.enum(["exact", "prefix", "glob"]),
+        value: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+const createProxyPolicySchema = z.object({
+  name: z.string().trim().min(1),
+  description: z.string().nullable().optional(),
+  document: z.object({
+    mode: z.literal("allowlist"),
+    rules: z.array(proxyPolicyRuleSchema).default([]),
+  }),
 });
 
 const connectionViewSchema = z.object({
@@ -277,17 +311,64 @@ export function adminRoutes(deps: AdminDeps) {
   });
 
   app.post(
+    "/proxy/policies",
+    adminSessionAuth(secret, adminKey),
+    zValidator("json", createProxyPolicySchema, zodHook),
+    async (c) => {
+      const body = c.req.valid("json");
+      const now = Math.floor(Date.now() / 1000);
+      const policy = await repo.createProxyPolicy({
+        id: randomCode("policy", 16),
+        name: body.name,
+        description: body.description ?? null,
+        document: body.document,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return c.json({
+        id: policy.id,
+        name: policy.name,
+        description: policy.description ?? null,
+        document: policy.document,
+        created_at: policy.createdAt,
+        updated_at: policy.updatedAt,
+      });
+    },
+  );
+
+  app.get("/proxy/policies", adminSessionAuth(secret, adminKey), async (c) => {
+    const policies = await repo.listProxyPolicies();
+    return c.json({
+      items: policies.map((policy) => ({
+        id: policy.id,
+        name: policy.name,
+        description: policy.description ?? null,
+        document: policy.document,
+        created_at: policy.createdAt,
+        updated_at: policy.updatedAt,
+      })),
+    });
+  });
+
+  app.post(
     "/oauth/clients",
     adminSessionAuth(secret, adminKey),
     zValidator("json", createOAuthClientSchema, zodHook),
     async (c) => {
       const body = c.req.valid("json");
+      if (body.policyId) {
+        const policy = await repo.getProxyPolicy(body.policyId);
+        if (!policy) {
+          return c.json({ error: "not_found", error_description: "proxy policy not found" }, 404);
+        }
+      }
       const client = await repo.createOAuthClient({
         clientId: randomCode("client", 16),
         clientSecret: randomCode("secret", 24),
         name: body.name,
         redirectUris: body.redirectUris,
         scopes: body.scopes,
+        policyId: body.policyId ?? null,
         createdAt: Math.floor(Date.now() / 1000),
       });
 
@@ -297,6 +378,7 @@ export function adminRoutes(deps: AdminDeps) {
         client_name: client.name,
         redirect_uris: client.redirectUris,
         scopes: client.scopes,
+        policy_id: client.policyId ?? null,
       });
     },
   );
@@ -309,6 +391,7 @@ export function adminRoutes(deps: AdminDeps) {
         client_name: client.name,
         redirect_uris: client.redirectUris,
         scopes: client.scopes,
+        policy_id: client.policyId ?? null,
         created_at: client.createdAt,
       })),
     });

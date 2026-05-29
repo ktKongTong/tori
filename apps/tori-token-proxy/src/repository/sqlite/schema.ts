@@ -44,17 +44,30 @@ export const oauthClients = sqliteTable("oauth_clients", {
   name: text("name").notNull(),
   redirectUris: text("redirect_uris", { mode: "json" }).notNull(),
   scopes: text("scopes", { mode: "json" }).notNull(),
+  policyId: text("policy_id"),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
 
-// ─── Proxy Rules ───
+// ─── Proxy Policies & Grants ───
 
-export const proxyRules = sqliteTable("proxy_rules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  provider: text("provider").notNull(),
-  allowedHost: text("allowed_host").notNull(),
-  pathPattern: text("path_pattern").notNull().default("*"),
-  methods: text("methods").notNull().default("GET"),
+export const proxyPolicies = sqliteTable("proxy_policies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  document: text("document", { mode: "json" }).notNull(),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});
+
+export const proxyGrants = sqliteTable("proxy_grants", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique("proxy_grants_token_hash_unique"),
+  clientId: text("client_id").notNull(),
+  connectionId: text("connection_id").notNull(),
+  scopes: text("scopes", { mode: "json" }).notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  lastUsedAt: integer("last_used_at", { mode: "number" }),
 });
 
 // ─── Settings (encrypted key-value) ───
@@ -67,6 +80,7 @@ export const settings = sqliteTable("settings", {
 export const requestLogs = sqliteTable("request_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   connectionId: text("connection_id").notNull(),
+  clientId: text("client_id"),
   routeGroup: text("route_group").notNull(),
   method: text("method").notNull(),
   targetUrl: text("target_url"),
@@ -75,6 +89,10 @@ export const requestLogs = sqliteTable("request_logs", {
   requestBody: text("request_body", { mode: "json" }),
   statusCode: integer("status_code"),
   error: text("error"),
+  policyId: text("policy_id"),
+  matchedRuleId: text("matched_rule_id"),
+  ruleDecision: text("rule_decision"),
+  blockedReason: text("blocked_reason"),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
 

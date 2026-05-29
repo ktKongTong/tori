@@ -48,6 +48,10 @@ const NAV_ITEMS: NavItem[] = [
     to: "/dashboard/oauth-clients",
     label: "OAuth Clients",
   },
+  {
+    to: "/dashboard/proxy-policies",
+    label: "Proxy Policies",
+  },
 ];
 
 function isItemActive(pathname: string, item: NavItem) {

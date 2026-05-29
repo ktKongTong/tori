@@ -99,15 +99,53 @@ export interface OAuthClient {
   name: string;
   redirectUris: string[];
   scopes: string[];
+  policyId?: string | null;
   createdAt: number;
 }
 
-export interface ProxyRule {
-  id: number;
-  provider: string;
-  allowedHost: string;
-  pathPattern: string;
-  methods: string;
+export interface ProxyPolicyHostMatcher {
+  match: "exact" | "suffix";
+  value: string;
+}
+
+export interface ProxyPolicyPathMatcher {
+  match: "exact" | "prefix" | "glob";
+  value: string;
+}
+
+export interface ProxyPolicyRule {
+  id: string;
+  name: string;
+  effect: "allow";
+  methods: string[];
+  schemes: string[];
+  hosts: ProxyPolicyHostMatcher[];
+  paths: ProxyPolicyPathMatcher[];
+}
+
+export interface ProxyPolicyDocument {
+  mode: "allowlist";
+  rules: ProxyPolicyRule[];
+}
+
+export interface ProxyPolicy {
+  id: string;
+  name: string;
+  description?: string | null;
+  document: ProxyPolicyDocument;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProxyGrant {
+  id: string;
+  tokenHash: string;
+  clientId: string;
+  connectionId: string;
+  scopes: string[];
+  status: string;
+  createdAt: number;
+  lastUsedAt?: number | null;
 }
 
 export interface CreateConnectionParams {
@@ -123,6 +161,7 @@ export interface CreateConnectionParams {
 export interface RequestLog {
   id: number;
   connectionId: string;
+  clientId?: string | null;
   routeGroup: string;
   method: string;
   targetUrl?: string | null;
@@ -131,5 +170,9 @@ export interface RequestLog {
   requestBody?: unknown;
   statusCode?: number | null;
   error?: string | null;
+  policyId?: string | null;
+  matchedRuleId?: string | null;
+  ruleDecision?: string | null;
+  blockedReason?: string | null;
   createdAt: number;
 }
